@@ -1,0 +1,199 @@
+/* Thiết lập chung */
+body {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    margin: 0;
+    padding: 0;
+    -webkit-text-size-adjust: 100%;
+}
+
+/* Thanh điều hướng mặc định */
+.navbar {
+    padding: 14px 16px !important;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+}
+.navbar-brand {
+    font-weight: 800;
+    font-size: 1.15rem !important;
+}
+
+/* Khung chứa nội dung */
+.container {
+    max-width: 1250px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+}
+
+/* Thẻ Card */
+.card {
+    border-radius: 16px !important;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08) !important;
+    border: none !important;
+    background: #fff;
+    margin-bottom: 20px !important;
+    padding: 20px !important;
+}
+
+/* 1. MÁY TÍNH (PC): GIỮ NGUYÊN 100% */
+@media (min-width: 992px) {
+    body {
+        font-size: 1.15rem !important;
+    }
+    label {
+        font-weight: 800 !important;
+        color: #1e293b !important;
+        margin-bottom: 8px !important;
+        display: block;
+        font-size: 1.1rem !important;
+    }
+    .form-control, .form-select {
+        border-radius: 12px !important;
+        border: 2px solid #64748b !important;
+        height: auto !important;
+        background-color: #fff !important;
+        color: #0f172a !important;
+        font-size: 1.2rem !important;
+        padding: 14px 18px !important;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #198754 !important;
+        box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25) !important;
+    }
+    .btn-success {
+        font-size: 1.3rem !important;
+        padding: 14px 30px !important;
+        font-weight: 800 !important;
+        width: auto !important;
+    }
+    #dynamic-fields .col-md-6 {
+        width: 50% !important;
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+        margin-bottom: 18px !important;
+    }
+}
+
+/* 2. ĐIỆN THOẠI (MOBILE): ĐÃ FIX LỖI TRÀN CHỮ VÀ LỆCH KHUNG */
+@media (max-width: 991px) {
+    body {
+        font-size: 1.1rem !important; 
+    }
+    
+    /* Cho thanh Navbar xuống dòng gọn gàng, không đè nút Đăng Xuất */
+    .navbar {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+        padding: 12px 16px !important;
+    }
+    .navbar-brand {
+        font-size: 1.1rem !important;
+        white-space: normal !important;
+    }
+
+    /* Ép container và card phủ rộng đều màn hình, không bị khoảng trống bên phải */
+    .container {
+        width: 100% !important;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+    .card {
+        padding: 16px !important;
+        width: 100% !important;
+    }
+
+    /* Tiêu đề ô nhập */
+    label {
+        font-size: 1.15rem !important; 
+        font-weight: 800 !important;
+        color: #1e293b !important;
+        margin-bottom: 8px !important;
+        display: block !important;
+    }
+
+    /* Ô nhập liệu cân đối, tràn đầy khung */
+    .form-control, .form-select {
+        font-size: 1.2rem !important; 
+        padding: 12px 14px !important; 
+        border-radius: 10px !important;
+        border: 2px solid #475569 !important;
+        background-color: #fff !important;
+        height: auto !important;
+        color: #0f172a !important;
+        width: 100% !important;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #198754 !important;
+        box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25) !important;
+    }
+
+    /* Nút Lưu Dữ Liệu */
+    .btn-success {
+        display: block !important;
+        width: 100% !important;
+        font-size: 1.25rem !important; 
+        padding: 14px 16px !important;
+        border-radius: 12px !important;
+        font-weight: 800 !important;
+        background-color: #198754 !important;
+        border: none !important;
+        box-shadow: 0 4px 10px rgba(25, 135, 84, 0.3) !important;
+        margin-top: 20px !important;
+        margin-bottom: 5px !important;
+        text-align: center !important;
+    }
+    
+    /* Ép 1 cột dọc duy nhất và căn khít 100% */
+    #dynamic-fields .row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: 0 !important;
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+    #dynamic-fields .col-md-6 {
+        width: 100% !important;
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        margin-bottom: 14px !important;
+    }
+}
+
+/* Bảng dữ liệu trực tuyến */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+}
+
+table {
+    font-size: 1.05rem !important;
+}
+
+table th {
+    background-color: #334155 !important;
+    color: #fff !important;
+    padding: 14px 12px !important;
+    font-weight: 700 !important;
+}
+
+table td {
+    padding: 14px 12px !important;
+    white-space: nowrap;
+    font-weight: 600;
+}/* Tùy chỉnh cụm 3 ô chọn Ngày - Tháng - Năm cho dễ nhìn */
+.row.g-2 > div {
+    padding-right: 4px;
+    padding-left: 4px;
+}
+
+/* Ẩn hoặc hiển thị ô input date gốc tùy ý bạn (nếu muốn hiện cả lịch bên dưới để bấm) */
+/* Nếu muốn hiện hẳn ô lịch bên dưới các ô chọn, bạn có thể xóa class 'd-none' ở trên đi */

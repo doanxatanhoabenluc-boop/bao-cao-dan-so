@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng Nhập - Hệ Thống Dân Số</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light d-flex align-items-center justify-content-center vh-100">
+    <div class="card p-4 shadow-sm" style="width: 400px;">
+        <h3 class="text-center text-success mb-4 fw-bold">ĐĂNG NHẬP HỆ THỐNG</h3>
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="mb-3">
+                <label class="form-label fw-bold">Chọn Họ và Tên:</label>
+                <select id="username" class="form-select form-select-lg" required>
+                    <option value="">-- Đang tải danh sách tài khoản... --</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="form-label fw-bold">Mật khẩu:</label>
+                <input type="password" id="password" class="form-control form-control-lg" placeholder="Nhập mật khẩu của bạn" required>
+            </div>
+            <button type="submit" class="btn btn-success btn-lg w-100 shadow-sm">Đăng Nhập</button>
+        </form>
+    </div>
+
+<script>
+    // Tự động tải danh sách tài khoản khi trang vừa mở
+    document.addEventListener("DOMContentLoaded", async () => {
+        try {
+            let res = await fetch('/api/public/users-list');
+            let users = await res.json();
+            let select = document.getElementById('username');
+            
+            if (users && users.length > 0) {
+                select.innerHTML = '<option value="">-- Bấm vào đây để chọn tên của bạn --</option>' + 
+                    users.map(u => `<option value="${u.username}">${u.fullname} (${u.username})</option>`).join('');
+            } else {
+                select.innerHTML = '<option value="">Không có tài khoản nào</option>';
+            }
+        } catch (err) {
+            console.error("Lỗi tải danh sách người dùng:", err);
+            document.getElementById('username').innerHTML = '<option value="">Lỗi tải danh sách</option>';
+        }
+    });
+
+    async function handleLogin(e) {
+        e.preventDefault();
+        let username = document.getElementById('username').value;
+        let password = document.getElementById('password').value;
+
+        let res = await fetch('/api/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ username, password })
+        });
+        
+        let data = await res.json();
+        if(data.success) {
+            window.location.href = 'index.html';
+        } else {
+            alert("❌ " + data.message);
+        }
+    }
+</script>
+</body>
+</html>

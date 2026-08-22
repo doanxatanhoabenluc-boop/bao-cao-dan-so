@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phần Mềm Quản Lý Dân Số Xã</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-light">
+
+    <!-- Navbar Hiện đại & Responsive cho Mobile -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-success shadow-sm px-3 px-lg-4">
+        <div class="container-fluid">
+            <!-- Brand / Tiêu đề hệ thống -->
+            <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+                <i class="fa-solid fa-chart-pie fs-4"></i>
+                <span class="fw-bold fs-6 fs-md-5">HỆ THỐNG DÂN SỐ XÃ</span>
+            </a>
+
+            <!-- Nút Hamburger cho Mobile -->
+            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <!-- Menu nội dung thu gọn -->
+            <div class="collapse navbar-collapse justify-content-end mt-2 mt-lg-0" id="navbarNav">
+                <ul class="navbar-nav align-items-lg-center gap-2">
+                    
+                    <!-- Khối thông tin tài khoản -->
+                    <li class="nav-item me-lg-2">
+                        <div class="d-flex align-items-center bg-success-subtle text-dark px-3 py-1.5 rounded-pill border border-light border-opacity-25" style="background-color: rgba(255, 255, 255, 0.15) !important;">
+                            <i class="fa-solid fa-circle-user text-white me-2 fs-5"></i>
+                            <span id="userInfo" class="text-white fw-semibold small">Đang tải tài khoản...</span>
+                        </div>
+                    </li>
+
+                    <!-- Nút Báo cáo tổng hợp (Chỉ Admin/Lãnh đạo thấy) -->
+                    <li class="nav-item">
+                        <a href="baocao_toanxa.html" id="btnBaocaoToanXa" class="btn btn-light btn-sm fw-bold text-success w-100 text-start text-lg-center" style="display: none;">
+                            <i class="fa-solid fa-file-invoice me-1"></i> Báo cáo tổng hợp
+                        </a>
+                    </li>
+                    
+                    <!-- Nút Xem Phiếu P0/CTV -->
+                    <li class="nav-item">
+                        <a href="baocao.html" class="btn btn-light btn-sm fw-bold text-success w-100 text-start text-lg-center">
+                            <i class="fa-solid fa-file-lines me-1"></i> Xem Phiếu P0/CTV
+                        </a>
+                    </li>
+                    
+                    <!-- Nút Quản trị hệ thống (Chỉ Admin/Lãnh đạo thấy) -->
+                    <li class="nav-item">
+                        <a href="admin.html" id="btnAdmin" class="btn btn-outline-warning btn-sm w-100 text-start text-lg-center" style="display: none;">
+                            <i class="fa-solid fa-user-gear me-1"></i> Quản trị
+                        </a>
+                    </li>
+                    
+                    <!-- Nút Đăng Xuất -->
+                    <li class="nav-item ms-lg-1">
+                        <button class="btn btn-danger btn-sm w-100 text-start text-lg-center" onclick="logout()">
+                            <i class="fa-solid fa-right-from-bracket me-1"></i> Đăng Xuất
+                        </button>
+                    </li>
+
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <!-- Chọn Bảng -->
+        <div class="card shadow-sm p-4 mb-3 border-0">
+            <label class="form-label text-success fw-bold">👉 CHỌN BẢNG BÁO CÁO:</label>
+            <select id="selectTable" class="form-select border-success shadow-none" onchange="switchTableForm()">
+                <option value="table_1">1. Danh sách trẻ sinh ra</option>
+                <option value="table_2">2. Danh sách SL sơ sinh</option>
+                <option value="table_3">3. Danh sách người chết</option>
+                <option value="table_4">4. Danh sách người chuyển đến từ xã khác</option>
+                <option value="table_5">5. Danh sách người chuyển đi khỏi xã</option>
+                <option value="table_6">6. Danh sách người thay đổi thông tin cơ bản</option>
+                <option value="table_7">7. Danh sách cặp vợ chồng mới sử dụng BPTT</option>
+                <option value="table_8">8. Danh sách vợ chồng thôi sử dụng BPTT</option>
+                <option value="table_9">9. Danh sách phụ nữ có thông tin thai sản</option>
+                <option value="table_10">10. Danh sách sàng lọc trước sinh</option>
+                <option value="table_11">11. Danh sách người cao tuổi khám sức khỏe</option>
+            </select>
+        </div>
+
+        <!-- Form Động -->
+        <div class="card shadow-sm p-4 mb-3 border-0">
+            <h4 id="form-title" class="text-primary mb-3">📝 Nhập liệu</h4>
+            <form id="dynamicForm" onsubmit="saveData(event)">
+                <div id="dynamic-fields" class="row"></div>
+                <button type="submit" class="btn btn-success w-100 mt-3 fw-bold shadow-sm">💾 Lưu Dữ Liệu</button>
+            </form>
+        </div>
+
+        <!-- Bảng Dữ Liệu -->
+        <div class="card shadow-sm p-4 border-0">
+            <h4 class="text-secondary mb-3">📋 Dữ liệu trực tuyến</h4>
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped align-middle">
+                    <thead class="table-dark" id="tableHeader"></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="vietnamese-formatter.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

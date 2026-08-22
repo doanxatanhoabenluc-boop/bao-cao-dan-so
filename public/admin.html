@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản trị Hệ thống Dân số</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Tối ưu thanh trượt ngang cho tab trên mobile */
+        .admin-tabs-container {
+            overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+        }
+        .admin-tabs-container::-webkit-scrollbar {
+            height: 4px;
+        }
+        .admin-tabs-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+    <!-- Navbar Tối Ưu Mobile -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3 shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold fs-6 fs-md-5" href="#">
+                <i class="fa-solid fa-users-gear text-warning me-1"></i> Quản Trị Hệ Thống
+            </a>
+            
+            <!-- Nút Hamburger cho Mobile -->
+            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar" aria-controls="adminNavbar" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse justify-content-end mt-2 mt-lg-0" id="adminNavbar">
+                <div class="d-flex flex-column flex-lg-row gap-2">
+                    <a href="index.html" class="btn btn-outline-light btn-sm">
+                        <i class="fa-solid fa-house me-1"></i> Về trang nhập liệu
+                    </a>
+                    <button onclick="logout()" class="btn btn-danger btn-sm">
+                        <i class="fa-solid fa-right-from-bracket me-1"></i> Đăng xuất
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid my-4 px-3 px-md-4">
+        
+        <!-- 7 Tab điều hướng hệ thống dạng trượt ngang hiện đại trên mobile -->
+        <div class="admin-tabs-container mb-4 pb-2">
+            <ul class="nav nav-pills flex-nowrap gap-2" id="adminTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active fw-bold py-2 px-3 shadow-sm" id="users-tab" data-bs-toggle="tab" data-bs-target="#usersContent" type="button" role="tab">
+                        <i class="fa-solid fa-user-shield me-1"></i> Tài khoản
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold py-2 px-3 shadow-sm" id="data-tab" data-bs-toggle="tab" data-bs-target="#dataContent" type="button" role="tab" onclick="loadTableDataAdmin()">
+                        <i class="fa-solid fa-database me-1"></i> 11 Biểu mẫu
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold py-2 px-3 shadow-sm" id="ap-tab" data-bs-toggle="tab" data-bs-target="#apContent" type="button" role="tab" onclick="loadApList()">
+                        <i class="fa-solid fa-map-location-dot me-1"></i> Quản lý Ấp
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold py-2 px-3 shadow-sm" id="bv-tab" data-bs-toggle="tab" data-bs-target="#bvContent" type="button" role="tab" onclick="loadBenhVienList()">
+                        <i class="fa-solid fa-hospital me-1"></i> Bệnh viện
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold py-2 px-3 shadow-sm" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logsContent" type="button" role="tab" onclick="loadLogs()">
+                        <i class="fa-solid fa-clock-rotate-left me-1"></i> Nhật ký Logs
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold py-2 px-3 shadow-sm" id="bptt-tab" data-bs-toggle="tab" data-bs-target="#bpttContent" type="button" role="tab" onclick="loadBpttList()">
+                        <i class="fa-solid fa-notes-medical me-1"></i> Quản lý BPTT
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold py-2 px-3 shadow-sm" id="noithuchien-tab" data-bs-toggle="tab" data-bs-target="#noiThucHienContent" type="button" role="tab" onclick="loadNoiThucHienList()">
+                        <i class="fa-solid fa-house-medical me-1"></i> Nơi thực hiện
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="tab-content" id="adminTabsContent">
+            
+            <!-- TAB 1: QUẢN LÝ NGƯỜI DÙNG -->
+            <div class="tab-pane fade show active" id="usersContent" role="tabpanel">
+                <div class="card shadow-sm mb-4 border-0">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center flex-wrap gap-2 py-3">
+                        <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-users me-1"></i> Danh sách tài khoản người dùng</h5>
+                        <button class="btn btn-light btn-sm text-primary fw-bold" data-bs-toggle="modal" data-bs-target="#userModal" onclick="resetUserForm()">
+                            <i class="fa-solid fa-user-plus me-1"></i> Thêm tài khoản mới
+                        </button>
+                    </div>
+                    <div class="card-body p-2 p-md-3">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle">
+                                <thead class="table-dark text-center">
+                                    <tr>
+                                        <th>STT</th>
+                                        <th>Họ và tên</th>
+                                        <th>Tên đăng nhập</th>
+                                        <th>Quyền</th>
+                                        <th>Địa bàn</th>
+                                        <th>Ấp</th>
+                                        <th>Xã</th>
+                                        <th>Trạng thái</th>
+                                        <th>Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="userTableBody">
+                                    <tr><td colspan="9" class="text-center">Đang tải dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: QUẢN LÝ DỮ LIỆU CÁC BẢNG (TABLE 1 - 11) -->
+            <div class="tab-pane fade" id="dataContent" role="tabpanel">
+                <div class="card shadow-sm mb-4 border-0">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center flex-wrap gap-2 py-3">
+                        <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-table-list me-1"></i> Xem & Chỉnh sửa Dữ liệu</h5>
+                        <div class="d-flex align-items-center gap-2 w-100 w-md-auto">
+                            <label class="text-white fw-semibold mb-0 small text-nowrap">Chọn bảng:</label>
+                            <select id="selectManagedTable" class="form-select form-select-sm" onchange="loadTableDataAdmin()">
+                                <option value="table_1">1. Trẻ sinh ra</option>
+                                <option value="table_2">2. SL sơ sinh</option>
+                                <option value="table_3">3. Người chết</option>
+                                <option value="table_4">4. Người chuyển đến</option>
+                                <option value="table_5">5. Người chuyển đi</option>
+                                <option value="table_6">6. Thay đổi thông tin</option>
+                                <option value="table_7">7. Vợ chồng mới dùng BPTT</option>
+                                <option value="table_8">8. Vợ chồng thôi dùng BPTT</option>
+                                <option value="table_9">9. Thai sản</option>
+                                <option value="table_10">10. Sàng lọc trước sinh</option>
+                                <option value="table_11">11. Người cao tuổi khám SK</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body p-2 p-md-3">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped table-hover align-middle small">
+                                <thead class="table-secondary text-center" id="adminTableHeader"></thead>
+                                <tbody id="adminTableBody">
+                                    <tr><td class="text-center">Vui lòng chọn bảng dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: QUẢN LÝ ẤP -->
+            <div class="tab-pane fade" id="apContent" role="tabpanel">
+                <div class="card shadow-sm mb-4 border-0">
+                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center py-3">
+                        <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-map me-1"></i> Danh sách các ấp trong xã</h5>
+                        <button class="btn btn-light btn-sm text-info fw-bold" data-bs-toggle="modal" data-bs-target="#apModal">
+                            <i class="fa-solid fa-plus me-1"></i> Thêm ấp mới
+                        </button>
+                    </div>
+                    <div class="card-body p-2 p-md-3">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle">
+                                <thead class="table-secondary text-center">
+                                    <tr>
+                                        <th style="width: 70px;">STT</th>
+                                        <th>Tên ấp</th>
+                                        <th style="width: 150px;">Trạng thái</th>
+                                        <th style="width: 150px;">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="apTableBody">
+                                    <tr><td colspan="4" class="text-center">Đang tải dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: QUẢN LÝ BỆNH VIỆN -->
+            <div class="tab-pane fade" id="bvContent" role="tabpanel">
+                <div class="card shadow-sm mb-4 border-0">
+                    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center py-3">
+                        <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-hospital me-1"></i> Danh sách cơ sở y tế</h5>
+                        <button class="btn btn-dark btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#bvModal">
+                            <i class="fa-solid fa-plus me-1"></i> Thêm mới
+                        </button>
+                    </div>
+                    <div class="card-body p-2 p-md-3">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle">
+                                <thead class="table-secondary text-center">
+                                    <tr>
+                                        <th style="width: 70px;">STT</th>
+                                        <th>Tên bệnh viện</th>
+                                        <th>Địa chỉ</th>
+                                        <th style="width: 150px;">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bvTableBody">
+                                    <tr><td colspan="4" class="text-center">Đang tải dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: NHẬT KÝ HỆ THỐNG (LOGS) -->
+            <div class="tab-pane fade" id="logsContent" role="tabpanel">
+                <div class="card shadow-sm mb-4 border-0">
+                    <div class="card-header bg-dark text-white py-3">
+                        <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-clock-rotate-left me-1"></i> Nhật ký hoạt động hệ thống (Logs)</h5>
+                    </div>
+                    <div class="card-body p-2 p-md-3">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped table-hover align-middle small">
+                                <thead class="table-secondary text-center">
+                                    <tr>
+                                        <th style="width: 70px;">ID</th>
+                                        <th style="width: 150px;">Tài khoản</th>
+                                        <th style="width: 180px;">Hành động</th>
+                                        <th>Chi tiết đối tượng</th>
+                                        <th style="width: 180px;">Thời gian</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logsTableBody">
+                                    <tr><td colspan="5" class="text-center">Đang tải dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 6: QUẢN LÝ BPTT -->
+            <div class="tab-pane fade" id="bpttContent" role="tabpanel">
+                <div class="card shadow-sm mb-4 border-0">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
+                        <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-notes-medical me-1"></i> Danh mục Biện pháp tránh thai</h5>
+                        <button class="btn btn-light btn-sm text-primary fw-bold" data-bs-toggle="modal" data-bs-target="#bpttModal">
+                            <i class="fa-solid fa-plus me-1"></i> Thêm mới
+                        </button>
+                    </div>
+                    <div class="card-body p-2 p-md-3">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle">
+                                <thead class="table-secondary text-center">
+                                    <tr>
+                                        <th style="width: 70px;">STT</th>
+                                        <th style="width: 150px;">Mã BPTT</th>
+                                        <th>Tên Biện pháp tránh thai</th>
+                                        <th style="width: 180px;">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bpttTableBody">
+                                    <tr><td colspan="4" class="text-center">Đang tải dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 7: QUẢN LÝ NƠI THỰC HIỆN -->
+            <div class="tab-pane fade" id="noiThucHienContent" role="tabpanel">
+                <div class="card shadow-sm mb-4 border-0">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-3">
+                        <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-house-medical me-1"></i> Danh mục Nơi thực hiện</h5>
+                        <button class="btn btn-light btn-sm text-success fw-bold" data-bs-toggle="modal" data-bs-target="#noiThucHienModal">
+                            <i class="fa-solid fa-plus me-1"></i> Thêm mới
+                        </button>
+                    </div>
+                    <div class="card-body p-2 p-md-3">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle">
+                                <thead class="table-secondary text-center">
+                                    <tr>
+                                        <th style="width: 70px;">STT</th>
+                                        <th>Tên Nơi thực hiện</th>
+                                        <th style="width: 180px;">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="noiThucHienTableBody">
+                                    <tr><td colspan="3" class="text-center">Đang tải dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Các Modal giữ nguyên cấu trúc cũ -->
+    <!-- Modal Thêm / Sửa Người Dùng -->
+    <div class="modal fade" id="userModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="userForm" onsubmit="saveUser(event)">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="modalUserTitle">Thêm tài khoản mới</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="userId">
+                        <div class="mb-3">
+                            <label class="form-label">Họ và tên *</label>
+                            <input type="text" class="form-control" id="fullname" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tên đăng nhập *</label>
+                            <input type="text" class="form-control" id="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mật khẩu <span id="passNote"></span></label>
+                            <input type="password" class="form-control" id="password">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Quyền hạn *</label>
+                            <select class="form-select" id="role" required>
+                                <option value="admin">Admin</option>
+                                <option value="lãnh đạo">Lãnh đạo</option>
+                                <option value="cộng tác viên ấp">Cộng tác viên ấp</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Địa bàn</label>
+                            <input type="text" class="form-control" id="diabanh" placeholder="Ví dụ: Ấp Mỹ Nhơn hoặc Toàn xã">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ấp</label>
+                            <select class="form-select" id="ap">
+                                <option value="Tất cả">Tất cả</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Xã</label>
+                            <input type="text" class="form-control" id="xa" value="Lương Hòa">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary">Lưu lại</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Sửa Dữ Liệu Biểu Mẫu -->
+    <div class="modal fade" id="editDataModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <form id="editDataForm" onsubmit="saveRecordData(event)">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title"><i class="fa-solid fa-pen-to-square"></i> Chỉnh sửa thông tin</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="editRecordId">
+                        <div class="row" id="editDataFieldsContainer"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-success">Cập nhật thay đổi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Thêm Ấp Mới -->
+    <div class="modal fade" id="apModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form onsubmit="saveAp(event)">
+                    <div class="modal-header bg-info text-white">
+                        <h5 class="modal-title">Thêm ấp mới</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Tên ấp *</label>
+                            <input type="text" class="form-control" id="tenApInput" required placeholder="Nhập tên ấp...">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-info text-white">Thêm mới</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Thêm Bệnh Viện Mới -->
+    <div class="modal fade" id="bvModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form onsubmit="saveBenhVien(event)">
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title">Thêm cơ sở y tế mới</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Tên bệnh viện *</label>
+                            <input type="text" class="form-control" id="tenBvInput" required placeholder="Nhập tên bệnh viện...">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Địa chỉ</label>
+                            <input type="text" class="form-control" id="diaChiBvInput" placeholder="Nhập địa chỉ...">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-warning">Thêm mới</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Thêm BPTT Mới -->
+    <div class="modal fade" id="bpttModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form onsubmit="saveBptt(event)">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">Thêm Biện pháp tránh thai</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Mã BPTT *</label>
+                            <input type="text" class="form-control" id="maBpttInput" required placeholder="Nhập mã BPTT...">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tên Biện pháp tránh thai *</label>
+                            <input type="text" class="form-control" id="tenBpttInput" required placeholder="Nhập tên BPTT...">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary">Thêm mới</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Sửa BPTT -->
+    <div class="modal fade" id="editBpttModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form onsubmit="updateBptt(event)">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">Chỉnh sửa BPTT</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="editBpttId">
+                        <div class="mb-3">
+                            <label class="form-label">Mã BPTT *</label>
+                            <input type="text" class="form-control" id="editMaBpttInput" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tên Biện pháp tránh thai *</label>
+                            <input type="text" class="form-control" id="editTenBpttInput" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary">Cập nhật</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Thêm Nơi Thực Hiện Mới -->
+    <div class="modal fade" id="noiThucHienModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form onsubmit="saveNoiThucHien(event)">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">Thêm Nơi thực hiện mới</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Tên Nơi thực hiện *</label>
+                            <input type="text" class="form-control" id="tenNoiThucHienInput" required placeholder="Nhập tên nơi thực hiện...">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-success">Thêm mới</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Sửa Nơi Thực Hiện -->
+    <div class="modal fade" id="editNoiThucHienModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form onsubmit="updateNoiThucHien(event)">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">Chỉnh sửa Nơi thực hiện</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="editNoiThucHienId">
+                        <div class="mb-3">
+                            <label class="form-label">Tên Nơi thực hiện *</label>
+                            <input type="text" class="form-control" id="editTenNoiThucHienInput" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-success">Cập nhật</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>

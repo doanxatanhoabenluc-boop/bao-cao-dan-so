@@ -1,0 +1,15 @@
+{
+  "name": "population-management",
+  "version": "1.0.0",
+  "description": "Phần mềm quản lý dân số 11 bảng",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "pg": "^8.11.0"
+  }
+}

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phiếu Thu Tin Về Dân Số (P0/CTV) - Thông tư 01/2022/TT-BYT</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #525659; font-family: 'Times New Roman', Times, serif; }
+        
+        /* Cấu hình khổ giấy ngang cho trang báo cáo trên Web */
+        .report-page {
+            background: white;
+            width: 297mm;        
+            min-height: 210mm;   
+            margin: 20px auto;
+            padding: 15mm 15mm;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        
+        table { font-size: 11pt; border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #000 !important; padding: 4px 6px; vertical-align: middle; text-align: center; }
+        .table-header-group { background-color: #f2f2f2; font-weight: bold; }
+        .text-left { text-align: left !important; }
+        .text-right { text-align: right !important; }
+        
+        /* Cấu hình in ấn tự động nhận diện khổ ngang và ẩn nút điều khiển */
+        @media print {
+            @page {
+                size: A4 landscape; 
+                margin: 1cm;
+            }
+            body { background: none; }
+            .no-print { display: none !important; }
+            .report-page { margin: 0; box-shadow: none; width: 100%; padding: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Thanh công cụ lọc và điều khiển (Đã tối ưu Mobile) -->
+    <div class="container bg-dark text-white p-3 mb-3 rounded no-print shadow">
+        <div class="row align-items-center g-2">
+            <!-- Nút Quay lại -->
+            <div class="col-12 col-md-auto mb-1 mb-md-0">
+                <a href="index.html" class="btn btn-outline-light btn-sm w-100"><i class="fa-solid fa-arrow-left"></i> Quay lại</a>
+            </div>
+            
+            <!-- Tháng & Năm (Chia đôi màn hình mobile: col-6) -->
+            <div class="col-6 col-md-auto">
+                <label class="form-label mb-0 fw-bold small">Tháng:</label>
+                <select id="filterMonth" class="form-select form-select-sm" onchange="loadReportData()">
+                    <option value="1">Tháng 1</option><option value="2">Tháng 2</option><option value="3">Tháng 3</option>
+                    <option value="4">Tháng 4</option><option value="5">Tháng 5</option><option value="6">Tháng 6</option>
+                    <option value="7">Tháng 7</option><option value="8" selected>Tháng 8</option><option value="9">Tháng 9</option>
+                    <option value="10">Tháng 10</option><option value="11">Tháng 11</option><option value="12">Tháng 12</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-auto">
+                <label class="form-label mb-0 fw-bold small">Năm:</label>
+                <select id="filterYear" class="form-select form-select-sm" onchange="loadReportData()">
+                    <option value="2025">2025</option>
+                    <option value="2026" selected>2026</option>
+                </select>
+            </div>
+
+            <!-- Lọc theo Ấp -->
+            <div class="col-6 col-md-auto">
+                <label class="form-label mb-0 fw-bold small">Ấp:</label>
+                <select id="filterAp" class="form-select form-select-sm" onchange="onApChange()">
+                    <option value="">Toàn xã</option>
+                </select>
+            </div>
+            
+            <!-- Lọc theo Địa bàn (Tổ) -->
+            <div class="col-6 col-md-auto">
+                <label class="form-label mb-0 fw-bold small">Địa bàn:</label>
+                <select id="filterDiaBan" class="form-select form-select-sm" onchange="loadReportData()">
+                    <option value="">Tất cả địa bàn</option>
+                </select>
+            </div>
+
+            <!-- Các nút hành động (Tải Word, In/PDF) -->
+            <div class="col-12 col-md text-md-end mt-2 mt-md-0">
+                <button onclick="exportToWord()" class="btn btn-primary btn-sm fw-bold me-1 mb-1 mb-md-0"><i class="fa-solid fa-file-word"></i> Tải Word</button>
+                <button onclick="window.print()" class="btn btn-success btn-sm fw-bold mb-1 mb-md-0"><i class="fa-solid fa-print"></i> In / PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KHUNG TRANG BÁO CÁO CHUẨN MẪU WORD -->
+    <div class="report-page">
+        <!-- Header Phiếu -->
+        <div class="row mb-3">
+            <div class="col-7 text-start">
+                <p class="mb-0 fw-bold">Phiếu P0/CTV (tờ 1)</p>
+                <p class="mb-0 small"><i>(Ban hành kèm theo Thông tư số 01/2022/TT-BYT)</i>[cite: 10]</p>
+                <p class="mb-0 small">Thời điểm lập: Ngày 01 của tháng sau tháng báo cáo</p>
+            </div>
+            <div class="col-5 text-end small">
+                <p class="mb-0">Người báo cáo: <span id="lblReporterName">........................................</span></p>
+                <p class="mb-0">Nơi nhận báo cáo: ........................................</p>
+            </div>
+        </div>
+
+        <div class="text-center my-3">
+            <h4 class="fw-bold text-uppercase">PHIẾU THU TIN VỀ DÂN SỐ THÁNG <span id="txtMonth">...</span> NĂM <span id="txtYear">.....</span></h4>
+            <div class="small mt-1">
+                Địa bàn: <span id="txtDiaBan">..........................</span> &nbsp;&nbsp;&nbsp; 
+                Thôn: <span id="txtAp">..............................</span> &nbsp;&nbsp;&nbsp; 
+                Xã: <span id="txtXa">Lương Hòa</span>[cite: 10]
+            </div>
+        </div>
+
+      <!-- 1. Danh sách trẻ sinh ra -->
+        <div class="mb-4">
+            <p class="fw-bold mb-1">1. Danh sách trẻ sinh ra</p>
+            <table>
+                <tr class="table-header-group">
+                    <th rowspan="2" style="width: 40px;">Hộ số</th>
+                    <th rowspan="2">Họ và tên con</th>
+                    <th colspan="2">Ngày sinh của con</th>
+                    <th rowspan="2">Dân tộc</th>
+                    <th rowspan="2">Họ và tên mẹ</th>
+                    <th rowspan="2">Số thẻ BHYT của mẹ</th>
+                    <th rowspan="2" style="width: 80px;">Ngày sinh của mẹ</th>
+                    <th rowspan="2">Nơi đẻ</th>
+                    <th rowspan="2" style="width: 50px;">Là con thứ mấy</th>
+                </tr>
+                <tr class="table-header-group">
+                    <th style="width: 80px;">Nam</th>
+                    <th style="width: 80px;">Nữ</th>
+                </tr>
+                <tbody id="tbl1_body">
+                    <tr><td colspan="10" class="text-muted fst-italic">Không có dữ liệu trong tháng</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 2. Danh sách SL sơ sinh -->
+        <div class="mb-4">
+            <p class="fw-bold mb-1">2. Danh sách SL sơ sinh (Sàng lọc sơ sinh)</p>
+            <table>
+                <tr class="table-header-group">
+                    <th rowspan="2" style="width: 40px;">Số hộ</th>
+                    <th rowspan="2">Họ và tên trẻ</th>
+                    <th colspan="5">Kết quả tầm soát, sàng lọc</th>
+                    <th rowspan="2">Ghi chú</th>
+                </tr>
+                <tr class="table-header-group">
+                    <th style="font-size: 9pt;">Suy giáp trạng</th>
+                    <th style="font-size: 9pt;">Thiếu men G6PD</th>
+                    <th style="font-size: 9pt;">Tăng sản thượng thận</th>
+                    <th style="font-size: 9pt;">Khiếm thính</th>
+                    <th style="font-size: 9pt;">Tim bẩm sinh</th>
+                </tr>
+                <tbody id="tbl2_body">
+                    <tr><td colspan="8" class="text-muted fst-italic">Không có dữ liệu trong tháng</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 3. Danh sách người chết -->
+        <div class="mb-4">
+            <p class="fw-bold mb-1">3. Danh sách người chết</p>
+            <table>
+                <tr class="table-header-group">
+                    <th style="width: 40px;">Hộ số</th>
+                    <th>Họ và tên người chết</th>
+                    <th>Số thẻ BHYT</th>
+                    <th>Quan hệ với chủ hộ</th>
+                    <th style="width: 60px;">Giới tính</th>
+                    <th style="width: 85px;">Ngày sinh</th>
+                    <th style="width: 85px;">Ngày chết</th>
+                    <th>Ghi chú</th>
+                </tr>
+                <tbody id="tbl3_body">
+                    <tr><td colspan="8" class="text-muted fst-italic">Không có dữ liệu trong tháng</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 4. Danh sách người chuyển đến -->
+        <div class="mb-4">
+            <p class="fw-bold mb-1">4. Danh sách người chuyển đến từ xã khác</p>
+            <table>
+                <tr class="table-header-group">
+                    <th style="width: 40px;">Hộ số</th>
+                    <th>Họ và tên người đến</th>
+                    <th>Số thẻ BHYT</th>
+                    <th>Quan hệ chủ hộ</th>
+                    <th style="width: 50px;">Giới tính</th>
+                    <th>Ngày sinh</th>
+                    <th>Dân tộc</th>
+                    <th>Trình độ học vấn</th>
+                    <th>Tình trạng hôn nhân</th>
+                    <th>Ngày đến</th>
+                    <th>Nơi đi</th>
+                </tr>
+                <tbody id="tbl4_body">
+                    <tr><td colspan="11" class="text-muted fst-italic">Không có dữ liệu trong tháng</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 5. Danh sách người chuyển đi -->
+        <div class="mb-4">
+            <p class="fw-bold mb-1">5. Danh sách người chuyển đi khỏi xã</p>
+            <table>
+                <tr class="table-header-group">
+                    <th style="width: 40px;">Hộ số</th>
+                    <th>Họ và tên người đi</th>
+                    <th>Số thẻ BHYT</th>
+                    <th>Quan hệ chủ hộ</th>
+                    <th style="width: 50px;">Giới tính</th>
+                    <th>Ngày sinh</th>
+                    <th>Ngày đi</th>
+                    <th>Nơi đến</th>
+                    <th>Ghi chú</th>
+                </tr>
+                <tbody id="tbl5_body">
+                    <tr><td colspan="9" class="text-muted fst-italic">Không có dữ liệu trong tháng</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 6. Danh sách thay đổi thông tin -->
+        <div class="mb-4">
+            <p class="fw-bold mb-1">6. Danh sách người thay đổi thông tin cơ bản</p>
+            <table>
+                <tr class="table-header-group">
+                    <th style="width: 40px;">Hộ số</th>
+                    <th>Họ và tên</th>
+                    <th>Số thẻ BHYT</th>
+                    <th style="width: 50px;">Giới tính</th>
+                    <th>Ngày sinh</th>
+                    <th>Thông tin cũ</th>
+                    <th>Thông tin mới</th>
+                    <th>Ghi chú</th>
+                </tr>
+                <tbody id="tbl6_body">
+                    <tr><td colspan="8" class="text-muted fst-italic">Không có dữ liệu trong tháng</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 7 & 8. BPTT -->
+        <div class="row mb-4">
+            <div class="col-6">
+                <p class="fw-bold mb-1 small">7. Vợ chồng mới sử dụng BPTT</p>
+                <table class="small">
+                    <tr class="table-header-group">
+                        <th style="width: 35px;">Hộ số</th>
+                        <th>Họ tên vợ (15-49t)</th>
+                        <th>Số thẻ BHYT</th>
+                        <th>Ngày sinh</th>
+                        <th>Ngày dùng</th>
+                        <th>BPTT mới</th>
+                    </tr>
+                    <tbody id="tbl7_body">
+                        <tr><td colspan="6" class="text-muted fst-italic">Trống</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-6">
+                <p class="fw-bold mb-1 small">8. Vợ chồng thôi sử dụng BPTT</p>
+                <table class="small">
+                    <tr class="table-header-group">
+                        <th style="width: 35px;">Hộ số</th>
+                        <th>Họ tên vợ (15-49t)</th>
+                        <th>Số thẻ BHYT</th>
+                        <th>Ngày sinh</th>
+                        <th>Ngày thôi</th>
+                        <th>BPTT thôi</th>
+                    </tr>
+                    <tbody id="tbl8_body">
+                        <tr><td colspan="6" class="text-muted fst-italic">Trống</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>  
+
+        <!-- 9. Thai sản -->
+        <div class="mb-4">
+            <p class="fw-bold mb-1">9. Danh sách phụ nữ có thông tin mới về sự kiện thai sản</p>
+            <table>
+                <tr class="table-header-group">
+                    <th style="width: 40px;">Hộ số</th>
+                    <th>Họ và tên phụ nữ</th>
+                    <th>Số thẻ BHYT</th>
+                    <th>Ngày sinh</th>
+                    <th>Ngày sự kiện</th>
+                    <th>Sự kiện thai sản</th>
+                    <th>Lần mang thai</th>
+                </tr>
+                <tbody id="tbl9_body">
+                    <tr><td colspan="7" class="text-muted fst-italic">Không có dữ liệu trong tháng</td></tr>
+                </tbody>
+            </table>
+            <div class="mt-2 small border p-2 bg-light">
+                <div>- Số phụ nữ mang thai đến cuối tháng (T): <span id="sumMangThai" class="fw-bold">0</span></div>
+                <div>- Số phụ nữ phá thai/sảy thai trong tháng (N): <span id="sumSayPhaThai" class="fw-bold">0</span></div>
+            </div>
+        </div>
+
+        <!-- 10. Sàng lọc trước sinh -->
+        <div class="mb-4">
+            <p class="fw-bold mb-1">10. Danh sách sàng lọc trước sinh</p>
+            <table>
+                <tr class="table-header-group">
+                    <th rowspan="2" style="width: 40px;">Số hộ</th>
+                    <th rowspan="2">Số thẻ BHYT</th>
+                    <th rowspan="2">Họ và tên</th>
+                    <th rowspan="2">Nơi cư trú</th>
+                    <th rowspan="2">Ngày sinh</th>
+                    <th rowspan="2">Tuần thai</th>
+                    <th rowspan="2">Ngày thực hiện</th>
+                    <th colspan="4">Kết quả tầm soát, sàng lọc</th>
+                    <th rowspan="2">Ghi chú</th>
+                </tr>
+                <tr class="table-header-group">
+                    <th style="font-size: 8.5pt;">Edward</th>
+                    <th style="font-size: 8.5pt;">Down</th>
+                    <th style="font-size: 8.5pt;">Patau</th>
+                    <th style="font-size: 8.5pt;">Thalassemia</th>
+                </tr>
+                <tbody id="tbl10_body">
+                    <tr><td colspan="12" class="text-muted fst-italic">Không có dữ liệu trong tháng</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 11. Người cao tuổi khám SK -->
+        <div class="mb-4">
+            <p class="fw-bold mb-1">11. Danh sách người cao tuổi (từ 60 tuổi trở lên) được khám sức khỏe định kỳ</p>
+            <table>
+                <tr class="table-header-group">
+                    <th style="width: 40px;">Hộ số</th>
+                    <th>Mã số đối tượng</th>
+                    <th>Họ tên người NCT</th>
+                    <th style="width: 70px;">Năm sinh</th>
+                    <th style="width: 100px;">Ngày khám</th>
+                    <th>Ghi chú / Kết quả khám</th>
+                </tr>
+                <tbody id="tbl11_body">
+                    <tr><td colspan="6" class="text-muted fst-italic">Không có dữ liệu trong tháng</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Chữ ký cuối trang -->
+        <div class="row mt-5">
+            <div class="col-6 text-center">
+                <p class="fw-bold mb-1">Cán bộ dân số xã thẩm định</p>
+                <p class="small fst-italic">(Ký, ghi rõ họ và tên)</p>
+                <div style="height: 70px;"></div>
+                <p class="fw-bold mb-0" id="signAdminName">..............................................</p>
+            </div>
+            <div class="col-6 text-center">
+                <p class="small mb-1"><i>Lương Hòa, ngày ........ tháng ........ năm 20......</i>[cite: 10]</p>
+                <p class="fw-bold mb-1">Cộng tác viên dân số lập phiếu</p>
+                <p class="small fst-italic">(Ký, ghi rõ họ và tên)</p>
+                <div style="height: 70px;"></div>
+                <p class="fw-bold mb-0" id="signCtvName">..............................................</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="baocao.js"></script>
+</body>
+</html>

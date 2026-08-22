@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Báo cáo Toàn xã</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <style>
+        body { background-color: #f8f9fa; padding: 15px; }
+        .table thead th { background-color: #343a40; color: white; vertical-align: middle; text-align: center; }
+        .filter-box { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid mt-2">
+    
+    <!-- Tiêu đề & Nút Về trang chủ -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
+        <a href="index.html" class="btn btn-outline-secondary btn-sm shadow-sm order-2 order-md-1">
+            <i class="fa-solid fa-house me-1"></i> Về trang chủ
+        </a>
+        <h3 class="text-primary fw-bold text-center m-0 order-1 order-md-2">BÁO CÁO DÂN SỐ TOÀN XÃ</h3>
+        <div class="d-none d-md-block order-3" style="width: 100px;"></div> <!-- Giữ cân bằng layout -->
+    </div>
+
+    <!-- Thanh lọc chung -->
+    <div class="filter-box shadow-sm">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-3">
+                <label class="form-label fw-bold small">Chọn Loại Báo Cáo:</label>
+                <select id="filterLoaiBaoCao" class="form-select form-select-sm" onchange="doiLoaiBaoCao()">
+                    <option value="sinh">1. Sổ Sinh (Trẻ sinh ra)</option>
+                    <option value="tu">3. Sổ Tử (Tử vong)</option>
+                    <option value="di_den">6. Sổ Đi Đến (Nhân khẩu đi/đến)</option>
+                    <option value="bptt">7. Sổ Biện Pháp Tránh Thai (BPTT)</option>
+                </select>
+            </div>
+            <div class="col-12 col-sm-6 col-md-3">
+                <label class="form-label fw-bold small">Tháng:</label>
+                <select id="filterThang" class="form-select form-select-sm">
+                    <option value="">Tất cả các tháng</option>
+                    <option value="1">Tháng 1</option>
+                    <option value="2">Tháng 2</option>
+                    <option value="3">Tháng 3</option>
+                    <option value="4">Tháng 4</option>
+                    <option value="5">Tháng 5</option>
+                    <option value="6">Tháng 6</option>
+                    <option value="7">Tháng 7</option>
+                    <option value="8" selected>Tháng 8</option>
+                    <option value="9">Tháng 9</option>
+                    <option value="10">Tháng 10</option>
+                    <option value="11">Tháng 11</option>
+                    <option value="12">Tháng 12</option>
+                </select>
+            </div>
+            <div class="col-12 col-sm-6 col-md-2">
+                <label class="form-label fw-bold small">Năm:</label>
+                <input type="number" id="filterNam" class="form-control form-control-sm" value="2026">
+            </div>
+            <div class="col-12 col-md-4 text-md-end text-center">
+                <button class="btn btn-primary btn-sm px-3 mb-1 mb-sm-0" onclick="loadData()"><i class="fa-solid fa-eye me-1"></i> Xem Báo Cáo</button>
+                <button class="btn btn-success btn-sm px-3 mb-1 mb-sm-0" onclick="xuatExcel()"><i class="fa-solid fa-file-excel me-1"></i> Xuất Excel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tiêu đề động trên web -->
+    <div id="dynamicWebTitle" class="text-center my-3"></div>
+
+    <!-- Bảng Sổ Sinh -->
+    <div id="wrapper_sinh" class="table-responsive shadow-sm bg-white p-2 rounded">
+        <table class="table table-bordered table-striped align-middle small" id="tbl_sinh">
+            <thead class="table-light text-center">
+                <tr>
+                    <th rowspan="2">STT</th>
+                    <th rowspan="2">Số hộ</th>
+                    <th rowspan="2">Tên CTV</th>
+                    <th colspan="2">THÔNG TIN NGƯỜI MẸ</th>
+                    <th colspan="5">THÔNG TIN TRẺ MỚI SINH</th>
+                    <th rowspan="2">Ghi chú</th>
+                </tr>
+                <tr>
+                    <th>Họ và Tên mẹ</th>
+                    <th>Năm sinh</th>
+                    <th>Họ và tên đứa con</th>
+                    <th>Giới tính</th>
+                    <th>Ngày sinh</th>
+                    <th>Con lần...</th>
+                    <th>Nơi sinh</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Bảng Sổ Tử (Ẩn mặc định) -->
+    <div id="wrapper_tu" class="table-responsive shadow-sm bg-white p-2 rounded" style="display: none;">
+        <table class="table table-bordered table-striped align-middle small" id="tbl_tu">
+            <thead class="table-light text-center">
+                <tr>
+                    <th>STT</th>
+                    <th>Số hộ</th>
+                    <th>Tên CTV</th>
+                    <th>Họ và tên người chết</th>
+                    <th>Năm sinh</th>
+                    <th>Giới tính</th>
+                    <th>Tình trạng hôn nhân</th>
+                    <th>Ngày chết</th>
+                    <th>Nguyên nhân chết</th>
+                    <th>Ghi chú</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Bảng Sổ Đi Đến (Ẩn mặc định) -->
+    <div id="wrapper_di_den" class="table-responsive shadow-sm bg-white p-2 rounded" style="display: none;">
+        <table class="table table-bordered table-striped align-middle small" id="tbl_di_den">
+            <thead class="table-light text-center">
+                <tr>
+                    <th rowspan="2">STT</th>
+                    <th rowspan="2">Số hộ</th>
+                    <th rowspan="2">Địa bàn</th>
+                    <th rowspan="2">Họ và Tên</th>
+                    <th rowspan="2">Ngày sinh</th>
+                    <th rowspan="2">Giới tính</th>
+                    <th rowspan="2">Tình trạng hôn nhân</th>
+                    <th colspan="2">Đi</th>
+                    <th colspan="2">Đến</th>
+                    <th rowspan="2">Lý do</th>
+                </tr>
+                <tr>
+                    <th>Ngày đi</th>
+                    <th>Đi đâu</th>
+                    <th>Ngày đến</th>
+                    <th>Đâu đến</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Bảng Sổ Biện Pháp Tránh Thai (Ẩn mặc định) -->
+    <div id="wrapper_bptt" class="table-responsive shadow-sm bg-white p-2 rounded" style="display: none;">
+        <table class="table table-bordered table-striped align-middle small" id="tbl_bptt">
+            <thead class="table-light text-center">
+                <tr>
+                    <th rowspan="2">STT</th>
+                    <th rowspan="2">Số hộ</th>
+                    <th rowspan="2">Tên CTV</th>
+                    <th rowspan="2">Họ và Tên nữ 15-49 có chồng</th>
+                    <th rowspan="2">Năm sinh</th>
+                    <th rowspan="2">Số con hiện có</th>
+                    <th colspan="3">Mới sử dụng (Bảng 7)</th>
+                    <th colspan="3">Thôi sử dụng (Bảng 8)</th>
+                    <th rowspan="2">Ghi chú</th>
+                </tr>
+                <tr>
+                    <th>Tên biện pháp</th>
+                    <th>Ngày sử dụng</th>
+                    <th>Nơi thực hiện</th>
+                    <th>Tên biện pháp</th>
+                    <th>Ngày thôi sử dụng</th>
+                    <th>Nơi thực hiện</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    
+</div>
+<script src="baocao_toanxa.js"></script>
+</body>
+</html>
