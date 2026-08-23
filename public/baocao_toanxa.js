@@ -23,6 +23,7 @@ function doiLoaiBaoCao() {
     document.getElementById('wrapper_tu').style.display = (loai === 'tu') ? 'block' : 'none';
     document.getElementById('wrapper_di_den').style.display = (loai === 'di_den') ? 'block' : 'none';
     document.getElementById('wrapper_bptt').style.display = (loai === 'bptt') ? 'block' : 'none';
+    document.getElementById('wrapper_sang_loc_truoc_sinh').style.display = (loai === 'sang_loc_truoc_sinh') ? 'block' : 'none';
     loadData();
 }
 
@@ -50,6 +51,11 @@ async function loadData() {
         tableId = '#tbl_bptt';
         colSpanNum = 13;
         tenBaoCao = 'SỔ THEO DÕI BIỆN PHÁP TRÁNH THAI';
+    } else if (loai === 'sang_loc_truoc_sinh') {
+        apiEndpoints = ['/api/data/table_10'];
+        tableId = '#tbl_sang_loc_truoc_sinh';
+        colSpanNum = 15;
+        tenBaoCao = 'SỔ SÀNG LỌC TRƯỚC SINH';
     } else {
         apiEndpoints = ['/api/data/table_1'];
     }
@@ -187,7 +193,7 @@ async function loadData() {
             return;
         }
 
-        // Xử lý các bảng khác (sinh, tử, đi đến)
+        // Xử lý các bảng khác (sinh, tử, đi đến, sàng lọc trước sinh)
         let combinedData = [];
         for (let endpoint of apiEndpoints) {
             try {
@@ -247,7 +253,6 @@ async function loadData() {
                 let tenAp = item.ap || '';
                 let apDisplay = tenAp ? "Ấp " + tenAp.replace(/^ấp\s+/i, '').trim() : "";
 
-                // Lấy đúng các trường dữ liệu chuẩn từ table_3
                 let hoTen = item.ho_ten || '';
                 let ngaySinh = item.ngay_sinh || '';
                 let gioiTinh = item.gioi_tinh || '';
@@ -290,6 +295,49 @@ async function loadData() {
                     <td>${dauDen}</td>
                     <td>${item.ly_do || item.ghi_chu || ''}</td>
                 </tr>`;
+            } else if (loai === 'sang_loc_truoc_sinh') {
+                let rawCTV = item.nguoi_nhap || '';
+                let tenCTV = rawCTV.replace(/\s*\(.*?\)\s*/g, '').trim();
+                let tenAp = item.ap || '';
+                let apDisplay = tenAp ? "Ấp " + tenAp.replace(/^ấp\s+/i, '').trim() : "";
+                
+                let soHo = item.so_ho || '';
+                let maBhyt = item.ma_the_bhyt || '';
+                let hoTen = item.ho_ten || '';
+                let noiCuTru = item.noi_cu_tru || '';
+                let ngayKinhCuoi = formatDate(item.ngay_thang_mang_thai);
+                let noiThucHien = item.ghi_chu || '';
+
+                // Dòng 1: Tuần 12
+                row += `<tr>
+                    <td rowspan="2">${index + 1}</td>
+                    <td rowspan="2">
+                        <div class="fw-bold">${tenCTV}</div>
+                        <div class="text-muted small">${apDisplay}</div>
+                    </td>
+                    <td rowspan="2">${soHo}</td>
+                    <td rowspan="2">${maBhyt}</td>
+                    <td rowspan="2" class="fw-bold text-start">${hoTen}</td>
+                    <td rowspan="2" class="text-start">${noiCuTru}</td>
+                    <td rowspan="2">${ngayKinhCuoi}</td>
+                    <td>12 tuần</td>
+                    <td>${formatDate(item.mang_thai_tuan_12)}</td>
+                    <td>${item.hoi_chung_edward_12 || item.hoi_chung_edward || ''}</td>
+                    <td>${item.hoi_chung_down_12 || item.hoi_chung_down || ''}</td>
+                    <td>${item.hoi_chung_patau_12 || item.hoi_chung_patau || ''}</td>
+                    <td>${item.benh_thalassemia_12 || item.benh_thalassemia || ''}</td>
+                    <td rowspan="2">${noiThucHien}</td>
+                </tr>`;
+
+                // Dòng 2: Tuần 21
+                row += `<tr>
+                    <td>21 tuần</td>
+                    <td>${formatDate(item.mang_thai_tuan_21)}</td>
+                    <td>${item.hoi_chung_edward_21 || ''}</td>
+                    <td>${item.hoi_chung_down_21 || ''}</td>
+                    <td>${item.hoi_chung_patau_21 || ''}</td>
+                    <td>${item.benh_thalassemia_21 || ''}</td>
+                </tr>`;
             }
             tbody.innerHTML += row;
         });
@@ -298,6 +346,7 @@ async function loadData() {
         tbody.innerHTML = `<tr><td colspan='${colSpanNum}' class='text-center text-danger'>Lỗi kết nối tới Server!</td></tr>`;
     }
 }
+
 function xuatExcel() {
     const loai = document.getElementById('filterLoaiBaoCao').value;
     const thang = document.getElementById('filterThang').value;
@@ -315,12 +364,16 @@ function xuatExcel() {
         tableId = 'tbl_di_den';
         tenFile = 'Bao_Cao_Di_Den';
         tenTieuDe = 'PHẦN THEO DÕI ĐI ĐẾN';
-    }
-    else if (loai === 'bptt') {
+    } else if (loai === 'bptt') {
         tableId = 'tbl_bptt';
         tenFile = 'Bao_Cao_Bien_Phap_Tranh_Thai';
         tenTieuDe = 'SỔ THEO DÕI BIỆN PHÁP TRÁNH THAI';
+    } else if (loai === 'sang_loc_truoc_sinh') {
+        tableId = 'tbl_sang_loc_truoc_sinh';
+        tenFile = 'Bao_Cao_Sang_Loc_Truoc_Sinh';
+        tenTieuDe = 'SỔ SÀNG LỌC TRƯỚC SINH';
     }
+    
     const table = document.getElementById(tableId);
     const ws = XLSX.utils.table_to_sheet(table);
     

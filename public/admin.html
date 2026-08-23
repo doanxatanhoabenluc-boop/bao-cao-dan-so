@@ -60,7 +60,7 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link fw-bold py-2 px-3 shadow-sm" id="data-tab" data-bs-toggle="tab" data-bs-target="#dataContent" type="button" role="tab" onclick="loadTableDataAdmin()">
+                    <button class="nav-link fw-bold py-2 px-3 shadow-sm" id="data-tab" data-bs-toggle="tab" data-bs-target="#dataContent" type="button" role="tab" onclick="loadTableDataAdmin(1)">
                         <i class="fa-solid fa-database me-1"></i> 11 Biểu mẫu
                     </button>
                 </li>
@@ -135,7 +135,7 @@
                         <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-table-list me-1"></i> Xem & Chỉnh sửa Dữ liệu</h5>
                         <div class="d-flex align-items-center gap-2 w-100 w-md-auto">
                             <label class="text-white fw-semibold mb-0 small text-nowrap">Chọn bảng:</label>
-                            <select id="selectManagedTable" class="form-select form-select-sm" onchange="loadTableDataAdmin()">
+                            <select id="selectManagedTable" class="form-select form-select-sm" onchange="loadTableDataAdmin(1)">
                                 <option value="table_1">1. Trẻ sinh ra</option>
                                 <option value="table_2">2. SL sơ sinh</option>
                                 <option value="table_3">3. Người chết</option>
@@ -151,14 +151,30 @@
                         </div>
                     </div>
                     <div class="card-body p-2 p-md-3">
+                        <!-- Thanh tìm kiếm nhanh (Đã tích hợp oninput để tự động lọc) -->
+                        <div class="row mb-3">
+                            <div class="col-md-6 col-lg-4">
+                                <div class="input-group input-group-sm">
+                                    <input type="text" id="adminSearchInput" class="form-control" placeholder="Tìm kiếm (họ tên, số hộ, thẻ BHYT)..." oninput="loadTableDataAdmin(1)">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="loadTableDataAdmin(1)">
+                                        <i class="fa-solid fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bảng hiển thị dữ liệu -->
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped table-hover align-middle small">
-                                <thead class="table-secondary text-center" id="adminTableHeader"></thead>
+                                <thead class="table-secondary text-center sticky-top" id="adminTableHeader"></thead>
                                 <tbody id="adminTableBody">
-                                    <tr><td class="text-center">Vui lòng chọn bảng dữ liệu...</td></tr>
+                                    <tr><td class="text-center py-3">Vui lòng chọn bảng dữ liệu...</td></tr>
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- Khu vực phân trang tự động (Căn giữa chuẩn Bootstrap) -->
+                        <div id="adminPaginationContainer" class="d-flex justify-content-center mt-3"></div>
                     </div>
                 </div>
             </div>
@@ -308,7 +324,7 @@
         </div>
     </div>
 
-    <!-- Các Modal giữ nguyên cấu trúc cũ -->
+    <!-- Các Modal -->
     <!-- Modal Thêm / Sửa Người Dùng -->
     <div class="modal fade" id="userModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">

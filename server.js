@@ -25,7 +25,20 @@ function getVietnamTimestamp() {
     return new Date().toLocaleString("vi-VN");
 }
 
-// Tự động khởi tạo CSDL và cập nhật các bảng, cột thiếu
+// Hàm ghi nhật ký tự động chuẩn xác kèm thông tin chi tiết
+async function logAction(user, action, target_id = null, target_name = null) {
+    try {
+        const userInfo = user ? `${user.fullname} (${user.username})` : 'Hệ thống';
+        await pool.query(
+            `INSERT INTO logs (user_id, username, action, target_id, target_name, created_at) VALUES ($1, $2, $3, $4, $5, $6)`,
+            [user ? user.id : null, userInfo, action, target_id, target_name, getVietnamTimestamp()]
+        );
+    } catch (err) {
+        console.error('Lỗi ghi log:', err);
+    }
+}
+
+// Tự động khởi tạo CSDL và cập nhật đầy đủ các bảng, cột như ban đầu của bạn
 async function initDatabase() {
     try {
         await pool.query(`
@@ -100,9 +113,9 @@ async function initDatabase() {
             ALTER TABLE table_8 DROP COLUMN IF EXISTS ho_ten;
             ALTER TABLE table_8 DROP COLUMN IF EXISTS nam_sinh;
             ALTER TABLE table_8 DROP COLUMN IF EXISTS bptt_moi;
-             ALTER TABLE table_8 DROP COLUMN IF EXISTS bptt_thoi_su_dung;
+            ALTER TABLE table_8 DROP COLUMN IF EXISTS bptt_thoi_su_dung;
 
--- Dọn dẹp triệt để các biến thể cột mã đối tượng bị thừa ở bảng 11
+            -- Dọn dẹp triệt để các biến thể cột mã đối tượng bị thừa ở bảng 11
             ALTER TABLE table_11 DROP COLUMN IF EXISTS ma_doi_tuong;
             ALTER TABLE table_11 DROP COLUMN IF EXISTS ma_so_doi_tuong;
 
@@ -122,16 +135,42 @@ async function initDatabase() {
             ALTER TABLE table_7 ADD COLUMN IF NOT EXISTS noi_thuc_hien TEXT;
 
            -- Bảng 8: Khai báo đầy đủ các cột khớp với giao diện form
-            ALTER TABLE table_8 DROP COLUMN IF EXISTS bptt; -- Xóa cột tên cũ nếu lỡ tạo
+            ALTER TABLE table_8 DROP COLUMN IF EXISTS bptt; 
             ALTER TABLE table_8 ADD COLUMN IF NOT EXISTS ho_so TEXT;
             ALTER TABLE table_8 ADD COLUMN IF NOT EXISTS ho_ten_vo TEXT;
             ALTER TABLE table_8 ADD COLUMN IF NOT EXISTS so_the_bhyt TEXT;
             ALTER TABLE table_8 ADD COLUMN IF NOT EXISTS ngay_sinh TEXT;
             ALTER TABLE table_8 ADD COLUMN IF NOT EXISTS ngay_thoi_su_dung TEXT;
-            ALTER TABLE table_8 ADD COLUMN IF NOT EXISTS bptt_thoi TEXT; -- Đổi thành bptt_thoi_su_dung cho khớp app.js
+            ALTER TABLE table_8 ADD COLUMN IF NOT EXISTS bptt_thoi TEXT; 
             ALTER TABLE table_8 ADD COLUMN IF NOT EXISTS noi_thuc_hien TEXT;
 
-            -- Bảng 11: Khám sức khỏe / Đối tượng khác (Đã chuẩn hóa các cột theo yêu cầu)
+            -- Bảng 10: Sàng lọc trước sinh (Tách riêng các cột kết quả cho Tuần 12 và Tuần 21)
+            ALTER TABLE table_10 DROP COLUMN IF EXISTS ket_qua;
+            ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS so_ho TEXT;
+            ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS ma_the_bhyt TEXT;
+            ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS ho_ten TEXT;
+            ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS noi_cu_tru TEXT;
+            ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS ngay_sinh TEXT;
+            ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS ngay_thang_mang_thai TEXT;
+            ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS mang_thai_tuan_12 TEXT;
+            ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS mang_thai_tuan_21 TEXT;
+            
+            -- Kết quả tuần 12
+            ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS hoi_chung_down_12 TEXT;
+            ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS hoi_chung_edward_12 TEXT;
+            ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS hoi_chung_patau_12 TEXT;
+            ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS benh_thalassemia_12 TEXT;
+            
+            -- Kết quả tuần 21
+            ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS hoi_chung_down_21 TEXT;
+            ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS hoi_chung_edward_21 TEXT;
+            ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS hoi_chung_patau_21 TEXT;
+            ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS benh_thalassemia_21 TEXT;
+            
+            ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS ghi_chu TEXT;
+
+
+            -- Bảng 11: Khám sức khỏe / Đối tượng khác
             ALTER TABLE table_11 ADD COLUMN IF NOT EXISTS ho_so TEXT;
             ALTER TABLE table_11 ADD COLUMN IF NOT EXISTS ma_so_doi_tuong TEXT;
             ALTER TABLE table_11 ADD COLUMN IF NOT EXISTS ho_ten TEXT;
@@ -205,7 +244,7 @@ async function initDatabase() {
 }
 initDatabase();
 
-// ==================== API XÁC THỰC & NGƯỜI DÙNG ====================
+// ==================== API XÁC THỰC & NGƯỜI DÙNG (CÓ LOG ĐĂNG NHẬP/ĐĂNG XUẤT) ====================
 app.get("/api/public/users-list", async (req, res) => {
     try {
         const result = await pool.query("SELECT username, fullname FROM users WHERE active = 1 ORDER BY fullname ASC");
@@ -231,6 +270,10 @@ app.post("/api/login", async (req, res) => {
             ap: user.ap,
             xa: user.xa
         };
+
+        // Ghi log đăng nhập
+        await logAction(req.session.user, `Đăng nhập vào hệ thống thành công`, user.id, user.fullname);
+
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
@@ -242,7 +285,11 @@ app.get("/api/me", (req, res) => {
     res.json(req.session.user);
 });
 
-app.post("/api/logout", (req, res) => {
+app.post("/api/logout", async (req, res) => {
+    if (req.session.user) {
+        // Ghi log đăng xuất
+        await logAction(req.session.user, `Đăng xuất khỏi hệ thống`, req.session.user.id, req.session.user.fullname);
+    }
     req.session.destroy(() => res.json({ success: true }));
 });
 
@@ -257,7 +304,6 @@ app.get("/api/danh-sach-ap", async (req, res) => {
     }
 });
 
-// API Lấy danh sách bệnh viện
 app.get("/api/danh-sach-benh-vien", async (req, res) => {
     try {
         const result = await pool.query("SELECT * FROM danh_sach_benh_vien WHERE trang_thai = 1 ORDER BY id ASC");
@@ -267,7 +313,6 @@ app.get("/api/danh-sach-benh-vien", async (req, res) => {
     }
 });
 
-// API Lấy danh sách Biện pháp tránh thai (BPTT) kèm mã ký hiệu
 app.get("/api/danh-sach-bptt", async (req, res) => {
     try {
         const result = await pool.query("SELECT id, ma_bptt, ten_bptt FROM danh_sach_bptt WHERE trang_thai = 1 ORDER BY id ASC");
@@ -277,7 +322,6 @@ app.get("/api/danh-sach-bptt", async (req, res) => {
     }
 });
 
-// API Lấy danh sách Nơi thực hiện
 app.get("/api/danh-sach-noi-thuc-hien", async (req, res) => {
     try {
         const result = await pool.query("SELECT id, ten_noi_thuc_hien FROM danh_sach_noi_thuc_hien WHERE trang_thai = 1 ORDER BY id ASC");
@@ -287,7 +331,6 @@ app.get("/api/danh-sach-noi-thuc-hien", async (req, res) => {
     }
 });
 
-// API Thêm bệnh viện mới (dành cho Admin quản lý)
 app.post("/api/admin/danh-sach-benh-vien", async (req, res) => {
     if (!req.session.user || req.session.user.role !== 'admin') {
         return res.status(403).json({ success: false, message: "Không có quyền truy cập" });
@@ -296,14 +339,15 @@ app.post("/api/admin/danh-sach-benh-vien", async (req, res) => {
         const { ten_benh_vien, dia_chi } = req.body;
         if (!ten_benh_vien) return res.status(400).json({ success: false, message: "Tên bệnh viện không được để trống" });
 
-        await pool.query("INSERT INTO danh_sach_benh_vien (ten_benh_vien, dia_chi) VALUES ($1, $2)", [ten_benh_vien, dia_chi]);
+        const insertRes = await pool.query("INSERT INTO danh_sach_benh_vien (ten_benh_vien, dia_chi) VALUES ($1, $2) RETURNING id", [ten_benh_vien, dia_chi]);
+        await logAction(req.session.user, "Thêm danh mục Bệnh viện", insertRes.rows[0].id, ten_benh_vien);
+
         res.json({ success: true, message: "Thêm bệnh viện thành công!" });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 });
 
-// API Đọc dữ liệu các bảng nghiệp vụ
 // API Đọc dữ liệu các bảng nghiệp vụ (Lọc chuẩn theo Ấp và Địa bàn / Khu vực)
 app.get("/api/data/:table", async (req, res) => {
     if (!req.session.user) return res.status(401).json({ success: false });
@@ -315,7 +359,6 @@ app.get("/api/data/:table", async (req, res) => {
         let query = `SELECT * FROM ${tableName}`;
         let params = [];
 
-        // Nếu không phải admin hoặc lãnh đạo, chỉ thấy dữ liệu đúng ấp + đúng địa bàn của mình, hoặc do chính mình nhập
         if (user.role !== 'admin' && user.role !== 'lãnh đạo') {
             query += ` WHERE (ap = $1 AND diabanh = $2) OR nguoi_nhap ILIKE $3`;
             params.push(user.ap, user.diabanh, `%${user.username}%`);
@@ -329,7 +372,7 @@ app.get("/api/data/:table", async (req, res) => {
     }
 });
 
-// API Thêm dữ liệu vào các bảng nghiệp vụ
+// API Thêm dữ liệu vào các bảng nghiệp vụ (Đã tích hợp log)
 app.post("/api/data/:table", async (req, res) => {
     if (!req.session.user) return res.status(401).json({ success: false });
     const tableName = req.params.table;
@@ -352,14 +395,20 @@ app.post("/api/data/:table", async (req, res) => {
         const placeholders = keys.map((_, idx) => `$${idx + 1}`).join(", ");
         const columns = keys.join(", ");
 
-        await pool.query(`INSERT INTO ${tableName} (${columns}) VALUES (${placeholders})`, values);
+        const insertRes = await pool.query(`INSERT INTO ${tableName} (${columns}) VALUES (${placeholders}) RETURNING id`, values);
+        const newId = insertRes.rows[0] ? insertRes.rows[0].id : null;
+        const targetName = dataObj.ho_so || dataObj.ho_ten || dataObj.ho_ten_con || dataObj.ho_ten_vo || `Bản ghi #${newId}`;
+
+        // === GHI NHẬT KÝ THÊM ===
+        await logAction(user, `Thêm mới dữ liệu vào ${tableName}`, newId, `Hồ sơ/Tên: ${targetName}`);
+
         res.json({ success: true, message: "Lưu dữ liệu thành công!" });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 });
 
-// API Xóa dữ liệu
+// API Xóa dữ liệu (Đã tích hợp log)
 app.delete("/api/data/:table/:id", async (req, res) => {
     if (!req.session.user) return res.status(401).json({ success: false });
     const tableName = req.params.table;
@@ -369,23 +418,30 @@ app.delete("/api/data/:table/:id", async (req, res) => {
     try {
         let user = req.session.user;
 
+        let checkRecord = await pool.query(`SELECT * FROM ${tableName} WHERE id = $1`, [recordId]);
+        if (checkRecord.rows.length === 0) return res.status(404).json({ success: false, message: "Không tìm thấy bản ghi" });
+
         if (user.role !== 'admin' && user.role !== 'lãnh đạo') {
-            let checkRecord = await pool.query(`SELECT ap FROM ${tableName} WHERE id = $1`, [recordId]);
-            if (checkRecord.rows.length === 0) return res.status(404).json({ success: false, message: "Không tìm thấy bản ghi" });
-            
             if (checkRecord.rows[0].ap !== user.ap) {
                 return res.status(403).json({ success: false, message: "Bạn không có quyền xóa dữ liệu của ấp khác!" });
             }
         }
 
+        const oldData = checkRecord.rows[0];
+        const targetName = oldData.ho_so || oldData.ho_ten || oldData.ho_ten_con || oldData.ho_ten_vo || `ID: ${recordId}`;
+
         await pool.query(`DELETE FROM ${tableName} WHERE id = $1`, [recordId]);
+
+        // === GHI NHẬT KÝ XÓA ===
+        await logAction(user, `Xóa bản ghi khỏi ${tableName}`, parseInt(recordId), `Đã xóa: ${targetName}`);
+
         res.json({ success: true, message: "Đã xóa dữ liệu thành công!" });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 });
 
-// ==================== API CẬP NHẬT DỮ LIỆU BẢNG ====================
+// ==================== API CẬP NHẬT DỮ LIỆU BẢNG (GHI CHI TIẾT THAY ĐỔI) ====================
 app.put("/api/data/:table/:id", async (req, res) => {
     if (!req.session.user) return res.status(401).json({ success: false, message: "Chưa đăng nhập" });
     const tableName = req.params.table;
@@ -396,10 +452,13 @@ app.put("/api/data/:table/:id", async (req, res) => {
         let user = req.session.user;
         let dataObj = req.body;
 
+        let checkRecord = await pool.query(`SELECT * FROM ${tableName} WHERE id = $1`, [recordId]);
+        if (checkRecord.rows.length === 0) return res.status(404).json({ success: false, message: "Không tìm thấy bản ghi" });
+        
+        let oldData = checkRecord.rows[0];
+
         if (user.role !== 'admin' && user.role !== 'lãnh đạo') {
-            let checkRecord = await pool.query(`SELECT ap FROM ${tableName} WHERE id = $1`, [recordId]);
-            if (checkRecord.rows.length === 0) return res.status(404).json({ success: false, message: "Không tìm thấy bản ghi" });
-            if (checkRecord.rows[0].ap !== user.ap) {
+            if (oldData.ap !== user.ap) {
                 return res.status(403).json({ success: false, message: "Bạn không có quyền sửa dữ liệu của ấp khác!" });
             }
             delete dataObj.ap;
@@ -408,22 +467,36 @@ app.put("/api/data/:table/:id", async (req, res) => {
         delete dataObj.id;
         delete dataObj.created_at;
 
+        // So sánh để ghi rõ thay đổi
+        let changes = [];
+        for (let key of Object.keys(dataObj)) {
+            if (String(oldData[key] || '') !== String(dataObj[key] || '')) {
+                changes.push(`${key}: "${oldData[key] || ''}" ➔ "${dataObj[key]}"`);
+            }
+        }
+
         const keys = Object.keys(dataObj);
         const values = Object.values(dataObj);
-        
         if (keys.length === 0) return res.status(400).json({ success: false, message: "Không có dữ liệu cập nhật" });
 
         const setString = keys.map((key, idx) => `${key} = $${idx + 1}`).join(", ");
         values.push(recordId);
 
         await pool.query(`UPDATE ${tableName} SET ${setString} WHERE id = $${values.length}`, values);
+
+        const targetName = oldData.ho_so || oldData.ho_ten || oldData.ho_ten_con || oldData.ho_ten_vo || `ID: ${recordId}`;
+        const changeDetails = changes.length > 0 ? changes.join(' | ') : 'Cập nhật thông tin';
+
+        // === GHI NHẬT KÝ SỬA CHI TIẾT ===
+        await logAction(user, `Cập nhật dữ liệu ${tableName} (ID: ${recordId})`, parseInt(recordId), `[${targetName}] Thay đổi: ${changeDetails}`);
+
         res.json({ success: true, message: "Cập nhật dữ liệu thành công!" });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 });
 
-// ==================== QUẢN LÝ DANH MỤC ẤP ====================
+// ==================== QUẢN LÝ DANH MỤC ẤP (CÓ LOG) ====================
 app.get("/api/admin/ap", async (req, res) => {
     try {
         let result = await pool.query("SELECT * FROM danh_sach_ap ORDER BY id ASC");
@@ -434,19 +507,23 @@ app.get("/api/admin/ap", async (req, res) => {
 app.post("/api/admin/ap", async (req, res) => {
     try {
         let { ten_ap } = req.body;
-        await pool.query("INSERT INTO danh_sach_ap (ten_ap, trang_thai) VALUES ($1, 1)", [ten_ap]);
+        const insertRes = await pool.query("INSERT INTO danh_sach_ap (ten_ap, trang_thai) VALUES ($1, 1) RETURNING id", [ten_ap]);
+        await logAction(req.session.user, "Thêm danh mục Ấp mới", insertRes.rows[0].id, ten_ap);
         res.json({ success: true, message: "Thêm ấp thành công!" });
     } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
 app.delete("/api/admin/ap/:id", async (req, res) => {
     try {
+        let record = await pool.query("SELECT ten_ap FROM danh_sach_ap WHERE id = $1", [req.params.id]);
+        let tenAp = record.rows[0] ? record.rows[0].ten_ap : '';
         await pool.query("DELETE FROM danh_sach_ap WHERE id = $1", [req.params.id]);
+        await logAction(req.session.user, "Xóa danh mục Ấp", parseInt(req.params.id), tenAp);
         res.json({ success: true, message: "Xóa ấp thành công!" });
     } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
-// ==================== QUẢN LÝ DANH MỤC BỆNH VIỆN ====================
+// ==================== QUẢN LÝ DANH MỤC BỆNH VIỆN (CÓ LOG) ====================
 app.get("/api/admin/benh-vien", async (req, res) => {
     try {
         let result = await pool.query("SELECT * FROM danh_sach_benh_vien ORDER BY id ASC");
@@ -457,29 +534,119 @@ app.get("/api/admin/benh-vien", async (req, res) => {
 app.post("/api/admin/benh-vien", async (req, res) => {
     try {
         let { ten_benh_vien, dia_chi } = req.body;
-        await pool.query("INSERT INTO danh_sach_benh_vien (ten_benh_vien, dia_chi, trang_thai) VALUES ($1, $2, 1)", [ten_benh_vien, dia_chi]);
+        const insertRes = await pool.query("INSERT INTO danh_sach_benh_vien (ten_benh_vien, dia_chi, trang_thai) VALUES ($1, $2, 1) RETURNING id", [ten_benh_vien, dia_chi]);
+        await logAction(req.session.user, "Thêm danh mục Bệnh viện", insertRes.rows[0].id, ten_benh_vien);
         res.json({ success: true, message: "Thêm bệnh viện thành công!" });
     } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
 app.delete("/api/admin/benh-vien/:id", async (req, res) => {
     try {
+        let record = await pool.query("SELECT ten_benh_vien FROM danh_sach_benh_vien WHERE id = $1", [req.params.id]);
+        let tenBv = record.rows[0] ? record.rows[0].ten_benh_vien : '';
         await pool.query("DELETE FROM danh_sach_benh_vien WHERE id = $1", [req.params.id]);
+        await logAction(req.session.user, "Xóa danh mục Bệnh viện", parseInt(req.params.id), tenBv);
         res.json({ success: true, message: "Xóa bệnh viện thành công!" });
     } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
-// ==================== XEM NHẬT KÝ HỆ THỐNG (LOGS) ====================
+// ==================== QUẢN LÝ NHẬT KÝ (LOGS) & XÓA LỊCH SỬ ====================
 app.get("/api/admin/logs", async (req, res) => {
     try {
-        let result = await pool.query("SELECT * FROM logs ORDER BY id DESC LIMIT 100");
+        let result = await pool.query("SELECT * FROM logs ORDER BY id DESC LIMIT 200");
         res.json(result.rows);
     } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
-// ==================== API QUẢN TRỊ NGƯỜI DÙNG (ADMIN) ====================
-app.get("/api/admin/users", async (req, res) => {
+// API Xóa toàn bộ lịch sử nhật ký hệ thống
+app.delete("/api/admin/logs", async (req, res) => {
     if (!req.session.user || req.session.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Không có quyền thực hiện" });
+    }
+    try {
+        await pool.query("DELETE FROM logs");
+        await logAction(req.session.user, "Đã xóa toàn bộ lịch sử nhật ký hệ thống", null, "Xóa sạch logs");
+        res.json({ success: true, message: "Đã xóa toàn bộ lịch sử nhật ký thành công!" });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ==================== QUẢN LÝ DANH MỤC BPTT (CÓ LOG) ====================
+app.get("/api/admin/bptt", async (req, res) => {
+    try {
+        let result = await pool.query("SELECT * FROM danh_sach_bptt ORDER BY id ASC");
+        res.json(result.rows);
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+app.post("/api/admin/bptt", async (req, res) => {
+    try {
+        let { ma_bptt, ten_bptt } = req.body;
+        const insertRes = await pool.query("INSERT INTO danh_sach_bptt (ma_bptt, ten_bptt, trang_thai) VALUES ($1, $2, 1) RETURNING id", [ma_bptt, ten_bptt]);
+        await logAction(req.session.user, "Thêm danh mục BPTT", insertRes.rows[0].id, ten_bptt);
+        res.json({ success: true, message: "Thêm BPTT thành công!" });
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+app.put("/api/admin/bptt/:id", async (req, res) => {
+    try {
+        let { ma_bptt, ten_bptt } = req.body;
+        await pool.query("UPDATE danh_sach_bptt SET ma_bptt = $1, ten_bptt = $2 WHERE id = $3", [ma_bptt, ten_bptt, req.params.id]);
+        await logAction(req.session.user, "Cập nhật danh mục BPTT", parseInt(req.params.id), ten_bptt);
+        res.json({ success: true, message: "Cập nhật BPTT thành công!" });
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+app.delete("/api/admin/bptt/:id", async (req, res) => {
+    try {
+        let record = await pool.query("SELECT ten_bptt FROM danh_sach_bptt WHERE id = $1", [req.params.id]);
+        let tenBptt = record.rows[0] ? record.rows[0].ten_bptt : '';
+        await pool.query("DELETE FROM danh_sach_bptt WHERE id = $1", [req.params.id]);
+        await logAction(req.session.user, "Xóa danh mục BPTT", parseInt(req.params.id), tenBptt);
+        res.json({ success: true, message: "Xóa BPTT thành công!" });
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+// ==================== QUẢN LÝ DANH MỤC NƠI THỰC HIỆN (CÓ LOG) ====================
+app.get("/api/admin/noi-thuc-hien", async (req, res) => {
+    try {
+        let result = await pool.query("SELECT * FROM danh_sach_noi_thuc_hien ORDER BY id ASC");
+        res.json(result.rows);
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+app.post("/api/admin/noi-thuc-hien", async (req, res) => {
+    try {
+        let { ten_noi_thuc_hien } = req.body;
+        const insertRes = await pool.query("INSERT INTO danh_sach_noi_thuc_hien (ten_noi_thuc_hien, trang_thai) VALUES ($1, 1) RETURNING id", [ten_noi_thuc_hien]);
+        await logAction(req.session.user, "Thêm danh mục Nơi thực hiện", insertRes.rows[0].id, ten_noi_thuc_hien);
+        res.json({ success: true, message: "Thêm nơi thực hiện thành công!" });
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+app.put("/api/admin/noi-thuc-hien/:id", async (req, res) => {
+    try {
+        let { ten_noi_thuc_hien } = req.body;
+        await pool.query("UPDATE danh_sach_noi_thuc_hien SET ten_noi_thuc_hien = $1 WHERE id = $2", [ten_noi_thuc_hien, req.params.id]);
+        await logAction(req.session.user, "Cập nhật danh mục Nơi thực hiện", parseInt(req.params.id), ten_noi_thuc_hien);
+        res.json({ success: true, message: "Cập nhật nơi thực hiện thành công!" });
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+app.delete("/api/admin/noi-thuc-hien/:id", async (req, res) => {
+    try {
+        let record = await pool.query("SELECT ten_noi_thuc_hien FROM danh_sach_noi_thuc_hien WHERE id = $1", [req.params.id]);
+        let tenNth = record.rows[0] ? record.rows[0].ten_noi_thuc_hien : '';
+        await pool.query("DELETE FROM danh_sach_noi_thuc_hien WHERE id = $1", [req.params.id]);
+        await logAction(req.session.user, "Xóa danh mục Nơi thực hiện", parseInt(req.params.id), tenNth);
+        res.json({ success: true, message: "Xóa nơi thực hiện thành công!" });
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+// ==================== QUẢN TRỊ NGƯỜI DÙNG / TÀI KHOẢN (CÓ LOG) ====================
+app.get("/api/admin/users", async (req, res) => {
+    if (!req.session.user || (req.session.user.role !== 'admin' && req.session.user.role !== 'lãnh đạo')) {
         return res.status(403).json({ success: false, message: "Không có quyền truy cập" });
     }
     try {
@@ -494,12 +661,18 @@ app.post("/api/admin/users", async (req, res) => {
     if (!req.session.user || req.session.user.role !== 'admin') {
         return res.status(403).json({ success: false, message: "Không có quyền truy cập" });
     }
+    const { fullname, username, password, role, diabanh, ap, xa, admin_password } = req.body;
+    
+    if (admin_password !== 'admin123') {
+        return res.status(400).json({ success: false, message: "Mật khẩu quản trị không chính xác!" });
+    }
+
     try {
-        const { fullname, username, password, role, diabanh, ap, xa } = req.body;
-        await pool.query(
-            `INSERT INTO users (fullname, username, password, role, diabanh, ap, xa, active, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8)`,
+        const insertRes = await pool.query(
+            `INSERT INTO users (fullname, username, password, role, diabanh, ap, xa, active, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8) RETURNING id`,
             [fullname, username, password, role, diabanh, ap, xa, getVietnamTimestamp()]
         );
+        await logAction(req.session.user, "Thêm tài khoản người dùng mới", insertRes.rows[0].id, `${fullname} (${username})`);
         res.json({ success: true, message: "Thêm người dùng thành công!" });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
@@ -510,10 +683,14 @@ app.put("/api/admin/users/:id", async (req, res) => {
     if (!req.session.user || req.session.user.role !== 'admin') {
         return res.status(403).json({ success: false, message: "Không có quyền truy cập" });
     }
-    try {
-        const userId = req.params.id;
-        const { fullname, username, password, role, diabanh, ap, xa } = req.body;
+    const userId = req.params.id;
+    const { fullname, username, password, role, diabanh, ap, xa, admin_password } = req.body;
 
+    if (admin_password !== 'admin123') {
+        return res.status(400).json({ success: false, message: "Mật khẩu quản trị không chính xác!" });
+    }
+
+    try {
         if (password) {
             await pool.query(
                 `UPDATE users SET fullname = $1, username = $2, password = $3, role = $4, diabanh = $5, ap = $6, xa = $7 WHERE id = $8`,
@@ -525,6 +702,7 @@ app.put("/api/admin/users/:id", async (req, res) => {
                 [fullname, username, role, diabanh, ap, xa, userId]
             );
         }
+        await logAction(req.session.user, "Cập nhật thông tin tài khoản", parseInt(userId), `${fullname} (${username})`);
         res.json({ success: true, message: "Cập nhật thành công!" });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
@@ -535,79 +713,51 @@ app.post("/api/admin/users/:id/toggle", async (req, res) => {
     if (!req.session.user || req.session.user.role !== 'admin') {
         return res.status(403).json({ success: false, message: "Not allowed" });
     }
+    const userId = req.params.id;
+    const { admin_password } = req.body;
+
+    if (admin_password !== 'admin123') {
+        return res.status(400).json({ success: false, message: "Mật khẩu quản trị không chính xác!" });
+    }
+
     try {
-        const userId = req.params.id;
-        const userRes = await pool.query("SELECT active FROM users WHERE id = $1", [userId]);
+        const userRes = await pool.query("SELECT username, fullname, active FROM users WHERE id = $1", [userId]);
         if (userRes.rows.length === 0) return res.status(404).json({ success: false, message: "Không tìm thấy người dùng" });
 
-        const newActive = userRes.rows[0].active === 1 ? 0 : 1;
+        const targetUser = userRes.rows[0];
+        const newActive = targetUser.active === 1 ? 0 : 1;
         await pool.query("UPDATE users SET active = $1 WHERE id = $2", [newActive, userId]);
+        
+        await logAction(req.session.user, `Đổi trạng thái tài khoản (${newActive === 1 ? 'Mở khóa' : 'Khóa'})`, parseInt(userId), `${targetUser.fullname} (${targetUser.username})`);
         res.json({ success: true, message: "Đổi trạng thái thành công!" });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 });
-// ==================== QUẢN LÝ DANH MỤC BPTT ====================
-app.get("/api/admin/bptt", async (req, res) => {
-    try {
-        let result = await pool.query("SELECT * FROM danh_sach_bptt ORDER BY id ASC");
-        res.json(result.rows);
-    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-});
 
-app.post("/api/admin/bptt", async (req, res) => {
-    try {
-        let { ma_bptt, ten_bptt } = req.body;
-        await pool.query("INSERT INTO danh_sach_bptt (ma_bptt, ten_bptt, trang_thai) VALUES ($1, $2, 1)", [ma_bptt, ten_bptt]);
-        res.json({ success: true, message: "Thêm BPTT thành công!" });
-    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-});
+app.delete('/api/admin/users/:id', async (req, res) => {
+    if (!req.session.user || req.session.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Không có quyền truy cập" });
+    }
+    const userId = req.params.id;
+    const { admin_password } = req.body;
 
-app.delete("/api/admin/bptt/:id", async (req, res) => {
-    try {
-        await pool.query("DELETE FROM danh_sach_bptt WHERE id = $1", [req.params.id]);
-        res.json({ success: true, message: "Xóa BPTT thành công!" });
-    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-});
+    if (admin_password !== 'admin123') {
+        return res.status(400).json({ success: false, message: "Mật khẩu quản trị không chính xác!" });
+    }
 
-// ==================== QUẢN LÝ DANH MỤC NƠI THỰC HIỆN ====================
-app.get("/api/admin/noi-thuc-hien", async (req, res) => {
     try {
-        let result = await pool.query("SELECT * FROM danh_sach_noi_thuc_hien ORDER BY id ASC");
-        res.json(result.rows);
-    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-});
+        let userRes = await pool.query("SELECT username, fullname FROM users WHERE id = $1", [userId]);
+        let targetUser = userRes.rows[0] ? `${userRes.rows[0].fullname} (${userRes.rows[0].username})` : '';
 
-app.post("/api/admin/noi-thuc-hien", async (req, res) => {
-    try {
-        let { ten_noi_thuc_hien } = req.body;
-        await pool.query("INSERT INTO danh_sach_noi_thuc_hien (ten_noi_thuc_hien, trang_thai) VALUES ($1, 1)", [ten_noi_thuc_hien]);
-        res.json({ success: true, message: "Thêm nơi thực hiện thành công!" });
-    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-});
+        await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+        await logAction(req.session.user, "Xóa tài khoản người dùng", parseInt(userId), targetUser);
 
-app.delete("/api/admin/noi-thuc-hien/:id", async (req, res) => {
-    try {
-        await pool.query("DELETE FROM danh_sach_noi_thuc_hien WHERE id = $1", [req.params.id]);
-        res.json({ success: true, message: "Xóa nơi thực hiện thành công!" });
-    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-});
-// Cập nhật Biện pháp tránh thai (BPTT)
-app.put("/api/admin/bptt/:id", async (req, res) => {
-    try {
-        let { ma_bptt, ten_bptt } = req.body;
-        await pool.query("UPDATE danh_sach_bptt SET ma_bptt = $1, ten_bptt = $2 WHERE id = $3", [ma_bptt, ten_bptt, req.params.id]);
-        res.json({ success: true, message: "Cập nhật BPTT thành công!" });
-    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-});
-
-// Cập nhật Nơi thực hiện
-app.put("/api/admin/noi-thuc-hien/:id", async (req, res) => {
-    try {
-        let { ten_noi_thuc_hien } = req.body;
-        await pool.query("UPDATE danh_sach_noi_thuc_hien SET ten_noi_thuc_hien = $1 WHERE id = $2", [ten_noi_thuc_hien, req.params.id]);
-        res.json({ success: true, message: "Cập nhật nơi thực hiện thành công!" });
-    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+        res.json({ success: true, message: 'Xóa tài khoản thành công!' });
+    } catch (error) {
+        console.error('Lỗi khi xóa tài khoản:', error);
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ khi xóa tài khoản!' });
+    }
 });
 
 // Khởi chạy server

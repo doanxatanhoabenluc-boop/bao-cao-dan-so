@@ -36,6 +36,7 @@
                     <option value="tu">3. Sổ Tử (Tử vong)</option>
                     <option value="di_den">6. Sổ Đi Đến (Nhân khẩu đi/đến)</option>
                     <option value="bptt">7. Sổ Biện Pháp Tránh Thai (BPTT)</option>
+                    <option value="sang_loc_truoc_sinh">10. Sổ Sàng Lọc Trước Sinh</option>
                 </select>
             </div>
             <div class="col-12 col-sm-6 col-md-3">
@@ -171,6 +172,34 @@
             <tbody></tbody>
         </table>
     </div>
+
+    <!-- Bảng Sổ Sàng Lọc Trước Sinh (Ẩn mặc định) -->
+<div id="wrapper_sang_loc_truoc_sinh" class="table-responsive shadow-sm bg-white p-2 rounded" style="display: none;">
+    <table class="table table-bordered table-striped align-middle small text-center" id="tbl_sang_loc_truoc_sinh">
+        <thead class="table-light">
+            <tr>
+                <th rowspan="2">TT</th>
+                <th rowspan="2">Tên CTV</th>
+                <th rowspan="2">Số hộ</th>
+                <th rowspan="2">Mã số thẻ BHYT</th>
+                <th rowspan="2">Họ và tên</th>
+                <th rowspan="2">Nơi cư trú<br><small>(tỉnh, huyện, xã, địa chỉ cụ thể)</small></th>
+                <th rowspan="2">Ngày tháng mang thai<br><small>(Ngày kinh cuối)</small></th>
+                <th rowspan="2">Mang thai tuần thứ mấy</th>
+                <th rowspan="2">Ngày thực hiện dịch vụ</th>
+                <th colspan="4">Kết quả tầm soát, sàng lọc</th>
+                <th rowspan="2">Nơi thực hiện</th>
+            </tr>
+            <tr>
+                <th>Hội chứng Edward</th>
+                <th>Hội chứng Down</th>
+                <th>Hội chứng Patau</th>
+                <th>Bệnh Thalassemia</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
     
 </div>
 <script src="baocao_toanxa.js"></script>

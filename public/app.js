@@ -1,4 +1,4 @@
-// app.js
+// app.js - Phiên bản hoàn chỉnh: Tích hợp popup xác nhận tài khoản khi vừa vào trang và giữ nguyên toàn bộ tính năng
 
 let currentTable = "table_1";
 let danhSachApOptions = [];
@@ -8,30 +8,29 @@ let danhSachNoiThucHienOptions = [];
 
 // Danh sách 54 dân tộc Việt Nam chuẩn
 const danhSachDanToc = [
-    "Kinh", "Tày", "Thái", "Mường", "H'Mông", "Dao", "Khmer", "Nùng", "Mường", "Gia Rai", 
+    "Kinh", "Tày", "Thái", "Mường", "H'Mông", "Dao", "Khmer", "Nùng", "Gia Rai", 
     "Ê Đê", "Ba Na", "Sán Chay", "Chăm", "Kơ Ho", "Hà Nhì", "Chu Ru", "Xơ Đăng", "Sán Dìu", "H'rê", 
     "Ra Glai", "Mnông", "Thổ", "Stiêng", "Khơ Mú", "Bru - Vân Kiều", "Cơ Tu", "Giáy", "Tà Ôi", "Mạ", 
-    "Giẻ Triêng", "Cơ Ho", "Cờ Lao", "Bha Lang", "La Ha", "Chơ Ro", "Háng Hì", "Phù La", "La Hủ", "Lự", 
-    "Lô Lô", "Chứt", "Mảng", "Pa Thẻn", "Cống", "Giáy", "Pu Péo", "Si La", "Ơ Đô", "Bru", "Rơ Măm", "Lô Lô", "Pà Thẻn", "Mông"
+    "Giẻ Triêng", "Cờ Lao", "La Ha", "Chơ Ro", "Phù La", "La Hủ", "Lự", 
+    "Lô Lô", "Chứt", "Mảng", "Pa Thẻn", "Cống", "Pu Péo", "Si La", "Ơ Đô", "Bru", "Rơ Măm", "Pà Thẻn"
 ];
 const uniqueDanToc = [...new Set(danhSachDanToc)];
 
 const trinhDoHocVanOptions = ["Chưa đi học", "Tiểu học", "THCS", "THPT", "Trung cấp", "Cao đẳng", "Đại học", "Trên đại học"];
 const tinhTrangHonNhanOptions = ["Chưa kết hôn", "Đang kết hôn", "Ly hôn", "Góa"];
 
-// Cấu hình các trường nhập liệu tương ứng 11 bảng chuẩn
 const tableConfigs = {
     "table_1": { title: "1. Danh sách trẻ sinh ra", fields: [
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ho_ten_con", label: "Họ và tên con", type: "text", required: true },
-        { name: "ngay_sinh_con", label: "Ngày sinh của con", type: "date" },
-        { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"] },
-        { name: "dan_toc", label: "Dân tộc", type: "select-dantoc", options: uniqueDanToc },
-        { name: "ho_ten_me", label: "Họ và tên mẹ", type: "text" },
+        { name: "ngay_sinh_con", label: "Ngày sinh của con", type: "date", required: true },
+        { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"], required: true },
+        { name: "dan_toc", label: "Dân tộc", type: "select-dantoc", options: uniqueDanToc, required: true },
+        { name: "ho_ten_me", label: "Họ và tên mẹ", type: "text", required: true },
         { name: "so_the_bhyt_me", label: "Số thẻ BHYT của mẹ", type: "text" },
-        { name: "ngay_sinh_me", label: "Ngày sinh của mẹ", type: "date" },
-        { name: "noi_de", label: "Nơi đẻ", type: "select-benhvien" },
-        { name: "con_thu_may", label: "Là con thứ mấy của mẹ", type: "number" }
+        { name: "ngay_sinh_me", label: "Ngày sinh của mẹ", type: "date", required: true },
+        { name: "noi_de", label: "Nơi đẻ", type: "select-benhvien", required: true },
+        { name: "con_thu_may", label: "Là con thứ mấy của mẹ", type: "number", required: true }
     ]},
     "table_2": { title: "2. Danh sách SL sơ sinh", fields: [
         { name: "so_ho", label: "Số hộ", type: "text", required: true },
@@ -47,91 +46,106 @@ const tableConfigs = {
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ho_ten", label: "Họ và tên người chết", type: "text", required: true },
         { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
-        { name: "quan_he", label: "Quan hệ với chủ hộ", type: "select", options: ["Chủ hộ", "Vợ","Chồng", "Con", "Bố","Mẹ"] },
-        { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"] },
+        { name: "quan_he", label: "Quan hệ với chủ hộ", type: "select", options: ["Chủ hộ", "Vợ","Chồng", "Con", "Bố","Mẹ"], required: true },
+        { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"], required: true },
         { name: "ngay_sinh", label: "Ngày sinh", type: "date" },
-        { name: "ngay_chet", label: "Ngày chết", type: "date" },
+        { name: "ngay_chet", label: "Ngày chết", type: "date", required: true },
         { name: "ghi_chu", label: "Ghi chú", type: "text" }
     ]},
     "table_4": { title: "4. Danh sách người chuyển đến từ xã khác", fields: [
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ho_ten", label: "Họ tên người đến", type: "text", required: true },
         { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
-        { name: "quan_he", label: "Quan hệ với chủ hộ", type: "select", options: ["Chủ hộ", "Vợ","Chồng", "Con", "Bố","Mẹ"] },
-        { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"] },
-        { name: "ngay_sinh", label: "Ngày sinh", type: "date" },
-        { name: "dan_toc", label: "Dân tộc", type: "select-dantoc", options: uniqueDanToc },
+        { name: "quan_he", label: "Quan hệ với chủ hộ", type: "select", options: ["Chủ hộ", "Vợ","Chồng", "Con", "Bố","Mẹ"], required: true },
+        { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"], required: true },
+        { name: "ngay_sinh", label: "Ngày sinh", type: "date", required: true },
+        { name: "dan_toc", label: "Dân tộc", type: "select-dantoc", options: uniqueDanToc, required: true },
         { name: "trinh_do_hoc_van", label: "Trình độ học vấn", type: "select", options: trinhDoHocVanOptions },
         { name: "tinh_trang_hon_nhan", label: "Tình trạng hôn nhân", type: "select", options: tinhTrangHonNhanOptions },
-        { name: "ngay_den", label: "Ngày đến", type: "date" },
+        { name: "ngay_den", label: "Ngày đến", type: "date", required: true },
         { name: "noi_di", label: "Nơi đi", type: "text" }
     ]},
     "table_5": { title: "5. Danh sách người chuyển đi khỏi xã", fields: [
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ho_ten", label: "Họ tên người đi", type: "text", required: true },
         { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
-        { name: "quan_he", label: "Quan hệ với chủ hộ", type: "select", options: ["Chủ hộ", "Vợ","Chồng", "Con", "Bố","Mẹ"] },
-        { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"] },
-        { name: "ngay_sinh", label: "Ngày sinh", type: "date" },
-        { name: "ngay_di", label: "Ngày đi", type: "date" },
+        { name: "quan_he", label: "Quan hệ với chủ hộ", type: "select", options: ["Chủ hộ", "Vợ","Chồng", "Con", "Bố","Mẹ"], required: true },
+        { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"], required: true },
+        { name: "ngay_sinh", label: "Ngày sinh", type: "date", required: true },
+        { name: "dan_toc", label: "Dân tộc", type: "select-dantoc", options: uniqueDanToc, required: true },
+        { name: "ngay_di", label: "Ngày đi", type: "date", required: true },
         { name: "noi_den", label: "Nơi đến", type: "text" },
         { name: "ghi_chu", label: "Ghi chú", type: "text" }
     ]},
     "table_6": { title: "6. Danh sách thay đổi thông tin cơ bản", fields: [
-        { name: "ho_so", label: "Hộ số", type: "text" },
-        { name: "ho_ten", label: "Họ tên người có thay đổi", type: "text" },
+        { name: "ho_so", label: "Hộ số", type: "text", required: true },
+        { name: "ho_ten", label: "Họ tên người có thay đổi", type: "text", required: true },
         { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
-        { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"] },
-        { name: "ngay_sinh", label: "Ngày sinh", type: "date" },
-        { name: "thong_tin_cu", label: "Thông tin cũ", type: "text" },
-        { name: "thong_tin_moi", label: "Thông tin mới", type: "text" },
+        { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"], required: true },
+        { name: "ngay_sinh", label: "Ngày sinh", type: "date", required: true },
+        { name: "thong_tin_cu", label: "Thông tin cũ", type: "text", required: true },
+        { name: "thong_tin_moi", label: "Thông tin mới", type: "text", required: true },
         { name: "ghi_chu", label: "Ghi chú", type: "text" }
     ]},
    "table_7": { title: "7. Vợ chồng mới sử dụng BPTT", fields: [
-        { name: "ho_so", label: "Hộ số", type: "text" },
+        { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ho_ten_vo", label: "Họ tên người vợ (từ 15-49 tuổi)", type: "text", required: true },
         { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
-        { name: "ngay_sinh", label: "Ngày sinh", type: "date" },
-        { name: "ngay_su_dung", label: "Ngày sử dụng", type: "date" },
-        { name: "bptt_moi", label: "Biện pháp tránh thai mới", type: "select-bptt" },
-        { name: "so_con_hien_co", label: "Số con hiện có", type: "number" },
-        { name: "noi_thuc_hien", label: "Nơi thực hiện", type: "select-noithuchien" }
+        { name: "ngay_sinh", label: "Ngày sinh", type: "date", required: true },
+        { name: "ngay_su_dung", label: "Ngày sử dụng", type: "date", required: true },
+        { name: "bptt_moi", label: "Biện pháp tránh thai mới", type: "select-bptt", required: true },
+        { name: "so_con_hien_co", label: "Số con hiện có", type: "number", required: true },
+        { name: "noi_thuc_hien", label: "Nơi thực hiện", type: "select-noithuchien", required: true }
     ]},
    "table_8": { title: "8. Vợ chồng thôi sử dụng BPTT", fields: [
         { name: "search_helper", label: "🔍 Tìm kiếm thông tin từ Bảng 7 (Nhập hộ số hoặc tên vợ)", type: "search-table7" },
-        { name: "ho_so", label: "Hộ số", type: "text" },
+        { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ho_ten_vo", label: "Họ tên người vợ (từ 15-49 tuổi)", type: "text", required: true },
         { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
-        { name: "ngay_sinh", label: "Năm sinh", type: "date" },
-        { name: "ngay_thoi_su_dung", label: "Ngày thôi sử dụng", type: "date" },
-        { name: "bptt_thoi", label: "BPTT thôi sử dụng", type: "select-bptt" },
-        { name: "noi_thuc_hien", label: "Nơi thực hiện", type: "select-noithuchien" }
+        { name: "ngay_sinh", label: "Năm sinh", type: "date", required: true },
+        { name: "ngay_thoi_su_dung", label: "Ngày thôi sử dụng", type: "date", required: true },
+        { name: "bptt_thoi", label: "BPTT thôi sử dụng", type: "select-bptt", required: true },
+        { name: "noi_thuc_hien", label: "Nơi thực hiện", type: "select-noithuchien", required: true }
     ]},
     "table_9": { title: "9. Phụ nữ có thông tin thai sản", fields: [
-        { name: "ho_so", label: "Hộ số", type: "text" },
-        { name: "ho_ten", label: "Họ tên phụ nữ", type: "text" },
+        { name: "ho_so", label: "Hộ số", type: "text", required: true },
+        { name: "ho_ten", label: "Họ tên phụ nữ", type: "text", required: true },
         { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
-        { name: "ngay_sinh", label: "Ngày sinh", type: "date" },
-        { name: "ngay_su_kien", label: "Ngày có sự kiện", type: "date" },
-        { name: "su_kien", label: "Sự kiện thai sản", type: "select", options: ["Mang thai", "Sảy thai", "Phá thai"] },
-        { name: "mang_thai_lan_thu", label: "Mang thai lần thứ", type: "number" }
+        { name: "ngay_sinh", label: "Ngày sinh", type: "date", required: true },
+        { name: "ngay_su_kien", label: "Ngày có sự kiện", type: "date", required: true },
+        { name: "su_kien", label: "Sự kiện thai sản", type: "select", options: ["Mang thai", "Sảy thai", "Phá thai"], required: true },
+        { name: "mang_thai_lan_thu", label: "Mang thai lần thứ", type: "number", required: true }
     ]},
-    "table_10": { title: "10. Sàng lọc trước sinh", fields: [
-        { name: "so_ho", label: "Số hộ", type: "text" },
+   "table_10": { title: "10. Sàng lọc trước sinh", fields: [
+        { name: "so_ho", label: "Số hộ", type: "text", required: true },
         { name: "ma_the_bhyt", label: "Mã số thẻ BHYT", type: "text" },
-        { name: "ho_ten", label: "Họ tên", type: "text" },
-        { name: "noi_cu_tru", label: "Nơi cư trú", type: "text" },
-        { name: "ngay_sinh", label: "Ngày sinh", type: "date" },
-        { name: "mang_thai_tuan", label: "Mang thai tuần thứ mấy", type: "number" },
-        { name: "ngay_thuc_hien", label: "Ngày thực hiện dịch vụ", type: "date" },
-        { name: "ket_qua", label: "Kết quả tầm soát, sàng lọc", type: "select", options: ["Down", "Edward", "Patau", "Thalassemia", "Bình thường"] }
+        { name: "ho_ten", label: "Họ tên mẹ", type: "text", required: true },
+        { name: "noi_cu_tru", label: "Nơi cư trú", type: "text", required: true },
+        { name: "ngay_sinh", label: "Ngày sinh của mẹ", type: "date", required: true },
+        { name: "ngay_thang_mang_thai", label: "Ngày đầu kỳ kinh cuối (LMP)", type: "date", required: true },
+        
+        // Khám & Kết quả Tuần 12
+        { name: "mang_thai_tuan_12", label: "Ngày khám Tuần 12", type: "date", required: true },
+        { name: "hoi_chung_down_12", label: "Hội chứng Down (T12)", type: "select", options: ["Nguy cơ thấp", "Nguy cơ cao", "Bình thường"] },
+        { name: "hoi_chung_edward_12", label: "Hội chứng Edward (T12)", type: "select", options: ["Nguy cơ thấp", "Nguy cơ cao", "Bình thường"] },
+        { name: "hoi_chung_patau_12", label: "Hội chứng Patau (T12)", type: "select", options: ["Nguy cơ thấp", "Nguy cơ cao", "Bình thường"] },
+        { name: "benh_thalassemia_12", label: "Thalassemia (T12)", type: "select", options: ["Nguy cơ thấp", "Nguy cơ cao", "Bình thường"] },
+
+        // Khám & Kết quả Tuần 21
+        { name: "mang_thai_tuan_21", label: "Ngày khám Tuần 21", type: "date", required: true },
+        { name: "hoi_chung_down_21", label: "Hội chứng Down (T21)", type: "select", options: ["Nguy cơ thấp", "Nguy cơ cao", "Bình thường"] },
+        { name: "hoi_chung_edward_21", label: "Hội chứng Edward (T21)", type: "select", options: ["Nguy cơ thấp", "Nguy cơ cao", "Bình thường"] },
+        { name: "hoi_chung_patau_21", label: "Hội chứng Patau (T21)", type: "select", options: ["Nguy cơ thấp", "Nguy cơ cao", "Bình thường"] },
+        { name: "benh_thalassemia_21", label: "Thalassemia (T21)", type: "select", options: ["Nguy cơ thấp", "Nguy cơ cao", "Bình thường"] },
+
+        { name: "ghi_chu", label: "Ghi chú (Nơi đẻ)", type: "text" }
     ]},
     "table_11": { title: "11. Người cao tuổi khám sức khỏe", fields: [
-        { name: "ho_so", label: "Hộ số", type: "text" },
-        { name: "ma_so_doi_tuong", label: "Mã số đối tượng", type: "text" },
-        { name: "ho_ten", label: "Họ tên người NCT", type: "text" },
-        { name: "nam_sinh", label: "Năm sinh", type: "number" },
-        { name: "ngay_kham", label: "Ngày khám", type: "date" }
+        { name: "ho_so", label: "Hộ số", type: "text", required: true },
+        { name: "ma_so_doi_tuong", label: "Mã số đối tượng", type: "text", required: true },
+        { name: "ho_ten", label: "Họ tên người NCT", type: "text", required: true },
+        { name: "nam_sinh", label: "Năm sinh", type: "number", required: true },
+        { name: "ngay_kham", label: "Ngày khám", type: "date", required: true }
     ]}
 };
 
@@ -142,11 +156,58 @@ window.onload = async function() {
         return;
     }
 
+    let currentUser = await authCheck.json().catch(() => null);
+    if (currentUser) {
+        localStorage.setItem("currentUser", JSON.stringify(currentUser));
+        const role = (currentUser.role || "").trim().toLowerCase();
+        
+        if ( role.includes("lãnh đạo") || role.includes("lanh dao") ) {
+            let mainContainer = document.querySelector('.container') || document.body;
+            
+            mainContainer.innerHTML = `
+                <div class="row justify-content-center mt-5">
+                    <div class="col-md-9 text-center">
+                        <div class="card shadow-lg p-5 border-0 rounded-4">
+                            <div class="card-body">
+                                <div class="mb-4">
+                                    <i class="fa-solid fa-user-shield text-primary fa-4x"></i>
+                                </div>
+                                <h2 class="fw-bold text-dark mb-2">Xin chào, Lãnh đạo / Quản trị viên!</h2>
+                                <p class="text-muted mb-4">Trang này dành riêng cho việc nhập liệu cấp cơ sở. Với tư cách là Lãnh đạo, vui lòng truy cập vào các trang quản lý hoặc báo cáo bên dưới để theo dõi hệ thống.</p>
+                                
+                                <div class="d-grid gap-3 d-sm-flex justify-content-sm-center flex-wrap">
+                                    <a href="admin.html" id="btnAdmin" class="btn btn-primary btn-lg px-4 fw-bold">
+                                        <i class="fa-solid fa-gears me-2"></i> Trang Quản Lý
+                                    </a>
+                                    <a href="baocao.html" id="btnBaocaoToanXa" class="btn btn-success btn-lg px-4 fw-bold">
+                                        <i class="fa-solid fa-chart-pie me-2"></i> Báo Cáo Toàn Xã
+                                    </a>
+                                    <a href="baocao_toanxa.html" id="btnBaocaoTongHop" class="btn btn-info text-white btn-lg px-4 fw-bold">
+                                        <i class="fa-solid fa-file-invoice me-2"></i> Báo Cáo Tổng Hợp
+                                    </a>
+                                </div>
+
+                                <div class="mt-4 pt-3 border-top">
+                                    <button class="btn btn-outline-danger btn-sm" onclick="logout()">
+                                        <i class="fa-solid fa-right-from-bracket me-1"></i> Đăng xuất hệ thống
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // BẬT POPUP XÁC NHẬN TÀI KHOẢN NGAY KHI VỪA VÀO TRANG / ĐĂNG NHẬP
+        showLoginWelcomeModal(currentUser);
+    }
+
     let resAp = await fetch('/api/danh-sach-ap');
     let dataAp = await resAp.json();
     danhSachApOptions = dataAp.map(item => item.ten_ap);
 
-    // Lấy danh sách Bệnh viện riêng
     try {
         let resBv = await fetch('/api/danh-sach-benh-vien');
         let dataBv = await resBv.json();
@@ -155,11 +216,10 @@ window.onload = async function() {
         danhSachBenhVienOptions = ["Bệnh viện Đa khoa", "Trạm Y tế xã"];
     }
 
-    // Lấy danh mục Biện pháp tránh thai (dùng cho bảng 7 & 8)
     try {
         let resBptt = await fetch('/api/danh-sach-bptt');
         let dataBptt = await resBptt.json();
-        danhSachBptTOptions = dataBptt; // [{ma_bptt, ten_bptt}]
+        danhSachBptTOptions = dataBptt; 
     } catch(e) {
         danhSachBptTOptions = [
             { ma_bptt: '1', ten_bptt: 'Vòng tránh thai' },
@@ -170,7 +230,6 @@ window.onload = async function() {
         ];
     }
 
-    // Lấy danh sách Nơi thực hiện riêng
     try {
         let resNth = await fetch('/api/danh-sach-noi-thuc-hien');
         let dataNth = await resNth.json();
@@ -185,6 +244,63 @@ window.onload = async function() {
 
     switchTableForm();
 };
+
+// Hàm hiển thị Popup chào mừng/xác nhận tài khoản ban đầu
+function showLoginWelcomeModal(currentUser) {
+    let name = currentUser.fullname || currentUser.username || "";
+    let userRole = currentUser.role || "Cộng tác viên";
+    let locationText = "Toàn xã";
+    
+    if (currentUser.diabanh && currentUser.diabanh !== "Tất cả") {
+        locationText = currentUser.diabanh;
+    } else if (currentUser.ap && currentUser.ap !== "Tất cả") {
+        locationText = `Ấp ${currentUser.ap}`;
+    }
+
+    let modalHtml = `
+        <div class="modal fade" id="loginWelcomeModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+              <div class="modal-header bg-success text-white rounded-top-4">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-circle-user me-2"></i> Xác nhận tài khoản làm việc</h5>
+              </div>
+              <div class="modal-body text-center p-4">
+                <div class="mb-3">
+                    <i class="fa-solid fa-id-card text-success fa-3x"></i>
+                </div>
+                <h4 class="fw-bold text-dark mb-1">Xin chào, ${name}!</h4>
+                <p class="text-muted small mb-3">Bạn đang đăng nhập vào hệ thống nhập liệu với tư cách:</p>
+                
+                <div class="bg-light p-3 rounded-3 text-start border mb-3">
+                    <div class="mb-2"><strong>Vai trò:</strong> <span class="badge bg-primary">${userRole}</span></div>
+                    <div><strong>Khu vực phụ trách:</strong> <span class="text-danger fw-bold">${locationText}</span></div>
+                </div>
+
+                <div class="alert alert-warning small p-2 mb-0 text-start">
+                    ⚠️ <b>Lưu ý:</b> Nếu đây <u>không phải</u> tài khoản của bạn, vui lòng bấm <b>"Đăng xuất"</b> ngay để tránh nhập nhầm dữ liệu của người khác!
+                </div>
+              </div>
+              <div class="modal-footer bg-light rounded-bottom-4 justify-content-between">
+                <button type="button" class="btn btn-outline-danger btn-sm px-3" onclick="logout()">
+                    <i class="fa-solid fa-right-from-bracket me-1"></i> Đăng xuất
+                </button>
+                <button type="button" class="btn btn-success px-4 fw-bold" data-bs-dismiss="modal">
+                    <i class="fa-solid fa-check me-1"></i> Đúng là tôi, Bắt đầu làm việc
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+    `;
+
+    let oldModal = document.getElementById('loginWelcomeModal');
+    if (oldModal) oldModal.remove();
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    let modalElement = document.getElementById('loginWelcomeModal');
+    let modal = new bootstrap.Modal(modalElement);
+    modal.show();
+}
 
 function switchTableForm() {
     currentTable = document.getElementById('selectTable').value;
@@ -220,11 +336,10 @@ function switchTableForm() {
                 daysOptions += `<option value="${dVal}">Ngày ${d}</option>`;
             }
 
-            // 🔒 Khóa 3 ô chọn Ngày/Tháng/Năm nếu là Bảng 8 và là trường ngay_sinh
             let isDisabled = (currentTable === 'table_8' && field.name === 'ngay_sinh') ? 'disabled style="background-color: #e9ecef; cursor: not-allowed;"' : '';
 
             col.innerHTML = `
-                <label>${field.label} ${field.required ? '*' : ''}</label>
+                <label>${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>
                 <div class="row g-2 mb-2">
                     <div class="col-4">
                         <select class="form-select select-day" ${isDisabled} onchange="updateDateValue('${field.name}')">
@@ -245,40 +360,45 @@ function switchTableForm() {
                 <input type="date" id="${field.name}" class="form-control" name="${field.name}" ${field.required ? 'required' : ''}>
             `;
         } else if (field.type === 'select') {
-            col.innerHTML = `<label>${field.label} ${field.required ? '*' : ''}</label>`;
+            col.innerHTML = `<label>${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>`;
             let select = document.createElement('select');
             select.className = "form-select";
             select.name = field.name;
+            if (field.required) select.required = true;
             select.innerHTML = `<option value="">-- Chọn --</option>` + (field.options || []).map(o => `<option value="${o}">${o}</option>`).join('');
             col.appendChild(select);
         } else if (field.type === 'select-dantoc') {
-            col.innerHTML = `<label>${field.label} ${field.required ? '*' : ''}</label>`;
+            col.innerHTML = `<label>${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>`;
             let select = document.createElement('select');
             select.className = "form-select";
             select.name = field.name;
+            if (field.required) select.required = true;
             select.innerHTML = `<option value="">-- Chọn dân tộc --</option>` + (field.options || []).map(o => `<option value="${o}">${o}</option>`).join('');
             col.appendChild(select);
         } else if (field.type === 'select-benhvien') {
-            col.innerHTML = `<label>${field.label} ${field.required ? '*' : ''}</label>`;
+            col.innerHTML = `<label>${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>`;
             let select = document.createElement('select');
             select.className = "form-select";
             select.name = field.name;
+            if (field.required) select.required = true;
             select.innerHTML = `<option value="">-- Chọn bệnh viện --</option>` + (typeof danhSachBenhVienOptions !== 'undefined' ? danhSachBenhVienOptions : []).map(o => `<option value="${o}">${o}</option>`).join('');
             col.appendChild(select);
         } else if (field.type === 'select-bptt') {
-            col.innerHTML = `<label>${field.label} ${field.required ? '*' : ''}</label>`;
+            col.innerHTML = `<label>${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>`;
             let select = document.createElement('select');
             select.className = "form-select";
             select.name = field.name;
+            if (field.required) select.required = true;
             let optsHtml = `<option value="">-- Chọn biện pháp tránh thai --</option>` + 
                 (typeof danhSachBptTOptions !== 'undefined' ? danhSachBptTOptions : []).map(item => `<option value="${item.ma_bptt}">${item.ma_bptt} - ${item.ten_bptt}</option>`).join('');
             select.innerHTML = optsHtml;
             col.appendChild(select);
         } else if (field.type === 'select-noithuchien') {
-            col.innerHTML = `<label>${field.label} ${field.required ? '*' : ''}</label>`;
+            col.innerHTML = `<label>${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>`;
             let select = document.createElement('select');
             select.className = "form-select";
             select.name = field.name;
+            if (field.required) select.required = true;
             select.innerHTML = `<option value="">-- Chọn nơi thực hiện --</option>` + (typeof danhSachNoiThucHienOptions !== 'undefined' ? danhSachNoiThucHienOptions : []).map(o => `<option value="${o}">${o}</option>`).join('');
             col.appendChild(select);
         } else if (field.type === 'search-table7') {
@@ -293,7 +413,7 @@ function switchTableForm() {
             if (field.name === 'ho_ten_con' || field.name === 'ho_ten_tre' || field.name === 'ho_ten') {
                 col.innerHTML = `
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                        <label class="mb-0">${field.label} ${field.required ? '*' : ''}</label>
+                        <label class="mb-0">${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>
                         ${field.name !== 'ho_ten' ? `
                         <div class="form-check form-check-inline m-0">
                             <input class="form-check-input" type="checkbox" id="check_${field.name}" onchange="toggleChuaDatTen('${field.name}')">
@@ -303,14 +423,13 @@ function switchTableForm() {
                     <input type="${field.type || 'text'}" class="form-control" id="input_${field.name}" name="${field.name}" ${field.required ? 'required' : ''}>
                 `;
             } else {
-                col.innerHTML = `<label>${field.label} ${field.required ? '*' : ''}</label>`;
+                col.innerHTML = `<label>${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>`;
                 let input = document.createElement('input');
                 input.type = field.type || 'text';
                 input.className = "form-control";
                 input.name = field.name;
                 if (field.required) input.required = true;
 
-                // 🔒 Khóa riêng cho Bảng 8
                 if (currentTable === 'table_8' && ['ho_so', 'ho_ten_vo', 'so_the_bhyt', 'ngay_sinh'].includes(field.name)) {
                     input.setAttribute('readonly', true);
                     input.readOnly = true;
@@ -327,8 +446,54 @@ function switchTableForm() {
         container.appendChild(col);
     });
 
+    if (currentTable === 'table_1') {
+        let extraCol = document.createElement('div');
+        extraCol.className = "col-md-6 mb-3 bg-white p-3 border rounded shadow-sm border-success";
+        extraCol.innerHTML = `
+            <label class="fw-bold text-success mb-1"><i class="fa-solid fa-house-chimney me-1"></i> Nơi cư trú của mẹ (Dùng cho Sàng lọc trước sinh) <span class="text-danger">*</span></label>
+            <input type="text" id="input_noi_cu_tru_me" class="form-control mb-2" placeholder="Nhập địa chỉ nơi cư trú của mẹ...">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="check_nguoi_dia_phuong" onchange="toggleNguoiDiaPruong()">
+                <label class="form-check-label small text-primary fw-semibold" for="check_nguoi_dia_phuong" style="cursor: pointer;">
+                    🏠 Người địa phương (Tự động điền theo khu vực cán bộ)
+                </label>
+            </div>
+        `;
+        container.appendChild(extraCol);
+    }
+
     if (typeof fetchTableData === 'function') {
         fetchTableData(currentTable);
+    }
+}
+
+function toggleNguoiDiaPruong() {
+    let checkbox = document.getElementById('check_nguoi_dia_phuong');
+    let input = document.getElementById('input_noi_cu_tru_me');
+    if (!checkbox || !input) return;
+
+    if (checkbox.checked) {
+        let currentUser = JSON.parse(localStorage.getItem("currentUser")) || {};
+        let diabanh = currentUser.diabanh && currentUser.diabanh !== 'Tất cả' ? currentUser.diabanh : '';
+        let apRaw = currentUser.ap && currentUser.ap !== 'Tất cả' ? currentUser.ap : '';
+        
+        let ap = '';
+        if (apRaw) {
+            ap = apRaw.toLowerCase().startsWith('ấp') ? apRaw : `Ấp ${apRaw}`;
+        }
+        
+        let xa = currentUser.xa ? `Xã ${currentUser.xa.replace(/^(xã\s*)/i, '')}` : 'Xã Lương Hòa';
+        let tinh = "Tỉnh Tây Ninh";
+
+        let diaChiDefault = [diabanh, ap, xa, tinh].filter(Boolean).join(", ");
+        
+        input.value = diaChiDefault || "Xã Lương Hòa,Tỉnh Tây Ninh";
+        input.setAttribute('readonly', true);
+        input.style.backgroundColor = '#e9ecef';
+    } else {
+        input.value = '';
+        input.removeAttribute('readonly');
+        input.style.backgroundColor = '#fff';
     }
 }
 
@@ -362,6 +527,77 @@ function updateDateValue(fieldKey) {
     }
 }
 
+function isValidPastDate(dateString) {
+    if (!dateString) return true;
+    let inputDate = new Date(dateString);
+    let today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return inputDate < today;
+}
+
+function showPreviewModal(dataObj, configFields) {
+    return new Promise((resolve) => {
+        let modalHtml = `
+            <div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">📋 Xem lại dữ liệu trước khi lưu</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <p class="text-muted">Vui lòng kiểm tra lại thông tin bên dưới trước khi bấm <b>"Đồng ý lưu"</b>:</p>
+                    <table class="table table-bordered table-striped">
+                      <tbody>
+        `;
+
+        configFields.forEach(f => {
+            let val = dataObj[f.name] !== undefined && dataObj[f.name] !== null ? dataObj[f.name] : '';
+            if (f.name === 'search_helper') return;
+            modalHtml += `<tr><th style="width: 35%;">${f.label}</th><td>${val}</td></tr>`;
+        });
+
+        if (currentTable === 'table_1') {
+            let noiCuTru = document.getElementById('input_noi_cu_tru_me') ? document.getElementById('input_noi_cu_tru_me').value : '';
+            modalHtml += `<tr><th>Nơi cư trú của mẹ (Sàng lọc trước sinh)</th><td>${noiCuTru}</td></tr>`;
+        }
+
+        modalHtml += `
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="btnCancelSave" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="button" class="btn btn-success px-4 fw-bold" id="btnConfirmSave">✅ Đồng ý lưu</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+        `;
+
+        let oldModal = document.getElementById('previewModal');
+        if (oldModal) oldModal.remove();
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        let modalElement = document.getElementById('previewModal');
+        let modal = new bootstrap.Modal(modalElement);
+        modal.show();
+
+        document.getElementById('btnConfirmSave').onclick = function() {
+            modal.hide();
+            resolve(true);
+        };
+
+        document.getElementById('btnCancelSave').onclick = function() {
+            resolve(false);
+        };
+        
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            resolve(false);
+        }, { once: true });
+    });
+}
+
 async function saveData(e) {
     e.preventDefault();
     let form = document.getElementById('dynamicForm');
@@ -369,14 +605,108 @@ async function saveData(e) {
     let dataObj = {};
     formData.forEach((val, key) => dataObj[key] = val);
 
+    let config = tableConfigs[currentTable];
+    let fields = config.fields || [];
+
+    for (let f of fields) {
+        if (f.required && (!dataObj[f.name] || String(dataObj[f.name]).trim() === "")) {
+            alert(`❌ Lỗi: Trường "${f.label}" không được để trống!`);
+            let inputEl = document.querySelector(`[name="${f.name}"]`);
+            if (inputEl) inputEl.focus();
+            return;
+        }
+    }
+
+    if (currentTable === 'table_1') {
+        let noiCuTruVal = document.getElementById('input_noi_cu_tru_me') ? document.getElementById('input_noi_cu_tru_me').value : '';
+        if (!noiCuTruVal || noiCuTruVal.trim() === "") {
+            alert(`❌ Lỗi: Trường "Nơi cư trú của mẹ" không được để trống!`);
+            let inputEl = document.getElementById('input_noi_cu_tru_me');
+            if (inputEl) inputEl.focus();
+            return;
+        }
+    }
+
+    let dateFields = fields.filter(f => f.type === 'date');
+    for (let df of dateFields) {
+        let val = dataObj[df.name];
+        if (val && !isValidPastDate(val)) {
+            alert(`❌ Lỗi: "${df.label}" phải là ngày nhỏ hơn ngày hiện tại!`);
+            let inputEl = document.querySelector(`[name="${df.name}"]`);
+            if (inputEl) inputEl.focus();
+            return;
+        }
+    }
+
+    let isConfirmed = await showPreviewModal(dataObj, fields);
+    if (!isConfirmed) return;
+
     let res = await fetch(`/api/data/${currentTable}`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(dataObj)
     });
     let result = await res.json();
+
     if(result.success) {
-        alert("✅ Lưu thành công!");
+        if (currentTable === 'table_1') {
+            let noiCuTruVal = document.getElementById('input_noi_cu_tru_me') ? document.getElementById('input_noi_cu_tru_me').value : '';
+            let ngaySinhCon = dataObj.ngay_sinh_con;
+
+            let ngayKinhCuoiStr = '';
+            let ngayTuan12Str = '';
+            let ngayTuan21Str = '';
+
+            if (ngaySinhCon) {
+                let birthDate = new Date(ngaySinhCon);
+                if (!isNaN(birthDate.getTime())) {
+                    let lmpDate = new Date(birthDate);
+                    lmpDate.setDate(lmpDate.getDate() - 280);
+                    ngayKinhCuoiStr = lmpDate.toISOString().split('T')[0];
+
+                    function getRandomDateInWeek(lmp, targetWeek) {
+                        let startDay = (targetWeek - 1) * 7;
+                        let randomOffset = startDay + Math.floor(Math.random() * 7);
+                        let d = new Date(lmp);
+                        d.setDate(d.getDate() + randomOffset);
+                        return d.toISOString().split('T')[0];
+                    }
+
+                    ngayTuan12Str = getRandomDateInWeek(lmpDate, 12);
+                    ngayTuan21Str = getRandomDateInWeek(lmpDate, 21);
+                }
+            }
+
+           let table10Obj = {
+                so_ho: dataObj.ho_so || '',
+                ma_the_bhyt: dataObj.so_the_bhyt_me || '',
+                ho_ten: dataObj.ho_ten_me || '',
+                ngay_sinh: dataObj.ngay_sinh_me || '',
+                noi_cu_tru: noiCuTruVal,
+                ngay_thang_mang_thai: ngayKinhCuoiStr,
+                mang_thai_tuan_12: ngayTuan12Str,
+                mang_thai_tuan_21: ngayTuan21Str,
+                
+                hoi_chung_down_12: "Bình thường",
+                hoi_chung_edward_12: "Bình thường",
+                hoi_chung_patau_12: "Bình thường",
+                benh_thalassemia_12: "Bình thường",
+                
+                hoi_chung_down_21: "Bình thường",
+                hoi_chung_edward_21: "Bình thường",
+                hoi_chung_patau_21: "Bình thường",
+                benh_thalassemia_21: "Bình thường",
+                
+                ghi_chu: dataObj.noi_de || ''
+            };
+            await fetch('/api/data/table_10', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(table10Obj)
+            });
+        }
+
+        alert("✅ Lưu thành công và đồng bộ dữ liệu liên quan!");
         form.reset();
         
         document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
@@ -391,6 +721,8 @@ async function saveData(e) {
 async function fetchTableData(tableName) {
     let header = document.getElementById('tableHeader');
     let body = document.getElementById('tableBody');
+    if (!header || !body) return;
+
     header.innerHTML = '';
     body.innerHTML = '<tr><td colspan="10" class="text-center">Đang tải...</td></tr>';
 
@@ -398,22 +730,30 @@ async function fetchTableData(tableName) {
     let res = await fetch(`/api/data/${tableName}`);
     let data = await res.json();
 
-    header.innerHTML = `<tr><th>STT</th>` + config.fields.map(f => `<th>${f.label}</th>`).join('') + `</tr>`;
+    currentTableDataCache = data || [];
+
+    header.innerHTML = `<tr><th>STT</th>` + config.fields.map(f => `<th>${f.label}</th>`).join('') + `<th>Thao tác</th></tr>`;
     
     if(!data || data.length === 0) {
-        body.innerHTML = `<tr><td colspan="${config.fields.length + 1}" class="text-center">Chưa có dữ liệu</td></tr>`;
+        body.innerHTML = `<tr><td colspan="${config.fields.length + 2}" class="text-center">Chưa có dữ liệu</td></tr>`;
         return;
     }
 
     body.innerHTML = data.map((item, idx) => {
-        return `<tr><td>${idx + 1}</td>` + config.fields.map(f => {
+        let rowHtml = `<tr><td>${idx + 1}</td>`;
+        config.fields.forEach(f => {
             let val = item[f.name];
-            // Nếu là trường BPTT, nếu cần hiển thị tên thay vì mã ký hiệu trên bảng, bạn có thể map lại ở đây nếu server trả về mã
-            return `<td>${val !== undefined && val !== null ? val : ''}</td>`;
-        }).join('') + `</tr>`;
+            rowHtml += `<td>${val !== undefined && val !== null ? val : ''}</td>`;
+        });
+        rowHtml += `<td>
+            <button class="btn btn-sm btn-warning text-white fw-bold" onclick="openEditModal('${item.id}')">
+                <i class="fa-solid fa-pen-to-square"></i> Sửa
+            </button>
+        </td></tr>`;
+        return rowHtml;
     }).join('');
 }
-// Hàm chuyển đổi tiếng Việt có dấu sang không dấu để tìm kiếm tương đối dễ hơn
+
 function removeAccents(str) {
     if (!str) return '';
     return str.normalize('NFD')
@@ -449,9 +789,8 @@ function selectDataFromTable7(item) {
         }
     });
 
-    // 🔒 Tự động chọn và khóa 3 ô dropdown Ngày / Tháng / Năm phía trên của trường ngày sinh
     if (ngaySinhInput && item.ngay_sinh) {
-        let parts = item.ngay_sinh.split('-'); // Giả sử định dạng YYYY-MM-DD
+        let parts = item.ngay_sinh.split('-'); 
         if (parts.length === 3) {
             let container = ngaySinhInput.closest('.col-md-6');
             if (container) {
@@ -512,10 +851,10 @@ async function searchDataFromTable7(keyword) {
         console.error(e);
     }
 }
+
 document.addEventListener("DOMContentLoaded", async function() {
     let currentUser = JSON.parse(localStorage.getItem("currentUser"));
     
-    // Nếu trong localStorage chưa có, gọi API /api/me để lấy trực tiếp từ session server
     if (!currentUser) {
         try {
             let res = await fetch('/api/me');
@@ -529,31 +868,23 @@ document.addEventListener("DOMContentLoaded", async function() {
     }
 
     if (currentUser) {
-        // In ra F12 (Console) để xem chính xác role của bạn là gì
-        console.log("Current User Role:", currentUser.role); 
-
         const role = (currentUser.role || "").trim().toLowerCase();
-        
         const adminBtn = document.getElementById("btnAdmin");
         const baocaoBtn = document.getElementById("btnBaocaoToanXa");
-        const userInfoSpan = document.getElementById("userInfo"); // Thẻ hiển thị thông tin user
+        const userInfoSpan = document.getElementById("userInfo");
 
-        // Hiển thị tên và thông tin chi tiết lên giao diện nếu tìm thấy thẻ userInfo (đã bỏ icon 👤)
         if (userInfoSpan) {
             const name = currentUser.fullname || currentUser.username || "";
             const userRole = currentUser.role || "";
-            // Nếu có thông tin địa bàn/ấp thì hiển thị kèm theo cho rõ ràng
             let locationInfo = "";
             if (currentUser.diabanh && currentUser.diabanh !== "Tất cả") {
                 locationInfo = ` - ${currentUser.diabanh}`;
             } else if (currentUser.ap && currentUser.ap !== "Tất cả") {
                 locationInfo = ` - Ấp ${currentUser.ap}`;
             }
-            
             userInfoSpan.textContent = `${name} (${userRole}${locationInfo})`;
         }
 
-        // Kiểm tra linh hoạt các dạng tên gọi của admin và lãnh đạo
         if (role.includes("admin") || role.includes("lãnh đạo") || role.includes("lanh dao") || role.includes("quan tri")) {
             if (adminBtn) adminBtn.style.setProperty("display", "inline-block", "important");
             if (baocaoBtn) baocaoBtn.style.setProperty("display", "inline-block", "important");
@@ -563,6 +894,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 });
+
 async function logout() {
     await fetch('/api/logout', {method: 'POST'});
     localStorage.removeItem("currentUser");
