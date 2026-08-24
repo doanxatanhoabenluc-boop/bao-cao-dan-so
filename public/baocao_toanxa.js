@@ -20,6 +20,7 @@ function formatDate(dateStr) {
 function doiLoaiBaoCao() {
     const loai = document.getElementById('filterLoaiBaoCao').value;
     document.getElementById('wrapper_sinh').style.display = (loai === 'sinh') ? 'block' : 'none';
+    document.getElementById('wrapper_sang_loc_so_sinh').style.display = (loai === 'sang_loc_so_sinh') ? 'block' : 'none';
     document.getElementById('wrapper_tu').style.display = (loai === 'tu') ? 'block' : 'none';
     document.getElementById('wrapper_di_den').style.display = (loai === 'di_den') ? 'block' : 'none';
     document.getElementById('wrapper_bptt').style.display = (loai === 'bptt') ? 'block' : 'none';
@@ -30,14 +31,19 @@ function doiLoaiBaoCao() {
 async function loadData() {
     const loai = document.getElementById('filterLoaiBaoCao').value;
     const thang = document.getElementById('filterThang').value; 
-    const nam = document.getElementById('filterNam').value;     
+    const nam = document.getElementById('filterNam').value;    
 
     let apiEndpoints = [];
     let tableId = '#tbl_sinh';
     let colSpanNum = 11;
     let tenBaoCao = 'PHẦN THEO DÕI SINH';
 
-    if (loai === 'tu') {
+    if (loai === 'sang_loc_so_sinh') {
+        apiEndpoints = ['/api/data/table_2'];
+        tableId = '#tbl_sang_loc_so_sinh';
+        colSpanNum = 16;
+        tenBaoCao = 'SỔ SÀNG LỌC SƠ SINH';
+    } else if (loai === 'tu') {
         apiEndpoints = ['/api/data/table_3'];
         tableId = '#tbl_tu';
         colSpanNum = 10;
@@ -193,7 +199,7 @@ async function loadData() {
             return;
         }
 
-        // Xử lý các bảng khác (sinh, tử, đi đến, sàng lọc trước sinh)
+        // Xử lý các bảng khác (sinh, sàng lọc sơ sinh, tử, đi đến, sàng lọc trước sinh)
         let combinedData = [];
         for (let endpoint of apiEndpoints) {
             try {
@@ -246,6 +252,38 @@ async function loadData() {
                     <td>${item.con_thu_may || ''}</td>
                     <td>${item.noi_de || ''}</td>
                     <td>${item.ghi_chu || ''}</td>
+                </tr>`;
+            } else if (loai === 'sang_loc_so_sinh') {
+                let rawCTV = item.nguoi_nhap || '';
+                let tenCTV = rawCTV.replace(/\s*\(.*?\)\s*/g, '').trim();
+                let tenAp = item.ap || '';
+                let apDisplay = tenAp ? "Ấp " + tenAp.replace(/^ấp\s+/i, '').trim() : "";
+                
+                let gioiTinh = (item.gioi_tinh || '').toLowerCase();
+                let ngaySinhCon = formatDate(item.ngay_sinh_con || item.ngay_sinh_tre);
+                let namSuDungNam = (gioiTinh === 'nam' || gioiTinh === '1') ? ngaySinhCon : '';
+                let namSuDungNu = (gioiTinh === 'nữ' || gioiTinh === 'nu' || gioiTinh === '2') ? ngaySinhCon : '';
+
+                row = `<tr>
+                    <td>${index + 1}</td>
+                    <td>
+                        <div class="fw-bold">${tenCTV}</div>
+                        <div class="text-muted small">${apDisplay}</div>
+                    </td>
+                    <td>${item.so_ho || item.ho_so || ''}</td>
+                    <td>${item.ma_the_bhyt_me || item.ma_the_bhyt || ''}</td>
+                    <td class="fw-bold text-start">${item.ho_ten_me || ''}</td>
+                    <td class="text-start">${item.noi_cu_tru || ''}</td>
+                    <td>${item.nam_sinh_me || ''}</td>
+                    <td class="fw-bold text-start">${item.ho_ten_tre || item.ho_ten_con || ''}</td>
+                    <td>${namSuDungNam}</td>
+                    <td>${namSuDungNu}</td>
+                    <td>${item.suy_giap || item.benh_suy_giap || 'Bình thường'}</td>
+                    <td>${item.g6pd || item.benh_g6pd || 'Bình thường'}</td>
+                    <td>${item.thuong_than || item.tang_san_thuong_than || 'Bình thường'}</td>
+                    <td>${item.khiem_thinh || 'Bình thường'}</td>
+                    <td>${item.tim_bam_sinh || 'Bình thường'}</td>
+                    <td>${item.noi_thuc_hien || item.ghi_chu || ''}</td>
                 </tr>`;
             } else if (loai === 'tu') {
                 let rawCTV = item.nguoi_nhap || '';
@@ -355,23 +393,33 @@ function xuatExcel() {
     let tableId = 'tbl_sinh';
     let tenFile = 'Bao_Cao_Sinh';
     let tenTieuDe = 'PHẦN THEO DÕI SINH';
+    let colSpanVal = 11; // Mặc định cho sổ sinh
 
-    if (loai === 'tu') {
+    if (loai === 'sang_loc_so_sinh') {
+        tableId = 'tbl_sang_loc_so_sinh';
+        tenFile = 'Bao_Cao_Sang_Loc_So_Sinh';
+        tenTieuDe = 'SỔ SÀNG LỌC SƠ SINH';
+        colSpanVal = 16;
+    } else if (loai === 'tu') {
         tableId = 'tbl_tu';
         tenFile = 'Bao_Cao_Tu';
         tenTieuDe = 'PHẦN THEO DÕI TỬ VONG';
+        colSpanVal = 10;
     } else if (loai === 'di_den') {
         tableId = 'tbl_di_den';
         tenFile = 'Bao_Cao_Di_Den';
         tenTieuDe = 'PHẦN THEO DÕI ĐI ĐẾN';
+        colSpanVal = 12;
     } else if (loai === 'bptt') {
         tableId = 'tbl_bptt';
         tenFile = 'Bao_Cao_Bien_Phap_Tranh_Thai';
         tenTieuDe = 'SỔ THEO DÕI BIỆN PHÁP TRÁNH THAI';
+        colSpanVal = 13;
     } else if (loai === 'sang_loc_truoc_sinh') {
         tableId = 'tbl_sang_loc_truoc_sinh';
         tenFile = 'Bao_Cao_Sang_Loc_Truoc_Sinh';
         tenTieuDe = 'SỔ SÀNG LỌC TRƯỚC SINH';
+        colSpanVal = 15;
     }
     
     let tieuDeThoiGian = (thang && nam) ? `Tháng ${thang}/${nam}` : (nam ? `Năm ${nam}` : "Tất cả các tháng");
@@ -395,11 +443,11 @@ function xuatExcel() {
         </head>
         <body>
             <table>
-                <tr><td colspan="15" class="title">${tenTieuDe}</td></tr>
-                <tr><td colspan="15" class="subtitle">${tieuDeThoiGian}</td></tr>
-                <tr><td colspan="15" style="border:none;"></td></tr>
+                <tr><td colspan="${colSpanVal}" class="title">${tenTieuDe}</td></tr>
+                <tr><td colspan="${colSpanVal}" class="subtitle">${tieuDeThoiGian}</td></tr>
+                <tr><td colspan="${colSpanVal}" style="border:none;"></td></tr>
             </table>
-            ${table.outerHTML}
+            ${table ? table.outerHTML : ''}
         </body>
         </html>
     `;

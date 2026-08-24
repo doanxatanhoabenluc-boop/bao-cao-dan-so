@@ -38,6 +38,9 @@
 
             <div class="collapse navbar-collapse justify-content-end mt-2 mt-lg-0" id="adminNavbar">
                 <div class="d-flex flex-column flex-lg-row gap-2">
+                    <a href="quan-ly-bieu-mau.html" class="btn btn-success btn-sm fw-bold">
+                        <i class="fa-solid fa-table-list me-1"></i> Quản lý 11 Biểu mẫu
+                    </a>
                     <a href="index.html" class="btn btn-outline-light btn-sm">
                         <i class="fa-solid fa-house me-1"></i> Về trang nhập liệu
                     </a>
@@ -51,17 +54,12 @@
 
     <div class="container-fluid my-4 px-3 px-md-4">
         
-        <!-- 7 Tab điều hướng hệ thống dạng trượt ngang hiện đại trên mobile -->
+        <!-- Tab điều hướng hệ thống dạng trượt ngang -->
         <div class="admin-tabs-container mb-4 pb-2">
             <ul class="nav nav-pills flex-nowrap gap-2" id="adminTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active fw-bold py-2 px-3 shadow-sm" id="users-tab" data-bs-toggle="tab" data-bs-target="#usersContent" type="button" role="tab">
                         <i class="fa-solid fa-user-shield me-1"></i> Tài khoản
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link fw-bold py-2 px-3 shadow-sm" id="data-tab" data-bs-toggle="tab" data-bs-target="#dataContent" type="button" role="tab" onclick="loadTableDataAdmin(1)">
-                        <i class="fa-solid fa-database me-1"></i> 11 Biểu mẫu
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -133,58 +131,7 @@
                 </div>
             </div>
 
-            <!-- TAB 2: QUẢN LÝ DỮ LIỆU CÁC BẢNG (TABLE 1 - 11) -->
-            <div class="tab-pane fade" id="dataContent" role="tabpanel">
-                <div class="card shadow-sm mb-4 border-0">
-                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center flex-wrap gap-2 py-3">
-                        <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-table-list me-1"></i> Xem & Chỉnh sửa Dữ liệu</h5>
-                        <div class="d-flex align-items-center gap-2 w-100 w-md-auto">
-                            <label class="text-white fw-semibold mb-0 small text-nowrap">Chọn bảng:</label>
-                            <select id="selectManagedTable" class="form-select form-select-sm" onchange="loadTableDataAdmin(1)">
-                                <option value="table_1">1. Trẻ sinh ra</option>
-                                <option value="table_2">2. SL sơ sinh</option>
-                                <option value="table_3">3. Người chết</option>
-                                <option value="table_4">4. Người chuyển đến</option>
-                                <option value="table_5">5. Người chuyển đi</option>
-                                <option value="table_6">6. Thay đổi thông tin</option>
-                                <option value="table_7">7. Vợ chồng mới dùng BPTT</option>
-                                <option value="table_8">8. Vợ chồng thôi dùng BPTT</option>
-                                <option value="table_9">9. Thai sản</option>
-                                <option value="table_10">10. Sàng lọc trước sinh</option>
-                                <option value="table_11">11. Người cao tuổi khám SK</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="card-body p-2 p-md-3">
-                        <!-- Thanh tìm kiếm nhanh (Đã tích hợp oninput để tự động lọc) -->
-                        <div class="row mb-3">
-                            <div class="col-md-6 col-lg-4">
-                                <div class="input-group input-group-sm">
-                                    <input type="text" id="adminSearchInput" class="form-control" placeholder="Tìm kiếm (họ tên, số hộ, thẻ BHYT)..." oninput="loadTableDataAdmin(1)">
-                                    <button class="btn btn-outline-secondary" type="button" onclick="loadTableDataAdmin(1)">
-                                        <i class="fa-solid fa-search"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Bảng hiển thị dữ liệu -->
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-striped table-hover align-middle small">
-                                <thead class="table-secondary text-center sticky-top" id="adminTableHeader"></thead>
-                                <tbody id="adminTableBody">
-                                    <tr><td class="text-center py-3">Vui lòng chọn bảng dữ liệu...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- Khu vực phân trang tự động (Căn giữa chuẩn Bootstrap) -->
-                        <div id="adminPaginationContainer" class="d-flex justify-content-center mt-3"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB 3: QUẢN LÝ ẤP -->
+            <!-- TAB 2: QUẢN LÝ ẤP -->
             <div class="tab-pane fade" id="apContent" role="tabpanel">
                 <div class="card shadow-sm mb-4 border-0">
                     <div class="card-header bg-info text-white d-flex justify-content-between align-items-center py-3">
@@ -213,7 +160,7 @@
                 </div>
             </div>
 
-            <!-- TAB 4: QUẢN LÝ BỆNH VIỆN -->
+            <!-- TAB 3: QUẢN LÝ BỆNH VIỆN -->
             <div class="tab-pane fade" id="bvContent" role="tabpanel">
                 <div class="card shadow-sm mb-4 border-0">
                     <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center py-3">
@@ -242,34 +189,37 @@
                 </div>
             </div>
 
-            <!-- TAB 5: NHẬT KÝ HỆ THỐNG (LOGS) -->
-            <div class="tab-pane fade" id="logsContent" role="tabpanel">
-                <div class="card shadow-sm mb-4 border-0">
-                    <div class="card-header bg-dark text-white py-3">
-                        <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-clock-rotate-left me-1"></i> Nhật ký hoạt động hệ thống (Logs)</h5>
-                    </div>
-                    <div class="card-body p-2 p-md-3">
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-striped table-hover align-middle small">
-                                <thead class="table-secondary text-center">
-                                    <tr>
-                                        <th style="width: 70px;">ID</th>
-                                        <th style="width: 150px;">Tài khoản</th>
-                                        <th style="width: 180px;">Hành động</th>
-                                        <th>Chi tiết đối tượng</th>
-                                        <th style="width: 180px;">Thời gian</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="logsTableBody">
-                                    <tr><td colspan="5" class="text-center">Đang tải dữ liệu...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
+         <!-- TAB 4: NHẬT KÝ HỆ THỐNG (LOGS) -->
+        <div class="tab-pane fade" id="logsContent" role="tabpanel">
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-clock-rotate-left me-1"></i> Nhật ký hoạt động hệ thống (Logs)</h5>
+                    <button class="btn btn-danger btn-sm fw-bold" onclick="clearAllLogs()">
+                        <i class="fa-solid fa-trash-can me-1"></i> Xóa toàn bộ lịch sử
+                    </button>
+                </div>
+                <div class="card-body p-2 p-md-3">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped table-hover align-middle small">
+                            <thead class="table-secondary text-center">
+                                <tr>
+                                    <th style="width: 70px;">ID</th>
+                                    <th style="width: 150px;">Tài khoản</th>
+                                    <th style="width: 180px;">Hành động</th>
+                                    <th>Chi tiết đối tượng</th>
+                                    <th style="width: 180px;">Thời gian</th>
+                                    <th style="width: 90px;">Thao tác</th> <!-- Thêm cột Thao tác -->
+                                </tr>
+                            </thead>
+                            <tbody id="logsTableBody">
+                                <tr><td colspan="6" class="text-center">Đang tải dữ liệu...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-
-            <!-- TAB 6: QUẢN LÝ BPTT -->
+        </div>
+            <!-- TAB 5: QUẢN LÝ BPTT -->
             <div class="tab-pane fade" id="bpttContent" role="tabpanel">
                 <div class="card shadow-sm mb-4 border-0">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
@@ -298,7 +248,7 @@
                 </div>
             </div>
 
-            <!-- TAB 7: QUẢN LÝ NƠI THỰC HIỆN -->
+            <!-- TAB 6: QUẢN LÝ NƠI THỰC HIỆN -->
             <div class="tab-pane fade" id="noiThucHienContent" role="tabpanel">
                 <div class="card shadow-sm mb-4 border-0">
                     <div class="card-header bg-success text-white d-flex justify-content-between align-items-center py-3">
@@ -326,10 +276,39 @@
                 </div>
             </div>
 
+            <!-- TAB 7: QUẢN LÝ MỐI QUAN HỆ -->
+            <div class="tab-pane fade" id="moiQuanHeContent" role="tabpanel">
+                <div class="card shadow-sm mb-4 border-0">
+                    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center py-3">
+                        <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-people-arrows me-1"></i> Danh mục Mối quan hệ</h5>
+                        <button class="btn btn-light btn-sm text-secondary fw-bold" data-bs-toggle="modal" data-bs-target="#moiQuanHeModal">
+                            <i class="fa-solid fa-plus me-1"></i> Thêm mới
+                        </button>
+                    </div>
+                    <div class="card-body p-2 p-md-3">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle">
+                                <thead class="table-secondary text-center">
+                                    <tr>
+                                        <th style="width: 70px;">STT</th>
+                                        <th>Tên Mối quan hệ</th>
+                                        <th style="width: 180px;">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="moiQuanHeTableBody">
+                                    <tr><td colspan="3" class="text-center">Đang tải dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
-    <!-- Các Modal -->
+    <!-- KHU VỰC TẤT CẢ CÁC MODAL DÙNG CHO CÁC CHỨC NĂNG TRÊN -->
+
     <!-- Modal Thêm / Sửa Người Dùng -->
     <div class="modal fade" id="userModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
@@ -385,29 +364,7 @@
         </div>
     </div>
 
-    <!-- Modal Sửa Dữ Liệu Biểu Mẫu -->
-    <div class="modal fade" id="editDataModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <form id="editDataForm" onsubmit="saveRecordData(event)">
-                    <div class="modal-header bg-success text-white">
-                        <h5 class="modal-title"><i class="fa-solid fa-pen-to-square"></i> Chỉnh sửa thông tin</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <input type="hidden" id="editRecordId">
-                        <div class="row" id="editDataFieldsContainer"></div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" class="btn btn-success">Cập nhật thay đổi</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Thêm Ấp Mới -->
+    <!-- Modal Thêm Ấp Mới (Đã đồng bộ id thành ten_ap) -->
     <div class="modal fade" id="apModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -419,7 +376,7 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Tên ấp *</label>
-                            <input type="text" class="form-control" id="tenApInput" required placeholder="Nhập tên ấp...">
+                            <input type="text" class="form-control" id="ten_ap" required placeholder="Nhập tên ấp...">
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -431,7 +388,7 @@
         </div>
     </div>
 
-    <!-- Modal Thêm Bệnh Viện Mới -->
+    <!-- Modal Thêm Bệnh Viện Mới (Đã đồng bộ id thành ten_benh_vien và dia_chi) -->
     <div class="modal fade" id="bvModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -443,11 +400,11 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Tên bệnh viện *</label>
-                            <input type="text" class="form-control" id="tenBvInput" required placeholder="Nhập tên bệnh viện...">
+                            <input type="text" class="form-control" id="ten_benh_vien" required placeholder="Nhập tên bệnh viện...">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Địa chỉ</label>
-                            <input type="text" class="form-control" id="diaChiBvInput" placeholder="Nhập địa chỉ...">
+                            <input type="text" class="form-control" id="dia_chi" placeholder="Nhập địa chỉ...">
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -459,7 +416,7 @@
         </div>
     </div>
 
-    <!-- Modal Thêm BPTT Mới -->
+    <!-- Modal Thêm BPTT Mới (Đã đồng bộ id thành ma_bptt và ten_bptt) -->
     <div class="modal fade" id="bpttModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -471,11 +428,11 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Mã BPTT *</label>
-                            <input type="text" class="form-control" id="maBpttInput" required placeholder="Nhập mã BPTT...">
+                            <input type="text" class="form-control" id="ma_bptt" required placeholder="Nhập mã BPTT...">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Tên Biện pháp tránh thai *</label>
-                            <input type="text" class="form-control" id="tenBpttInput" required placeholder="Nhập tên BPTT...">
+                            <input type="text" class="form-control" id="ten_bptt" required placeholder="Nhập tên BPTT...">
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -516,7 +473,7 @@
         </div>
     </div>
 
-    <!-- Modal Thêm Nơi Thực Hiện Mới -->
+    <!-- Modal Thêm Nơi Thực Hiện Mới (Đã đồng bộ id thành ten_noi_thuc_hien) -->
     <div class="modal fade" id="noiThucHienModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -528,7 +485,7 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Tên Nơi thực hiện *</label>
-                            <input type="text" class="form-control" id="tenNoiThucHienInput" required placeholder="Nhập tên nơi thực hiện...">
+                            <input type="text" class="form-control" id="ten_noi_thuc_hien" required placeholder="Nhập tên nơi thực hiện...">
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -564,57 +521,31 @@
             </div>
         </div>
     </div>
-<!-- TAB: QUẢN LÝ MỐI QUAN HỆ -->
-<div class="tab-pane fade" id="moiQuanHeContent" role="tabpanel">
-    <div class="card shadow-sm mb-4 border-0">
-        <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center py-3">
-            <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-people-arrows me-1"></i> Danh mục Mối quan hệ</h5>
-            <button class="btn btn-light btn-sm text-secondary fw-bold" data-bs-toggle="modal" data-bs-target="#moiQuanHeModal">
-                <i class="fa-solid fa-plus me-1"></i> Thêm mới
-            </button>
-        </div>
-        <div class="card-body p-2 p-md-3">
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover align-middle">
-                    <thead class="table-secondary text-center">
-                        <tr>
-                            <th style="width: 70px;">STT</th>
-                            <th>Tên Mối quan hệ</th>
-                            <th style="width: 180px;">Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody id="moiQuanHeTableBody">
-                        <tr><td colspan="3" class="text-center">Đang tải dữ liệu...</td></tr>
-                    </tbody>
-                </table>
+
+    <!-- Modal Thêm Mối Quan Hệ Mới -->
+    <div class="modal fade" id="moiQuanHeModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form onsubmit="saveMoiQuanHe(event)">
+                    <div class="modal-header bg-secondary text-white">
+                        <h5 class="modal-title">Thêm Mối quan hệ mới</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Tên Mối quan hệ *</label>
+                            <input type="text" class="form-control" id="tenMoiQuanHeInput" required placeholder="Nhập tên mối quan hệ...">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-secondary">Thêm mới</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Modal Thêm Mối Quan Hệ Mới -->
-<div class="modal fade" id="moiQuanHeModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form onsubmit="saveMoiQuanHe(event)">
-                <div class="modal-header bg-secondary text-white">
-                    <h5 class="modal-title">Thêm Mối quan hệ mới</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Tên Mối quan hệ *</label>
-                        <input type="text" class="form-control" id="tenMoiQuanHeInput" required placeholder="Nhập tên mối quan hệ...">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-secondary">Thêm mới</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="admin.js"></script>
 </body>

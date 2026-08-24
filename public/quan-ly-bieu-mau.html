@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý 11 Biểu mẫu Dữ liệu</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-light">
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3 shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold fs-6 fs-md-5" href="#">
+                <i class="fa-solid fa-table-list text-warning me-1"></i> Quản lý Biểu mẫu Dữ liệu
+            </a>
+            
+            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse justify-content-end mt-2 mt-lg-0" id="adminNavbar">
+                <div class="d-flex flex-column flex-lg-row gap-2">
+                    <a href="admin.html" class="btn btn-outline-light btn-sm">
+                        <i class="fa-solid fa-arrow-left me-1"></i> Quay lại Admin
+                    </a>
+                    <a href="index.html" class="btn btn-outline-light btn-sm">
+                        <i class="fa-solid fa-house me-1"></i> Về trang nhập liệu
+                    </a>
+                    <button onclick="logout()" class="btn btn-danger btn-sm">
+                        <i class="fa-solid fa-right-from-bracket me-1"></i> Đăng xuất
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid my-4 px-3 px-md-4">
+        <div class="card shadow-sm mb-4 border-0">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center flex-wrap gap-2 py-3">
+                <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-database me-1"></i> Xem & Chỉnh sửa Dữ liệu 11 Biểu mẫu</h5>
+                <div class="d-flex align-items-center gap-2 w-100 w-md-auto">
+                    <label class="text-white fw-semibold mb-0 small text-nowrap">Chọn bảng:</label>
+                    <select id="selectManagedTable" class="form-select form-select-sm" onchange="loadTableDataAdmin(1)">
+                        <option value="table_1">1. Trẻ sinh ra</option>
+                        <option value="table_2">2. SL sơ sinh</option>
+                        <option value="table_3">3. Người chết</option>
+                        <option value="table_4">4. Người chuyển đến</option>
+                        <option value="table_5">5. Người chuyển đi</option>
+                        <option value="table_6">6. Thay đổi thông tin</option>
+                        <option value="table_7">7. Vợ chồng mới dùng BPTT</option>
+                        <option value="table_8">8. Vợ chồng thôi dùng BPTT</option>
+                        <option value="table_9">9. Thai sản</option>
+                        <option value="table_10">10. Sàng lọc trước sinh</option>
+                        <option value="table_11">11. Người cao tuổi khám SK</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body p-2 p-md-3">
+                <!-- Thanh tìm kiếm nhanh -->
+                <div class="row mb-3">
+                    <div class="col-md-6 col-lg-4">
+                        <div class="input-group input-group-sm">
+                            <input type="text" id="adminSearchInput" class="form-control" placeholder="Tìm kiếm (họ tên, số hộ, thẻ BHYT)..." oninput="loadTableDataAdmin(1)">
+                            <button class="btn btn-outline-secondary" type="button" onclick="loadTableDataAdmin(1)">
+                                <i class="fa-solid fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bảng hiển thị dữ liệu -->
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped table-hover align-middle small">
+                        <thead class="table-secondary text-center sticky-top" id="adminTableHeader"></thead>
+                        <tbody id="adminTableBody">
+                            <tr><td class="text-center py-3">Vui lòng chọn bảng dữ liệu...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Khu vực phân trang -->
+                <div id="adminPaginationContainer" class="d-flex justify-content-center mt-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Sửa Dữ Liệu Biểu Mẫu -->
+    <div class="modal fade" id="editDataModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <form id="editDataForm" onsubmit="saveRecordData(event)">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title"><i class="fa-solid fa-pen-to-square"></i> Chỉnh sửa thông tin</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="editRecordId">
+                        <div class="row" id="editDataFieldsContainer"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-success">Cập nhật thay đổi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="quan-ly-bieu-mau.js"></script>
+    <script>
+        // Gọi hàm tải dữ liệu ngay khi vào trang
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof loadTableDataAdmin === 'function') {
+                loadTableDataAdmin(1);
+            }
+        });
+    </script>
+</body>
+</html>

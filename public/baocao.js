@@ -216,13 +216,13 @@ function generateRowHtml(idx, r, stt) {
         case 2:
             return `<tr>
                 <td>${r.so_ho || stt}</td>
-                <td class="text-left">${r.ho_ten_tre || ''}</td>
-                <td>${r.benh_suy_giap ? 'x' : ''}</td>
-                <td>${r.thieu_men_g6pd ? 'x' : ''}</td>
-                <td>${r.tang_san_thuong_than ? 'x' : ''}</td>
-                <td>${r.khiem_thinh ? 'x' : ''}</td>
-                <td>${r.benh_tim ? 'x' : ''}</td>
-                <td class="text-left">${r.ghi_chu || ''}</td>
+                <td class="text-left">${r.ho_ten_tre || r.ho_ten_con || ''}</td>
+                <td>${r.suy_giap || r.benh_suy_giap || ''}</td>
+                <td>${r.g6pd || r.thieu_men_g6pd || ''}</td>
+                <td>${r.thuong_than || r.tang_san_thuong_than || ''}</td>
+                <td>${r.khiem_thinh || ''}</td>
+                <td>${r.tim_bam_sinh || r.benh_tim || ''}</td>
+                <td class="text-left">${r.noi_thuc_hien || r.ghi_chu || ''}</td>
             </tr>`;
         case 3:
             return `<tr>
@@ -301,16 +301,39 @@ function generateRowHtml(idx, r, stt) {
                 <td>${r.mang_thai_lan_thu || ''}</td>
             </tr>`;
         case 10:
-            return `<tr>
-                <td>${r.so_ho || stt}</td>
-                <td>${r.ma_the_bhyt || ''}</td>
-                <td class="text-left">${r.ho_ten || ''}</td>
-                <td class="text-left">${r.noi_cu_tru || ''}</td>
-                <td>${formatDateVN(r.ngay_sinh)}</td>
-                <td>${r.mang_thai_tuan || ''}</td>
-                <td>${formatDateVN(r.ngay_thuc_hien)}</td>
-                <td>${r.ket_qua || ''}</td>
+            // Tách riêng ngày thực hiện cho mốc 12 tuần và 21 tuần từ database
+            let ngayThucHien12 = formatDateVN(r.ngay_thuc_hien_12 || r.ngay_kham_12 || r.ngay_sieu_am_12 || r.ngay_thuc_hien_dich_vu_12 || r.ngay_thuc_hien || r.ngay_thuc_hien_dich_vu || r.mang_thai_tuan_12);
+            let ngayThucHien21 = formatDateVN(r.ngay_thuc_hien_21 || r.ngay_kham_21 || r.ngay_sieu_am_21 || r.ngay_thuc_hien_dich_vu_21 || r.mang_thai_tuan_21);
+            let noiThucHien = r.noi_thuc_hien || r.ghi_chu || '';
+            
+            // Dòng 1: Tuần 12 (Đã bổ sung biến ${ngayThucHien12} vào ô tương ứng)
+            let row1 = `<tr>
+                <td rowspan="2">${r.so_ho || stt}</td>
+                <td rowspan="2">${r.ma_the_bhyt || r.so_the_bhyt || ''}</td>
+                <td rowspan="2" class="text-left">${r.ho_ten || ''}</td>
+                <td rowspan="2" class="text-left">${r.noi_cu_tru || ''}</td>
+                <td rowspan="2">${formatDateVN(r.ngay_sinh)}</td>
+                <td>12 tuần</td>
+                <td>${ngayThucHien12}</td>
+                <td>${r.ket_qua_edward || r.edward || r.hoi_chung_edward || 'Bình thường'}</td>
+                <td>${r.ket_qua_down || r.down || r.hoi_chung_down || 'Bình thường'}</td>
+                <td>${r.ket_qua_patau || r.patau || r.hoi_chung_patau || 'Bình thường'}</td>
+                <td>${r.ket_qua_thalassemia || r.thalassemia || r.benh_thalassemia || 'Bình thường'}</td>
+                <td rowspan="2" class="text-left">${noiThucHien}</td>
+                <td rowspan="2"></td>
             </tr>`;
+
+            // Dòng 2: Tuần 21 (Đã bổ sung cột ngày thực hiện ${ngayThucHien21})
+            let row2 = `<tr>
+                <td>21 tuần</td>
+                <td>${ngayThucHien21}</td>
+                <td>${r.ket_qua_edward_21 || r.edward_21 || 'Bình thường'}</td>
+                <td>${r.ket_qua_down_21 || r.down_21 || 'Bình thường'}</td>
+                <td>${r.ket_qua_patau_21 || r.patau_21 || 'Bình thường'}</td>
+                <td>${r.ket_qua_thalassemia_21 || r.thalassemia_21 || 'Bình thường'}</td>
+            </tr>`;
+
+            return row1 + row2;
        case 11:
         return `<tr>
             <td>${r.ho_so || stt}</td>

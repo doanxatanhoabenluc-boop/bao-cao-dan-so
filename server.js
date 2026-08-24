@@ -145,9 +145,29 @@ async function initDatabase() {
             ALTER TABLE table_11 DROP COLUMN IF EXISTS ma_doi_tuong;
             ALTER TABLE table_11 DROP COLUMN IF EXISTS ma_so_doi_tuong;
             ALTER TABLE table_11 ALTER COLUMN nam_sinh TYPE TEXT USING nam_sinh::TEXT;
+
             -- Thêm lại các cột đúng chuẩn cho từng bảng
+            -- Bảng 1: Sàng lọc sinh
             ALTER TABLE table_1 ADD COLUMN IF NOT EXISTS ho_so TEXT, ADD COLUMN IF NOT EXISTS ho_ten_con TEXT, ADD COLUMN IF NOT EXISTS ngay_sinh_con TEXT, ADD COLUMN IF NOT EXISTS gioi_tinh TEXT, ADD COLUMN IF NOT EXISTS dan_toc TEXT, ADD COLUMN IF NOT EXISTS ho_ten_me TEXT, ADD COLUMN IF NOT EXISTS so_the_bhyt_me TEXT, ADD COLUMN IF NOT EXISTS ngay_sinh_me TEXT, ADD COLUMN IF NOT EXISTS noi_de TEXT, ADD COLUMN IF NOT EXISTS con_thu_may TEXT;
-            
+
+            -- Bảng 2: Danh sách sàng lọc sơ sinh
+            ALTER TABLE table_2 ADD COLUMN IF NOT EXISTS so_ho TEXT;
+            ALTER TABLE table_2 ADD COLUMN IF NOT EXISTS ho_ten_tre TEXT;
+            ALTER TABLE table_2 ADD COLUMN IF NOT EXISTS ngay_sinh_tre TEXT; 
+            ALTER TABLE table_2 ADD COLUMN IF NOT EXISTS ho_ten_me TEXT;     
+            ALTER TABLE table_2 ADD COLUMN IF NOT EXISTS ma_the_bhyt_me TEXT;
+            ALTER TABLE table_2 ADD COLUMN IF NOT EXISTS noi_cu_tru TEXT;
+            ALTER TABLE table_2 ADD COLUMN IF NOT EXISTS nam_sinh_me TEXT;
+            ALTER TABLE table_2 ADD COLUMN IF NOT EXISTS gioi_tinh TEXT;
+            ALTER TABLE table_2 ADD COLUMN IF NOT EXISTS benh_suy_giap TEXT;
+            ALTER TABLE table_2 ADD COLUMN IF NOT EXISTS thieu_men_g6pd TEXT;
+            ALTER TABLE table_2 ADD COLUMN IF NOT EXISTS tang_san_thuong_than TEXT;
+            ALTER TABLE table_2 ADD COLUMN IF NOT EXISTS khiem_thinh TEXT;
+            ALTER TABLE table_2 ADD COLUMN IF NOT EXISTS benh_tim TEXT;
+            ALTER TABLE table_2 ADD COLUMN IF NOT EXISTS noi_thuc_hien TEXT;
+            ALTER TABLE table_2 ADD COLUMN IF NOT EXISTS ghi_chu TEXT;
+
+            -- Bảng 4: Nhân khẩu
             ALTER TABLE table_4 ADD COLUMN IF NOT EXISTS ho_so TEXT, ADD COLUMN IF NOT EXISTS ho_ten TEXT, ADD COLUMN IF NOT EXISTS so_the_bhyt TEXT, ADD COLUMN IF NOT EXISTS quan_he TEXT, ADD COLUMN IF NOT EXISTS gioi_tinh TEXT, ADD COLUMN IF NOT EXISTS ngay_sinh TEXT, ADD COLUMN IF NOT EXISTS dan_toc TEXT, ADD COLUMN IF NOT EXISTS trinh_do_hoc_van TEXT, ADD COLUMN IF NOT EXISTS tinh_trang_hon_nhan TEXT, ADD COLUMN IF NOT EXISTS ngay_den TEXT, ADD COLUMN IF NOT EXISTS noi_di TEXT;
 
             -- Bảng 7: Cập nhật đúng và đủ các cột thực tế
@@ -160,7 +180,7 @@ async function initDatabase() {
             ALTER TABLE table_7 ADD COLUMN IF NOT EXISTS so_con_hien_co TEXT;
             ALTER TABLE table_7 ADD COLUMN IF NOT EXISTS noi_thuc_hien TEXT;
 
-           -- Bảng 8: Khai báo đầy đủ các cột khớp với giao diện form
+            -- Bảng 8: Khai báo đầy đủ các cột khớp với giao diện form
             ALTER TABLE table_8 DROP COLUMN IF EXISTS bptt; 
             ALTER TABLE table_8 ADD COLUMN IF NOT EXISTS ho_so TEXT;
             ALTER TABLE table_8 ADD COLUMN IF NOT EXISTS ho_ten_vo TEXT;
@@ -253,7 +273,7 @@ async function initDatabase() {
             `);
         }
 
-        // Thêm dữ liệu mẫu Quan hệ với chủ hộ nếu chưa có (Đã có đủ dấu đóng ngoặc)
+        // Thêm dữ liệu mẫu Quan hệ với chủ hộ nếu chưa có
         const qhCheck = await pool.query("SELECT id FROM danh_sach_quan_he LIMIT 1");
         if (qhCheck.rows.length === 0) {
             await pool.query(`
@@ -611,7 +631,28 @@ app.delete("/api/admin/logs", async (req, res) => {
         res.status(500).json({ success: false, message: err.message });
     }
 });
+// ==================== SỬA LẠI API XÓA 1 DÒNG NHẬT KÝ THEO ID ====================
+app.delete("/api/admin/logs/:id", async (req, res) => {
+    if (!req.session.user || req.session.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Không có quyền thực hiện" });
+    }
+    try {
+        const logId = req.params.id;
+        
+        // Sửa lại dùng $1 thay vì ? và nhận kết quả chuẩn của pg (dùng rowCount)
+        const result = await pool.query("DELETE FROM logs WHERE id = $1", [logId]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy dòng nhật ký này" });
+        }
 
+        await logAction(req.session.user, `Đã xóa nhật ký ID: ${logId}`, null, "Xóa 1 log");
+        res.json({ success: true, message: `Đã xóa nhật ký ID ${logId} thành công!` });
+    } catch (err) {
+        console.error('Lỗi khi xóa log:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
 // ==================== QUẢN LÝ DANH MỤC BPTT (CÓ LOG) ====================
 app.get("/api/admin/bptt", async (req, res) => {
     try {

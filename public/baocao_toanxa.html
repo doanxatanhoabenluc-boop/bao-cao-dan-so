@@ -33,6 +33,7 @@
                 <label class="form-label fw-bold small">Chọn Loại Báo Cáo:</label>
                 <select id="filterLoaiBaoCao" class="form-select form-select-sm" onchange="doiLoaiBaoCao()">
                     <option value="sinh">1. Sổ Sinh (Trẻ sinh ra)</option>
+                    <option value="sang_loc_so_sinh">2. Sổ Sàng Lọc Sơ Sinh</option>
                     <option value="tu">3. Sổ Tử (Tử vong)</option>
                     <option value="di_den">6. Sổ Đi Đến (Nhân khẩu đi/đến)</option>
                     <option value="bptt">7. Sổ Biện Pháp Tránh Thai (BPTT)</option>
@@ -96,7 +97,36 @@
             <tbody></tbody>
         </table>
     </div>
-
+<!-- Bảng Sổ Sàng Lọc Sơ Sinh (Ẩn mặc định) -->
+    <div id="wrapper_sang_loc_so_sinh" class="table-responsive shadow-sm bg-white p-2 rounded" style="display: none;">
+        <table class="table table-bordered table-striped align-middle small text-center" id="tbl_sang_loc_so_sinh">
+            <thead class="table-light">
+                <tr>
+                    <th rowspan="2">TT</th>
+                    <th rowspan="2">Tên CTV</th>
+                    <th rowspan="2">Số hộ</th>
+                    <th rowspan="2">Mã số thẻ BHYT</th>
+                    <th rowspan="2">Họ và tên mẹ</th>
+                    <th rowspan="2">Nơi cư trú<br><small>(tỉnh, huyện, xã, địa chỉ cụ thể)</small></th>
+                    <th rowspan="2">Năm sinh của mẹ</th>
+                    <th rowspan="2">Họ và tên con</th>
+                    <th colspan="2">Ngày sinh của con</th>
+                    <th colspan="5">Kết quả tầm soát, sàng lọc</th>
+                    <th rowspan="2">Nơi thực hiện</th>
+                </tr>
+                <tr>
+                    <th>Nam</th>
+                    <th>Nữ</th>
+                    <th>Bệnh suy giáp trạng bẩm sinh</th>
+                    <th>Bệnh thiếu men G6PD</th>
+                    <th>Tăng sản thượng thận bẩm sinh</th>
+                    <th>Khiếm thính bẩm sinh</th>
+                    <th>Bệnh tim bẩm sinh</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
     <!-- Bảng Sổ Tử (Ẩn mặc định) -->
     <div id="wrapper_tu" class="table-responsive shadow-sm bg-white p-2 rounded" style="display: none;">
         <table class="table table-bordered table-striped align-middle small" id="tbl_tu">

@@ -36,11 +36,18 @@ const tableConfigs = {
     "table_2": { title: "2. Danh sách SL sơ sinh", fields: [
         { name: "so_ho", label: "Số hộ", type: "text", required: true },
         { name: "ho_ten_tre", label: "Họ tên trẻ", type: "text", required: true },
+        { name: "ngay_sinh_tre", label: "Ngày sinh của con", type: "date" }, // 👈 Thêm trường này
+        { name: "ho_ten_me", label: "Họ và tên mẹ", type: "text" },          // 👈 Thêm trường này
+        { name: "ma_the_bhyt_me", label: "Mã số thẻ BHYT của mẹ", type: "text" },
+        { name: "noi_cu_tru", label: "Nơi cư trú (tỉnh, huyện, xã, địa chỉ cụ thể)", type: "text" },
+        { name: "nam_sinh_me", label: "Năm sinh của mẹ", type: "date" },
+        { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"] },
         { name: "benh_suy_giap", label: "Bệnh suy giáp trạng bẩm sinh", type: "text" },
         { name: "thieu_men_g6pd", label: "Thiếu men G6PD", type: "text" },
         { name: "tang_san_thuong_than", label: "Tăng sản thượng thận bẩm sinh", type: "text" },
         { name: "khiem_thinh", label: "Khiếm thính bẩm sinh", type: "text" },
         { name: "benh_tim", label: "Bệnh tim bẩm sinh", type: "text" },
+        { name: "noi_thuc_hien", label: "Nơi thực hiện", type: "select-benhvien" },
         { name: "ghi_chu", label: "Ghi chú", type: "text" }
     ]},
     "table_3": { title: "3. Danh sách người chết", fields: [
@@ -176,13 +183,16 @@ window.onload = async function() {
                                 
                                 <div class="d-grid gap-3 d-sm-flex justify-content-sm-center flex-wrap">
                                     <a href="admin.html" id="btnAdmin" class="btn btn-primary btn-lg px-4 fw-bold">
-                                        <i class="fa-solid fa-gears me-2"></i> Trang Quản Lý
+                                        <i class="fa-solid fa-gears me-2"></i> Quản Trị
+                                    </a>
+                                    <a href="quan-ly-bieu-mau.html" class="btn btn-success btn-lg px-4 fw-bold">
+                                        <i class="fa-solid fa-table-list me-2"></i> Quản lý 11 Biểu mẫu
                                     </a>
                                     <a href="baocao.html" id="btnBaocaoToanXa" class="btn btn-success btn-lg px-4 fw-bold">
-                                        <i class="fa-solid fa-chart-pie me-2"></i> Báo Cáo Toàn Xã
+                                        <i class="fa-solid fa-chart-pie me-2"></i> Xem Phiếu P0/CTV
                                     </a>
                                     <a href="baocao_toanxa.html" id="btnBaocaoTongHop" class="btn btn-info text-white btn-lg px-4 fw-bold">
-                                        <i class="fa-solid fa-file-invoice me-2"></i> Báo Cáo Tổng Hợp
+                                        <i class="fa-solid fa-file-invoice me-2"></i> Quản Lý Sổ
                                     </a>
                                 </div>
 
@@ -331,9 +341,12 @@ function switchTableForm() {
     let submitBtn = document.querySelector('#dynamicForm button[type="submit"]');
     let isTable10 = (currentTable === 'table_10');
 
-    // 🔒 Nếu là Bảng 10: Ẩn nút lưu và hiển thị thông báo hướng dẫn
-    if (isTable10) {
+    // 🔒 Nếu là Bảng 2 hoặc Bảng 10: Ẩn nút lưu và hiển thị thông báo hướng dẫn
+    const isReadOnlyTable = (currentTable === 'table_2' || isTable10);
+
+    if (isReadOnlyTable) {
         if (submitBtn) submitBtn.style.display = 'none';
+        
         let noticeDiv = document.createElement('div');
         noticeDiv.className = "col-12 mb-3";
         noticeDiv.innerHTML = `
@@ -477,51 +490,56 @@ function switchTableForm() {
                 <small class="text-muted mt-1 d-block">💡 Nhập thông tin để gợi ý kết quả từ Bảng 7, sau đó click chọn để hệ thống tự động điền các ô bên dưới.</small>
             `;
         } else {
-            if (field.name === 'ho_ten_con' || field.name === 'ho_ten_tre' || field.name === 'ho_ten') {
-                col.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <label class="mb-0">${field.label} ${field.required && !isTable10 ? '<span class="text-danger">*</span>' : ''}</label>
-                        ${field.name !== 'ho_ten' && !isTable10 ? `
-                        <div class="form-check form-check-inline m-0">
-                            <input class="form-check-input" type="checkbox" id="check_${field.name}" onchange="toggleChuaDatTen('${field.name}')">
-                            <label class="form-check-label small text-primary fw-semibold" for="check_${field.name}" style="cursor: pointer;">Chưa đặt tên</label>
-                        </div>` : ''}
-                    </div>
-                    <input type="${field.type || 'text'}" class="form-control" id="input_${field.name}" name="${field.name}" ${isTable10 ? 'readonly style="background-color: #e9ecef; cursor: not-allowed;"' : (field.required ? 'required' : '')}>
-                `;
-            } else {
-                col.innerHTML = `<label>${field.label} ${field.required && !isTable10 ? '<span class="text-danger">*</span>' : ''}</label>`;
-                let input = document.createElement('input');
-                input.type = field.type || 'text';
-                input.className = "form-control";
-                input.name = field.name;
-                if (field.required && !isTable10) input.required = true;
+    // Kiểm tra xem bảng hiện tại có phải là Bảng 2 hoặc Bảng 10 hay không
+    const isReadOnlyTable = (currentTable === 'table_2' || isTable10);
 
-                // Khóa trường riêng của Bảng 8
-                if (currentTable === 'table_8' && ['ho_so', 'ho_ten_vo', 'so_the_bhyt', 'ngay_sinh'].includes(field.name)) {
-                    input.setAttribute('readonly', true);
-                    input.readOnly = true;
-                    input.style.backgroundColor = '#e9ecef';
-                    input.style.cursor = 'not-allowed';
-                    input.placeholder = '🔒 Chọn từ Bảng 7 phía trên...';
-                    input.onkeydown = (e) => e.preventDefault();
-                    input.onpaste = (e) => e.preventDefault();
-                }
+    if (field.name === 'ho_ten_con' || field.name === 'ho_ten_tre' || field.name === 'ho_ten') {
+        col.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="mb-0">${field.label} ${field.required && !isReadOnlyTable ? '<span class="text-danger">*</span>' : ''}</label>
+                ${field.name !== 'ho_ten' && !isReadOnlyTable ? `
+                <div class="form-check form-check-inline m-0">
+                    <input class="form-check-input" type="checkbox" id="check_${field.name}" onchange="toggleChuaDatTen('${field.name}')">
+                    <label class="form-check-label small text-primary fw-semibold" for="check_${field.name}" style="cursor: pointer;">Chưa đặt tên</label>
+                </div>` : ''}
+            </div>
+            <input type="${field.type || 'text'}" class="form-control" id="input_${field.name}" name="${field.name}" ${isReadOnlyTable ? 'readonly style="background-color: #e9ecef; cursor: not-allowed;" placeholder="🔒 Đã tự động đồng bộ từ Bảng 1..."' : (field.required ? 'required' : '')}>
+        `;
+    } else {
+        col.innerHTML = `<label>${field.label} ${field.required && !isReadOnlyTable ? '<span class="text-danger">*</span>' : ''}</label>`;
+        let input = document.createElement('input');
+        input.type = field.type || 'text';
+        input.className = "form-control";
+        input.id = `input_${field.name}`;
+        input.name = field.name;
 
-                // 🔒 Khóa toàn bộ input nếu là Bảng 10
-                if (isTable10) {
-                    input.setAttribute('readonly', true);
-                    input.readOnly = true;
-                    input.style.backgroundColor = '#e9ecef';
-                    input.style.cursor = 'not-allowed';
-                    input.placeholder = '🔒 Đã tự động đồng bộ từ Bảng 1...';
-                    input.onkeydown = (e) => e.preventDefault();
-                    input.onpaste = (e) => e.preventDefault();
-                }
+        if (field.required && !isReadOnlyTable) input.required = true;
 
-                col.appendChild(input);
-            }
+        // 🔒 Khóa trường riêng của Bảng 8
+        if (currentTable === 'table_8' && ['ho_so', 'ho_ten_vo', 'so_the_bhyt', 'ngay_sinh'].includes(field.name)) {
+            input.setAttribute('readonly', true);
+            input.readOnly = true;
+            input.style.backgroundColor = '#e9ecef';
+            input.style.cursor = 'not-allowed';
+            input.placeholder = '🔒 Chọn từ Bảng 7 phía trên...';
+            input.onkeydown = (e) => e.preventDefault();
+            input.onpaste = (e) => e.preventDefault();
         }
+
+        // 🔒 Khóa toàn bộ input nếu là Bảng 2 hoặc Bảng 10
+        if (isReadOnlyTable) {
+            input.setAttribute('readonly', true);
+            input.readOnly = true;
+            input.style.backgroundColor = '#e9ecef';
+            input.style.cursor = 'not-allowed';
+            input.placeholder = '🔒 Đã tự động đồng bộ từ Bảng 1...';
+            input.onkeydown = (e) => e.preventDefault();
+            input.onpaste = (e) => e.preventDefault();
+        }
+
+        col.appendChild(input);
+    }
+}
         container.appendChild(col);
     });
 
@@ -727,83 +745,105 @@ async function saveData(e) {
     let result = await res.json();
 
     if(result.success) {
-        if (currentTable === 'table_1') {
-            let noiCuTruVal = document.getElementById('input_noi_cu_tru_me') ? document.getElementById('input_noi_cu_tru_me').value : '';
-            let ngaySinhCon = dataObj.ngay_sinh_con;
+    if (currentTable === 'table_1') {
+        let noiCuTruVal = document.getElementById('input_noi_cu_tru_me') ? document.getElementById('input_noi_cu_tru_me').value : '';
+        let ngaySinhCon = dataObj.ngay_sinh_con;
 
-            let ngayKinhCuoiStr = '';
-            let ngayTuan12Str = '';
-            let ngayTuan21Str = '';
+        // --- 1. ĐỒNG BỘ SANG BẢNG 2 (Sàng lọc sơ sinh) ---
+       let table2Obj = {
+            so_ho: dataObj.ho_so || '',
+            ho_ten_tre: dataObj.ho_ten_con || '',
+            ngay_sinh_tre: dataObj.ngay_sinh_con || '',   
+            ho_ten_me: dataObj.ho_ten_me || '',           
+            ma_the_bhyt_me: dataObj.so_the_bhyt_me || '',
+            noi_cu_tru: noiCuTruVal,
+            nam_sinh_me: dataObj.ngay_sinh_me || '',
+            gioi_tinh: dataObj.gioi_tinh || '',
+            benh_suy_giap: "Bình thường",
+            thieu_men_g6pd: "Bình thường",
+            tang_san_thuong_than: "Bình thường",
+            khiem_thinh: "Bình thường",
+            benh_tim: "Bình thường",
+            noi_thuc_hien: dataObj.noi_de || '',
+            ghi_chu: ''
+        };
 
-           if (ngaySinhCon) {
-                let birthDate = new Date(ngaySinhCon);
-                if (!isNaN(birthDate.getTime())) {
-                    let lmpDate = new Date(birthDate);
-                    // Trừ 280 ngày (40 tuần) từ ngày sinh con để ra Ngày kinh cuối (LMP)
-                    lmpDate.setDate(lmpDate.getDate() - 280);
-                    ngayKinhCuoiStr = lmpDate.toISOString().split('T')[0];
+        // --- 2. TÍNH TOÁN NGÀY THÁNG CHO BẢNG 10 ---
+        let ngayKinhCuoiStr = '';
+        let ngayTuan12Str = '';
+        let ngayTuan21Str = '';
 
-                    /**
-                     * Lấy ngày ngẫu nhiên trong 7 ngày của một tuần thai cụ thể
-                     * @param {Date} lmp - Ngày kinh cuối
-                     * @param {number} targetWeek - Tuần thai cần lấy (ví dụ: 12 hoặc 21)
-                     */
-                    function getRandomDateInExactWeek(lmp, targetWeek) {
-                        let startDay = targetWeek * 7; // Ngày đầu tiên của tuần (ví dụ: 12 * 7 = 84 ngày)
-                        let randomOffset = startDay + Math.floor(Math.random() * 7); // Lấy ngẫu nhiên từ +0 đến +6 ngày
+        if (ngaySinhCon) {
+            let birthDate = new Date(ngaySinhCon);
+            if (!isNaN(birthDate.getTime())) {
+                let lmpDate = new Date(birthDate);
+                // Trừ 280 ngày (40 tuần) để ra Ngày kinh cuối (LMP)
+                lmpDate.setDate(lmpDate.getDate() - 280);
+                ngayKinhCuoiStr = lmpDate.toISOString().split('T')[0];
 
-                        let resultDate = new Date(lmp);
-                        resultDate.setDate(resultDate.getDate() + randomOffset);
-                        return resultDate.toISOString().split('T')[0];
-                    }
+                function getRandomDateInExactWeek(lmp, targetWeek) {
+                    let startDay = targetWeek * 7;
+                    let randomOffset = startDay + Math.floor(Math.random() * 7);
 
-                    // Lấy ngẫu nhiên 1 trong 7 ngày thuộc Tuần 12 (từ ngày thứ 84 đến 90 sau LMP)
-                    ngayTuan12Str = getRandomDateInExactWeek(lmpDate, 12);
-
-                    // Lấy ngẫu nhiên 1 trong 7 ngày thuộc Tuần 21 (từ ngày thứ 147 đến 153 sau LMP)
-                    ngayTuan21Str = getRandomDateInExactWeek(lmpDate, 21);
+                    let resultDate = new Date(lmp);
+                    resultDate.setDate(resultDate.getDate() + randomOffset);
+                    return resultDate.toISOString().split('T')[0];
                 }
-            }
 
-           let table10Obj = {
-                so_ho: dataObj.ho_so || '',
-                ma_the_bhyt: dataObj.so_the_bhyt_me || '',
-                ho_ten: dataObj.ho_ten_me || '',
-                ngay_sinh: dataObj.ngay_sinh_me || '',
-                noi_cu_tru: noiCuTruVal,
-                ngay_thang_mang_thai: ngayKinhCuoiStr,
-                mang_thai_tuan_12: ngayTuan12Str,
-                mang_thai_tuan_21: ngayTuan21Str,
-                
-                hoi_chung_down_12: "Bình thường",
-                hoi_chung_edward_12: "Bình thường",
-                hoi_chung_patau_12: "Bình thường",
-                benh_thalassemia_12: "Bình thường",
-                
-                hoi_chung_down_21: "Bình thường",
-                hoi_chung_edward_21: "Bình thường",
-                hoi_chung_patau_21: "Bình thường",
-                benh_thalassemia_21: "Bình thường",
-                
-                ghi_chu: dataObj.noi_de || ''
-            };
-            await fetch('/api/data/table_10', {
+                ngayTuan12Str = getRandomDateInExactWeek(lmpDate, 12);
+                ngayTuan21Str = getRandomDateInExactWeek(lmpDate, 21);
+            }
+        }
+
+        // --- 3. ĐỒNG BỘ SANG BẢNG 10 (Sàng lọc trước sinh) ---
+        let table10Obj = {
+            so_ho: dataObj.ho_so || '',
+            ma_the_bhyt: dataObj.so_the_bhyt_me || '',
+            ho_ten: dataObj.ho_ten_me || '',
+            ngay_sinh: dataObj.ngay_sinh_me || '',
+            noi_cu_tru: noiCuTruVal,
+            ngay_thang_mang_thai: ngayKinhCuoiStr,
+            mang_thai_tuan_12: ngayTuan12Str,
+            mang_thai_tuan_21: ngayTuan21Str,
+            
+            hoi_chung_down_12: "Bình thường",
+            hoi_chung_edward_12: "Bình thường",
+            hoi_chung_patau_12: "Bình thường",
+            benh_thalassemia_12: "Bình thường",
+            
+            hoi_chung_down_21: "Bình thường",
+            hoi_chung_edward_21: "Bình thường",
+            hoi_chung_patau_21: "Bình thường",
+            benh_thalassemia_21: "Bình thường",
+            
+            ghi_chu: dataObj.noi_de || ''
+        };
+
+        // Gửi request ghi nhận đồng thời cả 2 bảng
+        await Promise.all([
+            fetch('/api/data/table_2', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(table2Obj)
+            }),
+            fetch('/api/data/table_10', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(table10Obj)
-            });
-        }
-
-        alert("✅ Lưu thành công và đồng bộ dữ liệu liên quan!");
-        form.reset();
-        
-        document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-        document.querySelectorAll('input[readonly]').forEach(inp => inp.removeAttribute('readonly'));
-
-        fetchTableData(currentTable);
-    } else {
-        alert("❌ Lỗi: " + result.message);
+            })
+        ]);
     }
+
+    alert("✅ Lưu thành công và đồng bộ dữ liệu sang Bảng 2 & Bảng 10!");
+    form.reset();
+    
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('input[readonly]').forEach(inp => inp.removeAttribute('readonly'));
+
+    fetchTableData(currentTable);
+} else {
+    alert("❌ Lỗi: " + result.message);
+}
 }
 
 async function fetchTableData(tableName) {
@@ -959,6 +999,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         const role = (currentUser.role || "").trim().toLowerCase();
         const adminBtn = document.getElementById("btnAdmin");
         const baocaoBtn = document.getElementById("btnBaocaoToanXa");
+        const quanLyBieuMauBtn = document.getElementById("btnQuanLyBieuMau"); // 🆕 Khai báo nút Quản lý 11 biểu mẫu
         const userInfoSpan = document.getElementById("userInfo");
 
         if (userInfoSpan) {
@@ -976,9 +1017,11 @@ document.addEventListener("DOMContentLoaded", async function() {
         if (role.includes("admin") || role.includes("lãnh đạo") || role.includes("lanh dao") || role.includes("quan tri")) {
             if (adminBtn) adminBtn.style.setProperty("display", "inline-block", "important");
             if (baocaoBtn) baocaoBtn.style.setProperty("display", "inline-block", "important");
+            if (quanLyBieuMauBtn) quanLyBieuMauBtn.style.setProperty("display", "inline-block", "important"); // 🆕 Hiển thị nút cho Admin/Lãnh đạo
         } else {
             if (adminBtn) adminBtn.style.setProperty("display", "none", "important");
-            if (baocaoBtn) baocaoBtn.style.setProperty("display", "none", "important");
+            if (baocaoBtn) adminBtn.style.setProperty("display", "none", "important");
+            if (quanLyBieuMauBtn) quanLyBieuMauBtn.style.setProperty("display", "none", "important"); // 🆕 Ẩn nút đối với tài khoản thường
         }
     }
 });
