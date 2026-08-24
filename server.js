@@ -9,10 +9,43 @@ const app = express();
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
-    }
+
+    ssl: process.env.DATABASE_URL
+        ? { rejectUnauthorized: false }
+        : false,
+
+    // Giới hạn số connection
+    max: 5,
+
+    // Connection không hoạt động quá lâu thì đóng
+    idleTimeoutMillis: 30000,
+
+    // Không chờ database quá 10 giây
+    connectionTimeoutMillis: 10000,
+
+    // Giữ TCP connection hoạt động
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000,
+
+    options: '-c timezone=Asia/Ho_Chi_Minh'
 });
+
+// Bắt lỗi connection PostgreSQL
+pool.on('error', (err) => {
+    console.error('❌ PostgreSQL Pool Error:', err.message);
+});
+
+// ==========================================
+// POSTGRESQL KEEP-ALIVE
+// ==========================================
+setInterval(async () => {
+    try {
+        await pool.query('SELECT 1');
+        console.log('✅ PostgreSQL: connection OK');
+    } catch (err) {
+        console.error('❌ PostgreSQL Keep-Alive Error:', err.message);
+    }
+}, 4 * 60 * 1000);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

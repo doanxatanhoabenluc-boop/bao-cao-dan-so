@@ -96,7 +96,7 @@ const tableConfigs = {
         { name: "ngay_su_dung", label: "Ngày sử dụng", type: "date", required: true },
         { name: "bptt_moi", label: "Biện pháp tránh thai mới", type: "select-bptt", required: true },
         { name: "so_con_hien_co", label: "Số con hiện có", type: "number", required: true },
-        { name: "noi_thuc_hien", label: "Nơi thực hiện", type: "select-noithuchien", required: true }
+        { name: "noi_thuc_hien", label: "Nơi thực hiện", type: "select-noithuchien", required: false }
     ]},
    "table_8": { title: "8. Vợ chồng thôi sử dụng BPTT", fields: [
         { name: "search_helper", label: "🔍 Tìm kiếm thông tin từ Bảng 7 (Nhập hộ số hoặc tên vợ)", type: "search-table7" },
@@ -106,7 +106,7 @@ const tableConfigs = {
         { name: "ngay_sinh", label: "Năm sinh", type: "date", required: true },
         { name: "ngay_thoi_su_dung", label: "Ngày thôi sử dụng", type: "date", required: true },
         { name: "bptt_thoi", label: "BPTT thôi sử dụng", type: "select-bptt", required: true },
-        { name: "noi_thuc_hien", label: "Nơi thực hiện", type: "select-noithuchien", required: true }
+        { name: "noi_thuc_hien", label: "Nơi thực hiện", type: "select-noithuchien", required: false }
     ]},
     "table_9": { title: "9. Phụ nữ có thông tin thai sản", fields: [
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
