@@ -8,7 +8,10 @@ const path = require('path');
 const app = express();
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
 
 app.use(express.json());
