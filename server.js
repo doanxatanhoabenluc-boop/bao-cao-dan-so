@@ -858,4 +858,6 @@ app.delete('/api/admin/users/:id', async (req, res) => {
 });
 
 // Khởi chạy server
-app.listen(3000, () => console.log("==> Server đang chạy tại http://localhost:3000"));
+// Thay thế đoạn app.listen cũ bằng đoạn này:
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`==> Server đang chạy trên cổng ${PORT}`));
