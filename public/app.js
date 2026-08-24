@@ -246,15 +246,24 @@ window.onload = async function() {
 };
 
 // Hàm hiển thị Popup chào mừng/xác nhận tài khoản ban đầu
+// Hàm hiển thị Popup chào mừng/xác nhận tài khoản ban đầu
 function showLoginWelcomeModal(currentUser) {
     let name = currentUser.fullname || currentUser.username || "";
     let userRole = currentUser.role || "Cộng tác viên";
     let locationText = "Toàn xã";
     
+    // Cập nhật hiển thị kết hợp Địa bàn và Ấp trực quan hơn
+    let parts = [];
     if (currentUser.diabanh && currentUser.diabanh !== "Tất cả") {
-        locationText = currentUser.diabanh;
-    } else if (currentUser.ap && currentUser.ap !== "Tất cả") {
-        locationText = `Ấp ${currentUser.ap}`;
+        parts.push(currentUser.diabanh);
+    }
+    if (currentUser.ap && currentUser.ap !== "Tất cả") {
+        let apName = currentUser.ap.toLowerCase().startsWith('ấp') ? currentUser.ap : `Ấp ${currentUser.ap}`;
+        parts.push(apName);
+    }
+    
+    if (parts.length > 0) {
+        locationText = parts.join(" - ");
     }
 
     let modalHtml = `
