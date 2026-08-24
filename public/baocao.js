@@ -120,11 +120,20 @@ async function loadReportData() {
     document.getElementById("txtAp").innerText = selectedAp || (currentUserGlobal.ap || "Toàn xã");
     document.getElementById("txtDiaBan").innerText = selectedDiaBan || (currentUserGlobal.diabanh || "Toàn xã");
 
+    // 🕒 Lấy ngày tháng năm hiện tại của hệ thống
+    const today = new Date();
+    const signDayEl = document.getElementById("signDay");
+    const signMonthEl = document.getElementById("signMonth");
+    const signYearEl = document.getElementById("signYear");
+
+    if (signDayEl) signDayEl.innerText = today.getDate();
+    if (signMonthEl) signMonthEl.innerText = today.getMonth() + 1;
+    if (signYearEl) signYearEl.innerText = today.getFullYear();
+
     for (let i = 1; i <= 11; i++) {
         fetchAndRenderTable(i, month, year, selectedAp, selectedDiaBan);
     }
 }
-
 async function fetchAndRenderTable(tableIndex, month, year, filterAp, filterDiaBan) {
     const tbody = document.getElementById(`tbl${tableIndex}_body`);
     if (!tbody) return;
@@ -302,14 +311,15 @@ function generateRowHtml(idx, r, stt) {
                 <td>${formatDateVN(r.ngay_thuc_hien)}</td>
                 <td>${r.ket_qua || ''}</td>
             </tr>`;
-        case 11:
-            return `<tr>
-                <td>${r.ho_so || stt}</td>
-                <td>${r.ma_so_doi_tuong || ''}</td>
-                <td class="text-left">${r.ho_ten || ''}</td>
-                <td>${r.nam_sinh || ''}</td>
-                <td>${formatDateVN(r.ngay_kham)}</td>
-            </tr>`;
+       case 11:
+        return `<tr>
+            <td>${r.ho_so || stt}</td>
+            <td>${r.ma_so_doi_tuong || ''}</td>
+            <td class="text-left">${r.ho_ten || ''}</td>
+            <td>${r.nam_sinh || ''}</td>
+            <td>${formatDateVN(r.ngay_kham)}</td>
+            <td class="text-left">${r.ghi_chu || ''}</td>
+        </tr>`;
         default:
             return `<tr><td>${stt}</td><td colspan="5">Dữ liệu bảng ${idx}</td></tr>`;
     }
@@ -348,7 +358,7 @@ function exportToWord() {
                 </td>
                 <td style="width: 45%; text-align: right; vertical-align: top; border: none !important; padding: 0; font-size: 10pt;">
                     <p style="margin: 0;">Người báo cáo: ${reporterName}</p>
-                    <p style="margin: 0;">Nơi nhận báo cáo: ........................................</p>
+                    <p style="margin: 0;">Nơi nhận báo cáo: Trạm Y Tế Xã Lương Hòa</p>
                 </td>
             </tr>
         </table>
@@ -363,6 +373,11 @@ function exportToWord() {
     `;
 
     // 2. Tạo Footer (Chữ ký) dạng bảng ẩn không viền cho Word
+  const today = new Date();
+    const curDay = today.getDate();
+    const curMonth = today.getMonth() + 1;
+    const curYear = today.getFullYear();
+
     const footerTableHtml = `
         <table style="width: 100%; border: none !important; margin-top: 30px; font-family: 'Times New Roman', Times, serif; font-size: 11pt;">
             <tr style="border: none !important;">
@@ -373,7 +388,7 @@ function exportToWord() {
                     <p style="margin: 0; font-weight: bold;">${adminSignName}</p>
                 </td>
                 <td style="width: 50%; text-align: center; vertical-align: top; border: none !important; padding: 0;">
-                    <p style="margin: 0; font-size: 10pt; font-style: italic;">Lương Hòa, ngày ........ tháng ........ năm 20......</p>
+                    <p style="margin: 0; font-size: 10pt; font-style: italic;">Lương Hòa, ngày ${curDay} tháng ${curMonth} năm ${curYear}</p>
                     <p style="margin: 2px 0 0 0; font-weight: bold;">Cộng tác viên dân số lập phiếu</p>
                     <p style="margin: 0; font-style: italic; font-size: 10pt;">(Ký, ghi rõ họ và tên)</p>
                     <div style="height: 70px;"></div>
@@ -382,7 +397,6 @@ function exportToWord() {
             </tr>
         </table>
     `;
-
     // Xóa các phần thừa trong bản sao
     const oldHeaderDiv = reportPageEl.querySelector('.row.mb-3');
     const oldTitleDiv = reportPageEl.querySelector('.text-center.my-3');

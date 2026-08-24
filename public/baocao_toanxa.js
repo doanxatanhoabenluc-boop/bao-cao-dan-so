@@ -374,20 +374,46 @@ function xuatExcel() {
         tenTieuDe = 'SỔ SÀNG LỌC TRƯỚC SINH';
     }
     
-    const table = document.getElementById(tableId);
-    const ws = XLSX.utils.table_to_sheet(table);
-    
     let tieuDeThoiGian = (thang && nam) ? `Tháng ${thang}/${nam}` : (nam ? `Năm ${nam}` : "Tất cả các tháng");
+    const table = document.getElementById(tableId);
 
-    XLSX.utils.sheet_add_aoa(ws, [
-        [tenTieuDe],
-        [tieuDeThoiGian],
-        [""] 
-    ], { origin: "A1" });
+    // Tạo cấu trúc HTML kèm CSS kẻ viền và canh lề chuẩn khi mở bằng Microsoft Excel
+    let htmlContent = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+            <meta charset="utf-8">
+            <style>
+                table { border-collapse: collapse; width: 100%; font-family: 'Times New Roman', Times, serif; font-size: 11pt; }
+                th, td { border: 0.5pt solid #000000; padding: 6px; vertical-align: middle; }
+                th { background-color: #f2f2f2; text-align: center; font-weight: bold; }
+                .text-center { text-align: center; }
+                .text-start { text-align: left; }
+                .fw-bold { font-weight: bold; }
+                .title { font-size: 14pt; font-weight: bold; text-align: center; border: none; }
+                .subtitle { font-size: 12pt; text-align: center; border: none; }
+            </style>
+        </head>
+        <body>
+            <table>
+                <tr><td colspan="15" class="title">${tenTieuDe}</td></tr>
+                <tr><td colspan="15" class="subtitle">${tieuDeThoiGian}</td></tr>
+                <tr><td colspan="15" style="border:none;"></td></tr>
+            </table>
+            ${table.outerHTML}
+        </body>
+        </html>
+    `;
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-    XLSX.writeFile(wb, `${tenFile}_Thang_${thang || 'All'}_${nam}.xlsx`);
+    // Xuất file dưới định dạng .xls tương thích hoàn toàn với Excel
+    const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${tenFile}_Thang_${thang || 'All'}_${nam}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 window.onload = loadData;

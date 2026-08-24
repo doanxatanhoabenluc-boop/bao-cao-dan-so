@@ -1,10 +1,11 @@
-// app.js - Phiên bản hoàn chỉnh: Tích hợp popup xác nhận tài khoản khi vừa vào trang và giữ nguyên toàn bộ tính năng
+// app.js - Phiên bản hoàn chỉnh: Tích hợp popup xác nhận tài khoản và danh mục Quan hệ động từ Database
 
 let currentTable = "table_1";
 let danhSachApOptions = [];
 let danhSachBenhVienOptions = [];
 let danhSachBptTOptions = [];
 let danhSachNoiThucHienOptions = [];
+let danhSachQuanHeOptions = []; // 🆕 Thêm biến lưu danh sách quan hệ từ DB
 
 // Danh sách 54 dân tộc Việt Nam chuẩn
 const danhSachDanToc = [
@@ -46,7 +47,7 @@ const tableConfigs = {
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ho_ten", label: "Họ và tên người chết", type: "text", required: true },
         { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
-        { name: "quan_he", label: "Quan hệ với chủ hộ", type: "select", options: ["Chủ hộ", "Vợ","Chồng", "Con", "Bố","Mẹ"], required: true },
+        { name: "quan_he", label: "Quan hệ với chủ hộ", type: "select-quanhe", required: true }, // 🔄 Đổi thành select-quanhe
         { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"], required: true },
         { name: "ngay_sinh", label: "Ngày sinh", type: "date" },
         { name: "ngay_chet", label: "Ngày chết", type: "date", required: true },
@@ -56,7 +57,7 @@ const tableConfigs = {
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ho_ten", label: "Họ tên người đến", type: "text", required: true },
         { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
-        { name: "quan_he", label: "Quan hệ với chủ hộ", type: "select", options: ["Chủ hộ", "Vợ","Chồng", "Con", "Bố","Mẹ"], required: true },
+        { name: "quan_he", label: "Quan hệ với chủ hộ", type: "select-quanhe", required: true }, // 🔄 Đổi thành select-quanhe
         { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"], required: true },
         { name: "ngay_sinh", label: "Ngày sinh", type: "date", required: true },
         { name: "dan_toc", label: "Dân tộc", type: "select-dantoc", options: uniqueDanToc, required: true },
@@ -69,7 +70,7 @@ const tableConfigs = {
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ho_ten", label: "Họ tên người đi", type: "text", required: true },
         { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
-        { name: "quan_he", label: "Quan hệ với chủ hộ", type: "select", options: ["Chủ hộ", "Vợ","Chồng", "Con", "Bố","Mẹ"], required: true },
+        { name: "quan_he", label: "Quan hệ với chủ hộ", type: "select-quanhe", required: true }, // 🔄 Đổi thành select-quanhe
         { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"], required: true },
         { name: "ngay_sinh", label: "Ngày sinh", type: "date", required: true },
         { name: "dan_toc", label: "Dân tộc", type: "select-dantoc", options: uniqueDanToc, required: true },
@@ -124,14 +125,12 @@ const tableConfigs = {
         { name: "ngay_sinh", label: "Ngày sinh của mẹ", type: "date", required: true },
         { name: "ngay_thang_mang_thai", label: "Ngày đầu kỳ kinh cuối (LMP)", type: "date", required: true },
         
-        // Khám & Kết quả Tuần 12
         { name: "mang_thai_tuan_12", label: "Ngày khám Tuần 12", type: "date", required: true },
         { name: "hoi_chung_down_12", label: "Hội chứng Down (T12)", type: "select", options: ["Nguy cơ thấp", "Nguy cơ cao", "Bình thường"] },
         { name: "hoi_chung_edward_12", label: "Hội chứng Edward (T12)", type: "select", options: ["Nguy cơ thấp", "Nguy cơ cao", "Bình thường"] },
         { name: "hoi_chung_patau_12", label: "Hội chứng Patau (T12)", type: "select", options: ["Nguy cơ thấp", "Nguy cơ cao", "Bình thường"] },
         { name: "benh_thalassemia_12", label: "Thalassemia (T12)", type: "select", options: ["Nguy cơ thấp", "Nguy cơ cao", "Bình thường"] },
 
-        // Khám & Kết quả Tuần 21
         { name: "mang_thai_tuan_21", label: "Ngày khám Tuần 21", type: "date", required: true },
         { name: "hoi_chung_down_21", label: "Hội chứng Down (T21)", type: "select", options: ["Nguy cơ thấp", "Nguy cơ cao", "Bình thường"] },
         { name: "hoi_chung_edward_21", label: "Hội chứng Edward (T21)", type: "select", options: ["Nguy cơ thấp", "Nguy cơ cao", "Bình thường"] },
@@ -142,9 +141,9 @@ const tableConfigs = {
     ]},
     "table_11": { title: "11. Người cao tuổi khám sức khỏe", fields: [
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
-        { name: "ma_so_doi_tuong", label: "Mã số đối tượng", type: "text", required: true },
+        { name: "ma_so_doi_tuong", label: "Mã số đối tượng", type: "text", required: false },
         { name: "ho_ten", label: "Họ tên người NCT", type: "text", required: true },
-        { name: "nam_sinh", label: "Năm sinh", type: "number", required: true },
+        { name: "nam_sinh", label: "Năm sinh", type: "date", required: true },
         { name: "ngay_kham", label: "Ngày khám", type: "date", required: true }
     ]}
 };
@@ -200,14 +199,15 @@ window.onload = async function() {
             return;
         }
 
-        // BẬT POPUP XÁC NHẬN TÀI KHOẢN NGAY KHI VỪA VÀO TRANG / ĐĂNG NHẬP
         showLoginWelcomeModal(currentUser);
     }
 
+    // Lấy danh sách ấp
     let resAp = await fetch('/api/danh-sach-ap');
     let dataAp = await resAp.json();
     danhSachApOptions = dataAp.map(item => item.ten_ap);
 
+    // Lấy danh sách Bệnh viện
     try {
         let resBv = await fetch('/api/danh-sach-benh-vien');
         let dataBv = await resBv.json();
@@ -216,6 +216,7 @@ window.onload = async function() {
         danhSachBenhVienOptions = ["Bệnh viện Đa khoa", "Trạm Y tế xã"];
     }
 
+    // Lấy danh sách BPTT
     try {
         let resBptt = await fetch('/api/danh-sach-bptt');
         let dataBptt = await resBptt.json();
@@ -230,12 +231,22 @@ window.onload = async function() {
         ];
     }
 
+    // Lấy danh sách Nơi thực hiện
     try {
         let resNth = await fetch('/api/danh-sach-noi-thuc-hien');
         let dataNth = await resNth.json();
         danhSachNoiThucHienOptions = dataNth.map(item => item.ten_noi_thuc_hien);
     } catch(e) {
         danhSachNoiThucHienOptions = ["Trạm Y tế xã Lương Hòa", "Bệnh viện Đa khoa Bến Lức"];
+    }
+
+    // 🆕 Lấy danh sách Quan hệ với chủ hộ từ Database (Phòng hờ nếu chưa có API thì dùng mặc định)
+    try {
+        let resQh = await fetch('/api/danh-sach-quan-he');
+        let dataQh = await resQh.json();
+        danhSachQuanHeOptions = dataQh.map(item => item.ten_quan_he || item);
+    } catch(e) {
+        danhSachQuanHeOptions = ["Chủ hộ", "Vợ", "Chồng", "Con", "Bố", "Mẹ"];
     }
 
     if (typeof initNameFormatter === 'function') {
@@ -245,14 +256,11 @@ window.onload = async function() {
     switchTableForm();
 };
 
-// Hàm hiển thị Popup chào mừng/xác nhận tài khoản ban đầu
-// Hàm hiển thị Popup chào mừng/xác nhận tài khoản ban đầu
 function showLoginWelcomeModal(currentUser) {
     let name = currentUser.fullname || currentUser.username || "";
     let userRole = currentUser.role || "Cộng tác viên";
     let locationText = "Toàn xã";
     
-    // Cập nhật hiển thị kết hợp Địa bàn và Ấp trực quan hơn
     let parts = [];
     if (currentUser.diabanh && currentUser.diabanh !== "Tất cả") {
         parts.push(currentUser.diabanh);
@@ -268,33 +276,33 @@ function showLoginWelcomeModal(currentUser) {
 
     let modalHtml = `
         <div class="modal fade" id="loginWelcomeModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-          <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg rounded-4">
-              <div class="modal-header bg-success text-white rounded-top-4">
-                <h5 class="modal-title fw-bold"><i class="fa-solid fa-circle-user me-2"></i> Xác nhận tài khoản làm việc</h5>
+          <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg rounded-4 mx-2">
+              <div class="modal-header bg-success text-white rounded-top-4 py-2">
+                <h6 class="modal-title fw-bold"><i class="fa-solid fa-circle-user me-1"></i> Xác nhận tài khoản</h6>
               </div>
-              <div class="modal-body text-center p-4">
-                <div class="mb-3">
-                    <i class="fa-solid fa-id-card text-success fa-3x"></i>
+              <div class="modal-body text-center px-3 py-2">
+                <div class="mb-1 text-success">
+                    <i class="fa-solid fa-id-card fa-2x"></i>
                 </div>
-                <h4 class="fw-bold text-dark mb-1">Xin chào, ${name}!</h4>
-                <p class="text-muted small mb-3">Bạn đang đăng nhập vào hệ thống nhập liệu với tư cách:</p>
+                <h5 class="fw-bold text-dark mb-1" style="font-size: 1.1rem;">Xin chào, ${name}!</h5>
+                <p class="text-muted small mb-2" style="font-size: 0.85rem;">Bạn đang đăng nhập với tư cách:</p>
                 
-                <div class="bg-light p-3 rounded-3 text-start border mb-3">
-                    <div class="mb-2"><strong>Vai trò:</strong> <span class="badge bg-primary">${userRole}</span></div>
-                    <div><strong>Khu vực phụ trách:</strong> <span class="text-danger fw-bold">${locationText}</span></div>
+                <div class="bg-light p-2 rounded-3 text-start border mb-2 small">
+                    <div class="mb-1"><strong>Vai trò:</strong> <span class="badge bg-primary">${userRole}</span></div>
+                    <div><strong>Khu vực:</strong> <span class="text-danger fw-bold">${locationText}</span></div>
                 </div>
 
-                <div class="alert alert-warning small p-2 mb-0 text-start">
-                    ⚠️ <b>Lưu ý:</b> Nếu đây <u>không phải</u> tài khoản của bạn, vui lòng bấm <b>"Đăng xuất"</b> ngay để tránh nhập nhầm dữ liệu của người khác!
+                <div class="alert alert-warning small p-2 mb-0 text-start" style="font-size: 0.78rem;">
+                    ⚠️ Nếu không phải tài khoản của bạn, hãy bấm <b>Đăng xuất</b>!
                 </div>
               </div>
-              <div class="modal-footer bg-light rounded-bottom-4 justify-content-between">
-                <button type="button" class="btn btn-outline-danger btn-sm px-3" onclick="logout()">
+              <div class="modal-footer bg-light rounded-bottom-4 py-2 justify-content-between">
+                <button type="button" class="btn btn-outline-danger btn-sm px-2 py-1" style="font-size: 0.8rem;" onclick="logout()">
                     <i class="fa-solid fa-right-from-bracket me-1"></i> Đăng xuất
                 </button>
-                <button type="button" class="btn btn-success px-4 fw-bold" data-bs-dismiss="modal">
-                    <i class="fa-solid fa-check me-1"></i> Đúng là tôi, Bắt đầu làm việc
+                <button type="button" class="btn btn-success btn-sm px-3 py-1 fw-bold" style="font-size: 0.85rem;" data-bs-dismiss="modal">
+                    <i class="fa-solid fa-check me-1"></i> Đúng là tôi
                 </button>
               </div>
             </div>
@@ -310,7 +318,6 @@ function showLoginWelcomeModal(currentUser) {
     let modal = new bootstrap.Modal(modalElement);
     modal.show();
 }
-
 function switchTableForm() {
     currentTable = document.getElementById('selectTable').value;
     let config = tableConfigs[currentTable];
@@ -320,6 +327,25 @@ function switchTableForm() {
 
     let container = document.getElementById('dynamic-fields');
     container.innerHTML = '';
+
+    let submitBtn = document.querySelector('#dynamicForm button[type="submit"]');
+    let isTable10 = (currentTable === 'table_10');
+
+    // 🔒 Nếu là Bảng 10: Ẩn nút lưu và hiển thị thông báo hướng dẫn
+    if (isTable10) {
+        if (submitBtn) submitBtn.style.display = 'none';
+        let noticeDiv = document.createElement('div');
+        noticeDiv.className = "col-12 mb-3";
+        noticeDiv.innerHTML = `
+            <div class="alert alert-info border-info shadow-sm p-3 mb-2">
+                <i class="fa-solid fa-circle-info me-2"></i> 
+                <b>Lưu ý:</b> Không cần nhập bảng này vì đã tự động đồng bộ với <b>Bảng 1 (Danh sách trẻ sinh ra)</b>.
+            </div>
+        `;
+        container.appendChild(noticeDiv);
+    } else {
+        if (submitBtn) submitBtn.style.display = 'inline-block';
+    }
 
     if (!config.fields) return;
 
@@ -345,10 +371,10 @@ function switchTableForm() {
                 daysOptions += `<option value="${dVal}">Ngày ${d}</option>`;
             }
 
-            let isDisabled = (currentTable === 'table_8' && field.name === 'ngay_sinh') ? 'disabled style="background-color: #e9ecef; cursor: not-allowed;"' : '';
+            let isDisabled = ((currentTable === 'table_8' && field.name === 'ngay_sinh') || isTable10) ? 'disabled style="background-color: #e9ecef; cursor: not-allowed;"' : '';
 
             col.innerHTML = `
-                <label>${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>
+                <label>${field.label} ${field.required && !isTable10 ? '<span class="text-danger">*</span>' : ''}</label>
                 <div class="row g-2 mb-2">
                     <div class="col-4">
                         <select class="form-select select-day" ${isDisabled} onchange="updateDateValue('${field.name}')">
@@ -366,49 +392,81 @@ function switchTableForm() {
                         </select>
                     </div>
                 </div>
-                <input type="date" id="${field.name}" class="form-control" name="${field.name}" ${field.required ? 'required' : ''}>
+                <input type="date" id="${field.name}" class="form-control" name="${field.name}" ${isTable10 ? 'readonly style="background-color: #e9ecef; cursor: not-allowed;"' : (field.required ? 'required' : '')}>
             `;
         } else if (field.type === 'select') {
-            col.innerHTML = `<label>${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>`;
+            col.innerHTML = `<label>${field.label} ${field.required && !isTable10 ? '<span class="text-danger">*</span>' : ''}</label>`;
             let select = document.createElement('select');
             select.className = "form-select";
             select.name = field.name;
-            if (field.required) select.required = true;
+            if (field.required && !isTable10) select.required = true;
+            if (isTable10) {
+                select.disabled = true;
+                select.style.backgroundColor = '#e9ecef';
+            }
             select.innerHTML = `<option value="">-- Chọn --</option>` + (field.options || []).map(o => `<option value="${o}">${o}</option>`).join('');
             col.appendChild(select);
         } else if (field.type === 'select-dantoc') {
-            col.innerHTML = `<label>${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>`;
+            col.innerHTML = `<label>${field.label} ${field.required && !isTable10 ? '<span class="text-danger">*</span>' : ''}</label>`;
             let select = document.createElement('select');
             select.className = "form-select";
             select.name = field.name;
-            if (field.required) select.required = true;
+            if (field.required && !isTable10) select.required = true;
+            if (isTable10) {
+                select.disabled = true;
+                select.style.backgroundColor = '#e9ecef';
+            }
             select.innerHTML = `<option value="">-- Chọn dân tộc --</option>` + (field.options || []).map(o => `<option value="${o}">${o}</option>`).join('');
             col.appendChild(select);
         } else if (field.type === 'select-benhvien') {
-            col.innerHTML = `<label>${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>`;
+            col.innerHTML = `<label>${field.label} ${field.required && !isTable10 ? '<span class="text-danger">*</span>' : ''}</label>`;
             let select = document.createElement('select');
             select.className = "form-select";
             select.name = field.name;
-            if (field.required) select.required = true;
+            if (field.required && !isTable10) select.required = true;
+            if (isTable10) {
+                select.disabled = true;
+                select.style.backgroundColor = '#e9ecef';
+            }
             select.innerHTML = `<option value="">-- Chọn bệnh viện --</option>` + (typeof danhSachBenhVienOptions !== 'undefined' ? danhSachBenhVienOptions : []).map(o => `<option value="${o}">${o}</option>`).join('');
             col.appendChild(select);
         } else if (field.type === 'select-bptt') {
-            col.innerHTML = `<label>${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>`;
+            col.innerHTML = `<label>${field.label} ${field.required && !isTable10 ? '<span class="text-danger">*</span>' : ''}</label>`;
             let select = document.createElement('select');
             select.className = "form-select";
             select.name = field.name;
-            if (field.required) select.required = true;
+            if (field.required && !isTable10) select.required = true;
+            if (isTable10) {
+                select.disabled = true;
+                select.style.backgroundColor = '#e9ecef';
+            }
             let optsHtml = `<option value="">-- Chọn biện pháp tránh thai --</option>` + 
                 (typeof danhSachBptTOptions !== 'undefined' ? danhSachBptTOptions : []).map(item => `<option value="${item.ma_bptt}">${item.ma_bptt} - ${item.ten_bptt}</option>`).join('');
             select.innerHTML = optsHtml;
             col.appendChild(select);
         } else if (field.type === 'select-noithuchien') {
-            col.innerHTML = `<label>${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>`;
+            col.innerHTML = `<label>${field.label} ${field.required && !isTable10 ? '<span class="text-danger">*</span>' : ''}</label>`;
             let select = document.createElement('select');
             select.className = "form-select";
             select.name = field.name;
-            if (field.required) select.required = true;
+            if (field.required && !isTable10) select.required = true;
+            if (isTable10) {
+                select.disabled = true;
+                select.style.backgroundColor = '#e9ecef';
+            }
             select.innerHTML = `<option value="">-- Chọn nơi thực hiện --</option>` + (typeof danhSachNoiThucHienOptions !== 'undefined' ? danhSachNoiThucHienOptions : []).map(o => `<option value="${o}">${o}</option>`).join('');
+            col.appendChild(select);
+        } else if (field.type === 'select-quanhe') {
+            col.innerHTML = `<label>${field.label} ${field.required && !isTable10 ? '<span class="text-danger">*</span>' : ''}</label>`;
+            let select = document.createElement('select');
+            select.className = "form-select";
+            select.name = field.name;
+            if (field.required && !isTable10) select.required = true;
+            if (isTable10) {
+                select.disabled = true;
+                select.style.backgroundColor = '#e9ecef';
+            }
+            select.innerHTML = `<option value="">-- Chọn quan hệ --</option>` + (typeof danhSachQuanHeOptions !== 'undefined' ? danhSachQuanHeOptions : []).map(o => `<option value="${o}">${o}</option>`).join('');
             col.appendChild(select);
         } else if (field.type === 'search-table7') {
             col.className = "col-12 mb-3 bg-light p-3 border rounded position-relative";
@@ -422,29 +480,41 @@ function switchTableForm() {
             if (field.name === 'ho_ten_con' || field.name === 'ho_ten_tre' || field.name === 'ho_ten') {
                 col.innerHTML = `
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                        <label class="mb-0">${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>
-                        ${field.name !== 'ho_ten' ? `
+                        <label class="mb-0">${field.label} ${field.required && !isTable10 ? '<span class="text-danger">*</span>' : ''}</label>
+                        ${field.name !== 'ho_ten' && !isTable10 ? `
                         <div class="form-check form-check-inline m-0">
                             <input class="form-check-input" type="checkbox" id="check_${field.name}" onchange="toggleChuaDatTen('${field.name}')">
                             <label class="form-check-label small text-primary fw-semibold" for="check_${field.name}" style="cursor: pointer;">Chưa đặt tên</label>
                         </div>` : ''}
                     </div>
-                    <input type="${field.type || 'text'}" class="form-control" id="input_${field.name}" name="${field.name}" ${field.required ? 'required' : ''}>
+                    <input type="${field.type || 'text'}" class="form-control" id="input_${field.name}" name="${field.name}" ${isTable10 ? 'readonly style="background-color: #e9ecef; cursor: not-allowed;"' : (field.required ? 'required' : '')}>
                 `;
             } else {
-                col.innerHTML = `<label>${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>`;
+                col.innerHTML = `<label>${field.label} ${field.required && !isTable10 ? '<span class="text-danger">*</span>' : ''}</label>`;
                 let input = document.createElement('input');
                 input.type = field.type || 'text';
                 input.className = "form-control";
                 input.name = field.name;
-                if (field.required) input.required = true;
+                if (field.required && !isTable10) input.required = true;
 
+                // Khóa trường riêng của Bảng 8
                 if (currentTable === 'table_8' && ['ho_so', 'ho_ten_vo', 'so_the_bhyt', 'ngay_sinh'].includes(field.name)) {
                     input.setAttribute('readonly', true);
                     input.readOnly = true;
                     input.style.backgroundColor = '#e9ecef';
                     input.style.cursor = 'not-allowed';
                     input.placeholder = '🔒 Chọn từ Bảng 7 phía trên...';
+                    input.onkeydown = (e) => e.preventDefault();
+                    input.onpaste = (e) => e.preventDefault();
+                }
+
+                // 🔒 Khóa toàn bộ input nếu là Bảng 10
+                if (isTable10) {
+                    input.setAttribute('readonly', true);
+                    input.readOnly = true;
+                    input.style.backgroundColor = '#e9ecef';
+                    input.style.cursor = 'not-allowed';
+                    input.placeholder = '🔒 Đã tự động đồng bộ từ Bảng 1...';
                     input.onkeydown = (e) => e.preventDefault();
                     input.onpaste = (e) => e.preventDefault();
                 }
@@ -475,7 +545,6 @@ function switchTableForm() {
         fetchTableData(currentTable);
     }
 }
-
 function toggleNguoiDiaPruong() {
     let checkbox = document.getElementById('check_nguoi_dia_phuong');
     let input = document.getElementById('input_noi_cu_tru_me');

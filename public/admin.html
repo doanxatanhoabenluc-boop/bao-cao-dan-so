@@ -89,6 +89,11 @@
                         <i class="fa-solid fa-house-medical me-1"></i> Nơi thực hiện
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold py-2 px-3 shadow-sm" id="moiquanhe-tab" data-bs-toggle="tab" data-bs-target="#moiQuanHeContent" type="button" role="tab" onclick="loadMoiQuanHeList()">
+                        <i class="fa-solid fa-people-arrows me-1"></i> Mối quan hệ
+                    </button>
+                </li>
             </ul>
         </div>
 
@@ -559,7 +564,57 @@
             </div>
         </div>
     </div>
+<!-- TAB: QUẢN LÝ MỐI QUAN HỆ -->
+<div class="tab-pane fade" id="moiQuanHeContent" role="tabpanel">
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center py-3">
+            <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-people-arrows me-1"></i> Danh mục Mối quan hệ</h5>
+            <button class="btn btn-light btn-sm text-secondary fw-bold" data-bs-toggle="modal" data-bs-target="#moiQuanHeModal">
+                <i class="fa-solid fa-plus me-1"></i> Thêm mới
+            </button>
+        </div>
+        <div class="card-body p-2 p-md-3">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle">
+                    <thead class="table-secondary text-center">
+                        <tr>
+                            <th style="width: 70px;">STT</th>
+                            <th>Tên Mối quan hệ</th>
+                            <th style="width: 180px;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="moiQuanHeTableBody">
+                        <tr><td colspan="3" class="text-center">Đang tải dữ liệu...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 
+<!-- Modal Thêm Mối Quan Hệ Mới -->
+<div class="modal fade" id="moiQuanHeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form onsubmit="saveMoiQuanHe(event)">
+                <div class="modal-header bg-secondary text-white">
+                    <h5 class="modal-title">Thêm Mối quan hệ mới</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Tên Mối quan hệ *</label>
+                        <input type="text" class="form-control" id="tenMoiQuanHeInput" required placeholder="Nhập tên mối quan hệ...">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-secondary">Thêm mới</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="admin.js"></script>
 </body>

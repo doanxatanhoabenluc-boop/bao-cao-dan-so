@@ -422,7 +422,7 @@ document.getElementById('selectManagedTable').addEventListener('change', () => {
     loadTableDataAdmin(1);
 });
 
-// ==================== CHỈNH SỬA BẢN GHI (ĐÃ TỐI ƯU CHO BẢNG 10) ====================
+// ==================== CHỈNH SỬA BẢN GHI (ĐÃ CẬP NHẬT DANH MỤC TĨNH + QUAN HỆ ĐỘNG) ====================
 async function openEditRecordModal(tableName, encodedRowJson) {
     const row = JSON.parse(decodeURIComponent(encodedRowJson));
     document.getElementById('editRecordId').value = row.id || '';
@@ -433,22 +433,21 @@ async function openEditRecordModal(tableName, encodedRowJson) {
     let benhVienList = [];
     let bpttList = [];
     let noiThucHienList = [];
-    let danTocList = [];
-    let gioiTinhList = ["Nam", "Nữ"];
     let quanHeList = [];
-    let hocVanList = [];
-    let honNhanList = [];
+    
+    // Danh sách cố định (cũ) cho Dân tộc, Trình độ học vấn, Tình trạng hôn nhân
+    let danTocList = ["Kinh", "Tày", "Thái", "Hoa", "Khmer", "Mường", "Nùng", "Dao", "Gia Rai", "Ê Đê", "Ba Na", "Sán Chay", "H'Mông", "Chăm"];
+    let gioiTinhList = ["Nam", "Nữ"];
+    let hocVanList = ["Tiểu học", "THCS", "THPT", "Trung cấp", "Cao đẳng", "Đại học", "Sau đại học", "Khác"];
+    let honNhanList = ["Chưa kết hôn", "Đang kết hôn", "Ly hôn", "Góa"];
 
     try {
-        let [resAp, resBv, resBptt, resNth, resDanToc, resQuanHe, resHocVan, resHonNhan] = await Promise.all([
+        let [resAp, resBv, resBptt, resNth, resQuanHe] = await Promise.all([
             fetch('/api/danh-sach-ap').catch(() => ({ json: () => [] })),
             fetch('/api/danh-sach-benh-vien').catch(() => ({ json: () => [] })),
             fetch('/api/danh-sach-bptt').catch(() => ({ json: () => [] })),
             fetch('/api/danh-sach-noi-thuc-hien').catch(() => ({ json: () => [] })),
-            fetch('/api/danh-sach-dan-toc').catch(() => ({ json: () => [] })),
-            fetch('/api/danh-sach-quan-he').catch(() => ({ json: () => [] })),
-            fetch('/api/danh-sach-hoc-van').catch(() => ({ json: () => [] })),
-            fetch('/api/danh-sach-hon-nhan').catch(() => ({ json: () => [] }))
+            fetch('/api/danh-sach-quan-he').catch(() => ({ json: () => [] }))
         ]);
 
         let dAp = await resAp.json();
@@ -463,27 +462,16 @@ async function openEditRecordModal(tableName, encodedRowJson) {
         let dNth = await resNth.json();
         noiThucHienList = Array.isArray(dNth) ? dNth.map(item => item.ten_noi_thuc_hien || item) : [];
 
-        let dDanToc = await resDanToc.json();
-        danTocList = Array.isArray(dDanToc) ? dDanToc.map(item => item.ten_dan_toc || item) : ["Kinh", "Tày", "Thái", "Hoa", "Khmer", "Mường", "Nùng"];
-
         let dQuanHe = await resQuanHe.json();
         quanHeList = Array.isArray(dQuanHe) ? dQuanHe.map(item => item.ten_quan_he || item) : ["Chủ hộ", "Vợ", "Chồng", "Con", "Bố", "Mẹ", "Khác"];
-
-        let dHocVan = await resHocVan.json();
-        hocVanList = Array.isArray(dHocVan) ? dHocVan.map(item => item.ten_hoc_van || item) : ["Tiểu học", "THCS", "THPT", "Đại học", "Khác"];
-
-        let dHonNhan = await resHonNhan.json();
-        honNhanList = Array.isArray(dHonNhan) ? dHonNhan.map(item => item.ten_hon_nhan || item) : ["Chưa kết hôn", "Đang kết hôn", "Ly hôn", "Góa"];
 
     } catch (e) {
         console.error("Lỗi tải danh mục cho modal sửa:", e);
     }
 
-    // Lọc bỏ các trường hệ thống không cần sửa trực tiếp và loại bỏ các trường trùng lặp thừa thãi
     let keys = Object.keys(row).filter(key => key !== 'id');
     
     if (tableName === 'table_10' || tableName.includes('10')) {
-        // Chỉ giữ lại các trường chuẩn của bảng 10, loại bỏ các trường rác/trùng lặp cũ
         const allowedTable10Keys = [
             'ten_ctv', 'so_ho', 'ho_so', 'ma_the_bhyt', 'so_the_bhyt', 'ho_ten', 
             'noi_cu_tru', 'dia_chi', 'ngay_thang_mang_thai', 'ngay_kinh_cuoi',
@@ -605,6 +593,7 @@ async function openEditRecordModal(tableName, encodedRowJson) {
     const editModal = new bootstrap.Modal(document.getElementById('editDataModal'));
     editModal.show();
 }
+
 async function saveRecordData(event) {
     event.preventDefault();
     const tableName = document.getElementById('selectManagedTable').value;
@@ -634,11 +623,9 @@ async function saveRecordData(event) {
 
             alert('Cập nhật thông tin thành công!');
 
-            // RESET TOÀN BỘ TRẠNG THÁI CACHE CỦA BẢNG ĐỂ ÉP TẢI LẠI MỚI HOÀN TOÀN
             window.currentTableLoaded = false; 
             window.currentLoadedTableName = null; 
 
-            // Gọi lại hàm load dữ liệu cho đúng bảng hiện tại
             if (typeof loadTableDataAdmin === 'function') {
                 loadTableDataAdmin(currentPage || 1); 
             } else {
@@ -652,13 +639,16 @@ async function saveRecordData(event) {
         alert('Lỗi kết nối máy chủ!');
     }
 }
+
 async function deleteRecord(table, id) {
     if(!confirm('Bạn có chắc chắn muốn xóa bản ghi dữ liệu này?')) return;
     try {
         const res = await fetch(`/api/data/${table}/${id}`, { method: 'DELETE' });
         const result = await res.json();
         if(result.success) {
-            loadTableDataAdmin();
+            window.currentTableLoaded = false; 
+            window.currentLoadedTableName = null; 
+            loadTableDataAdmin(currentPage || 1);
         } else {
             alert(result.message);
         }
@@ -987,7 +977,135 @@ async function loadNoiThucHienList() {
         tbody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">Lỗi tải dữ liệu</td></tr>`;
     }
 }
+// ==================== QUẢN LÝ MỐI QUAN HỆ ====================
 
+// 1. Tải danh sách mối quan hệ hiển thị lên bảng
+
+// ==================== QUẢN LÝ MỐI QUAN HỆ (QUAN HỆ VỚI CHỦ HỘ) ====================
+
+// 1. Tải danh sách mối quan hệ
+function loadMoiQuanHeList() {
+    const tbody = document.getElementById('moiQuanHeTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="3" class="text-center">Đang tải dữ liệu...</td></tr>';
+
+    fetch('/api/danh-sach-quan-he')
+        .then(response => response.json())
+        .then(data => {
+            // Lọc các bản ghi đang hoạt động (trang_thai = 1)
+            const activeData = data.filter(item => item.trang_thai === 1);
+            
+            if (activeData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center">Chưa có dữ liệu mối quan hệ.</td></tr>';
+                return;
+            }
+
+            let html = '';
+            activeData.forEach((item, index) => {
+                html += `
+                    <tr>
+                        <td class="text-center">${index + 1}</td>
+                        <td>${item.ten_quan_he}</td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditMoiQuanHe(${item.id}, '${item.ten_quan_he}')">
+                                <i class="fa-solid fa-pen"></i> Sửa
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteMoiQuanHe(${item.id})">
+                                <i class="fa-solid fa-trash"></i> Xóa
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Lỗi tải danh sách mối quan hệ:', error);
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Không thể tải dữ liệu.</td></tr>';
+        });
+}
+
+// 2. Thêm mới mối quan hệ
+function saveMoiQuanHe(event) {
+    event.preventDefault();
+    const tenQuanHe = document.getElementById('tenMoiQuanHeInput').value.trim();
+
+    fetch('/api/danh-sach-quan-he', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ten_quan_he: tenQuanHe })
+    })
+    .then(response => response.json())
+    .then(res => {
+        if (res.success) {
+            let modalEl = document.getElementById('moiQuanHeModal');
+            let modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
+            document.getElementById('tenMoiQuanHeInput').value = '';
+            loadMoiQuanHeList();
+            alert('Thêm mối quan hệ thành công!');
+        } else {
+            alert(res.message || 'Có lỗi xảy ra.');
+        }
+    })
+    .catch(error => {
+        console.error('Lỗi thêm:', error);
+        alert('Có lỗi xảy ra khi thêm mới.');
+    });
+}
+
+// 3. Mở Modal Sửa Mối Quan Hệ
+function openEditMoiQuanHe(id, currentName) {
+    let newName = prompt("Cập nhật tên mối quan hệ:", currentName);
+    if (newName === null) return; // Hủy
+    newName = newName.trim();
+    if (!newName) {
+        alert("Tên mối quan hệ không được để trống!");
+        return;
+    }
+
+    fetch(`/api/danh-sach-quan-he/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ten_quan_he: newName })
+    })
+    .then(response => response.json())
+    .then(res => {
+        if (res.success) {
+            loadMoiQuanHeList();
+            alert('Cập nhật thành công!');
+        } else {
+            alert(res.message || 'Có lỗi xảy ra.');
+        }
+    })
+    .catch(error => {
+        console.error('Lỗi sửa:', error);
+        alert('Có lỗi xảy ra khi cập nhật.');
+    });
+}
+
+// 4. Xóa mối quan hệ
+function deleteMoiQuanHe(id) {
+    if (!confirm('Bạn có chắc chắn muốn xóa mối quan hệ này không?')) return;
+
+    fetch(`/api/danh-sach-quan-he/${id}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(res => {
+        if (res.success) {
+            loadMoiQuanHeList();
+            alert('Xóa thành công!');
+        } else {
+            alert(res.message || 'Có lỗi xảy ra.');
+        }
+    })
+    .catch(error => {
+        console.error('Lỗi xóa:', error);
+        alert('Có lỗi xảy ra khi xóa.');
+    });
+}
 function openEditNoiThucHienModal(id, tenNoiThucHien) {
     document.getElementById('editNoiThucHienId').value = id;
     document.getElementById('editTenNoiThucHienInput').value = tenNoiThucHien;

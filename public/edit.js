@@ -1,4 +1,4 @@
-// edit.js - Kiểm tra thông minh dựa trên nhãn (label) hiển thị trên giao diện
+// edit.js - Đã fix lỗi cú pháp, kiểm tra thông minh và hỗ trợ chọn quan hệ
 
 let currentTableDataCache = []; // Lưu trữ cache dữ liệu
 let pendingEditData = {};       // Lưu tạm dữ liệu chờ xác nhận
@@ -74,8 +74,7 @@ function isMandatoryField(fieldName, fieldLabel) {
     let name = (fieldName || '').toLowerCase();
     let label = (fieldLabel || '').toLowerCase();
 
-    // Các từ khóa nhận diện trường bắt buộc
-    let keywords = ['so_ho', 'hộ số', 'số hộ', 'họ và tên', 'ho_ten', 'ten', 'ngày sinh', 'ngay_sinh', 'năm sinh', 'nam_sinh', 'dân tộc', 'dan_toc', 'giới tính', 'gioi_tinh', 'con thứ', 'con_thu', 'nơi đẻ', 'noi_de', 'nơi thực hiện', 'noi_thuc_hien'];
+    let keywords = ['so_ho', 'hộ số', 'số hộ', 'họ và tên', 'ho_ten', 'ten', 'ngày sinh', 'ngay_sinh', 'năm sinh', 'nam_sinh', 'dân tộc', 'dan_toc', 'giới tính', 'gioi_tinh', 'con thứ', 'con_thu', 'nơi đẻ', 'noi_de', 'nơi thực hiện', 'noi_thuc_hien', 'quan hệ', 'quan_he'];
 
     for (let kw of keywords) {
         if (name.includes(kw) || label.includes(kw)) {
@@ -89,7 +88,6 @@ function isMandatoryField(fieldName, fieldLabel) {
 function openEditModal(recordId) {
     injectEditModalHTML();
 
-    // Reset về giao diện nhập liệu ban đầu
     document.getElementById('editForm').style.display = 'block';
     document.getElementById('editReviewSection').style.display = 'none';
     document.getElementById('edit-mode-buttons').style.display = 'block';
@@ -151,11 +149,22 @@ function openEditModal(recordId) {
                 </div>
                 <input type="date" id="edit_${field.name}" class="form-control" name="${field.name}" value="${val}">
             `;
+        } else if (field.type === 'select-quanhe') {
+            col.innerHTML = `<label class="fw-semibold">${field.label} ${isSpecial ? '<span class="text-danger">*</span>' : ''}</label>`;
+            let select = document.createElement('select');
+            select.className = "form-select";
+            select.name = field.name;
+            select.id = `edit_${field.name}`;
+            
+            let opts = typeof danhSachQuanHeOptions !== 'undefined' ? danhSachQuanHeOptions : ["Chủ hộ", "Vợ", "Chồng", "Con đẻ", "Con nuôi", "Bố đẻ", "Mẹ đẻ"];
+            select.innerHTML = `<option value="">-- Chọn quan hệ --</option>` + opts.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('');
+            col.appendChild(select);
         } else if (field.type === 'select' || field.type === 'select-dantoc' || field.type === 'select-benhvien' || field.type === 'select-noithuchien') {
             col.innerHTML = `<label class="fw-semibold">${field.label} ${isSpecial ? '<span class="text-danger">*</span>' : ''}</label>`;
             let select = document.createElement('select');
             select.className = "form-select";
             select.name = field.name;
+            select.id = `edit_${field.name}`;
             
             let opts = field.options || (field.type === 'select-dantoc' ? uniqueDanToc : field.type === 'select-benhvien' ? danhSachBenhVienOptions : danhSachNoiThucHienOptions);
             select.innerHTML = `<option value="">-- Chọn --</option>` + (opts || []).map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('');
@@ -165,6 +174,7 @@ function openEditModal(recordId) {
             let select = document.createElement('select');
             select.className = "form-select";
             select.name = field.name;
+            select.id = `edit_${field.name}`;
             select.innerHTML = `<option value="">-- Chọn biện pháp tránh thai --</option>` + 
                 (typeof danhSachBptTOptions !== 'undefined' ? danhSachBptTOptions : []).map(item => `<option value="${item.ma_bptt}" ${val === item.ma_bptt ? 'selected' : ''}>${item.ma_bptt} - ${item.ten_bptt}</option>`).join('');
             col.appendChild(select);
@@ -182,7 +192,7 @@ function openEditModal(recordId) {
     myModal.show();
 }
 
-// Chuyển sang chế độ xem lại thông tin trước khi gửi (Kiểm tra chặn bỏ trống)
+// Chuyển sang chế độ xem lại thông tin trước khi gửi
 function switchToReviewMode() {
     let form = document.getElementById('editForm');
     let formData = new FormData(form);
@@ -192,7 +202,6 @@ function switchToReviewMode() {
 
     let config = tableConfigs[currentTable];
 
-    // Kiểm tra tất cả các trường: Nếu thuộc nhóm bắt buộc mà để trống thì chặn lại ngay
     for (let field of config.fields) {
         if (isMandatoryField(field.name, field.label)) {
             let val = pendingEditData[field.name];
@@ -205,7 +214,6 @@ function switchToReviewMode() {
         }
     }
 
-    // Kiểm tra ngày sinh / năm sinh phải nhỏ hơn ngày hiện tại
     let birthDateVal = pendingEditData['ngay_sinh'] || pendingEditData['nam_sinh'];
     if (birthDateVal) {
         let currentDate = new Date();
@@ -219,7 +227,6 @@ function switchToReviewMode() {
         }
     }
 
-    // Hiển thị phần xem lại tóm tắt khi qua tất cả các kiểm tra
     let reviewHtml = '<div class="row g-2">';
     config.fields.forEach(field => {
         let val = pendingEditData[field.name] || '<span class="text-muted fst-italic">(Trống)</span>';
@@ -233,14 +240,12 @@ function switchToReviewMode() {
 
     document.getElementById('edit-review-content').innerHTML = reviewHtml;
 
-    // Ẩn form nhập, hiện phần xem lại
     form.style.display = 'none';
     document.getElementById('editReviewSection').style.display = 'block';
     document.getElementById('edit-mode-buttons').style.display = 'none';
     document.getElementById('review-mode-buttons').style.display = 'block';
 }
 
-// Quay lại form sửa nếu phát hiện thông tin chưa đúng
 function backToEditForm() {
     document.getElementById('editForm').style.display = 'block';
     document.getElementById('editReviewSection').style.display = 'none';
@@ -248,9 +253,8 @@ function backToEditForm() {
     document.getElementById('review-mode-buttons').style.display = 'none';
 }
 
-// Gửi dữ liệu chính thức lên server sau khi đã xác nhận
 async function submitEditData() {
-    let recordId = document.getElementById('edit_record_id').value;
+    let recordId = document.getElementById('edit_record_id').value; // Đã sửa lại dấu ngoặc tròn chuẩn
 
     let res = await fetch(`/api/data/${currentTable}/${recordId}`, {
         method: 'PUT',

@@ -84,7 +84,11 @@ async function initDatabase() {
                 ten_noi_thuc_hien TEXT NOT NULL, 
                 trang_thai INTEGER DEFAULT 1
             );
-
+            CREATE TABLE IF NOT EXISTS danh_sach_quan_he (
+                id SERIAL PRIMARY KEY, 
+                ten_quan_he TEXT NOT NULL, 
+                trang_thai INTEGER DEFAULT 1
+            );
             CREATE TABLE IF NOT EXISTS logs (
                 id SERIAL PRIMARY KEY, user_id INTEGER, username TEXT, action TEXT, target_id INTEGER, target_name TEXT, created_at TEXT
             );
@@ -169,7 +173,6 @@ async function initDatabase() {
             
             ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS ghi_chu TEXT;
 
-
             -- Bảng 11: Khám sức khỏe / Đối tượng khác
             ALTER TABLE table_11 ADD COLUMN IF NOT EXISTS ho_so TEXT;
             ALTER TABLE table_11 ADD COLUMN IF NOT EXISTS ma_so_doi_tuong TEXT;
@@ -225,6 +228,21 @@ async function initDatabase() {
                 ('Bệnh viện Đa khoa Bến Lức', 'Huyện Bến Lức'),
                 ('Trạm Y tế xã Lương Hòa', 'Xã Lương Hòa'),
                 ('Bệnh viện Từ Dũ', 'TP. Hồ Chí Minh');
+            `);
+        }
+
+        // Thêm dữ liệu mẫu Quan hệ với chủ hộ nếu chưa có (Đã có đủ dấu đóng ngoặc)
+        const qhCheck = await pool.query("SELECT id FROM danh_sach_quan_he LIMIT 1");
+        if (qhCheck.rows.length === 0) {
+            await pool.query(`
+                INSERT INTO danh_sach_quan_he (ten_quan_he) VALUES 
+                ('Chủ hộ'), 
+                ('Vợ/Chồng'), 
+                ('Con'), 
+                ('Bố/Mẹ'), 
+                ('Con dâu/rể'),
+                ('Cháu'),
+                ('Khác');
             `);
         }
 
@@ -642,6 +660,85 @@ app.delete("/api/admin/noi-thuc-hien/:id", async (req, res) => {
         await logAction(req.session.user, "Xóa danh mục Nơi thực hiện", parseInt(req.params.id), tenNth);
         res.json({ success: true, message: "Xóa nơi thực hiện thành công!" });
     } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+// ==================== QUẢN LÝ DANH MỤC QUAN HỆ VỚI CHỦ HỘ (CÓ LOG) ====================
+app.get('/api/danh-sach-quan-he', async (req, res) => {
+    try {
+        const result = await pool.query("SELECT * FROM danh_sach_quan_he WHERE trang_thai = 1 ORDER BY id ASC");
+        res.json(result.rows);
+    } catch (err) {
+        console.error("Lỗi lấy danh sách quan hệ:", err);
+        res.status(500).json({ error: "Lỗi Server" });
+    }
+});
+
+app.post('/api/danh-sach-quan-he', async (req, res) => {
+    try {
+        const { ten_quan_he } = req.body;
+        if (!ten_quan_he || ten_quan_he.trim() === "") {
+            return res.status(400).json({ success: false, message: "Tên quan hệ không được để trống!" });
+        }
+
+        const newRecord = await pool.query(
+            "INSERT INTO danh_sach_quan_he (ten_quan_he, trang_thai) VALUES ($1, 1) RETURNING *",
+            [ten_quan_he.trim()]
+        );
+        await logAction(req.session.user, "Thêm danh mục Quan hệ", newRecord.rows[0].id, ten_quan_he.trim());
+        res.json({ success: true, data: newRecord.rows[0] });
+    } catch (err) {
+        console.error("Lỗi thêm quan hệ:", err);
+        res.status(500).json({ success: false, message: "Lỗi Server" });
+    }
+});
+
+app.put('/api/danh-sach-quan-he/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { ten_quan_he } = req.body;
+
+        if (!ten_quan_he || ten_quan_he.trim() === "") {
+            return res.status(400).json({ success: false, message: "Tên quan hệ không được để trống!" });
+        }
+
+        const updateRecord = await pool.query(
+            "UPDATE danh_sach_quan_he SET ten_quan_he = $1 WHERE id = $2 RETURNING *",
+            [ten_quan_he.trim(), id]
+        );
+
+        if (updateRecord.rows.length === 0) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy quan hệ cần sửa!" });
+        }
+
+        await logAction(req.session.user, "Cập nhật danh mục Quan hệ", parseInt(id), ten_quan_he.trim());
+        res.json({ success: true, data: updateRecord.rows[0] });
+    } catch (err) {
+        console.error("Lỗi cập nhật quan hệ:", err);
+        res.status(500).json({ success: false, message: "Lỗi Server" });
+    }
+});
+
+app.delete('/api/danh-sach-quan-he/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        let record = await pool.query("SELECT ten_quan_he FROM danh_sach_quan_he WHERE id = $1", [id]);
+        let tenQh = record.rows[0] ? record.rows[0].ten_quan_he : '';
+
+        const deleteRecord = await pool.query(
+            "UPDATE danh_sach_quan_he SET trang_thai = 0 WHERE id = $1 RETURNING *",
+            [id]
+        );
+
+        if (deleteRecord.rows.length === 0) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy quan hệ cần xóa!" });
+        }
+
+        await logAction(req.session.user, "Xóa danh mục Quan hệ", parseInt(id), tenQh);
+        res.json({ success: true, message: "Đã xóa thành công!" });
+    } catch (err) {
+        console.error("Lỗi xóa quan hệ:", err);
+        res.status(500).json({ success: false, message: "Lỗi Server" });
+    }
 });
 
 // ==================== QUẢN TRỊ NGƯỜI DÙNG / TÀI KHOẢN (CÓ LOG) ====================
