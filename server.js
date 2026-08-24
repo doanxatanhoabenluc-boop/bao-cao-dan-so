@@ -122,7 +122,7 @@ async function initDatabase() {
             -- Dọn dẹp triệt để các biến thể cột mã đối tượng bị thừa ở bảng 11
             ALTER TABLE table_11 DROP COLUMN IF EXISTS ma_doi_tuong;
             ALTER TABLE table_11 DROP COLUMN IF EXISTS ma_so_doi_tuong;
-
+            ALTER TABLE table_11 ALTER COLUMN nam_sinh TYPE TEXT USING nam_sinh::TEXT;
             -- Thêm lại các cột đúng chuẩn cho từng bảng
             ALTER TABLE table_1 ADD COLUMN IF NOT EXISTS ho_so TEXT, ADD COLUMN IF NOT EXISTS ho_ten_con TEXT, ADD COLUMN IF NOT EXISTS ngay_sinh_con TEXT, ADD COLUMN IF NOT EXISTS gioi_tinh TEXT, ADD COLUMN IF NOT EXISTS dan_toc TEXT, ADD COLUMN IF NOT EXISTS ho_ten_me TEXT, ADD COLUMN IF NOT EXISTS so_the_bhyt_me TEXT, ADD COLUMN IF NOT EXISTS ngay_sinh_me TEXT, ADD COLUMN IF NOT EXISTS noi_de TEXT, ADD COLUMN IF NOT EXISTS con_thu_may TEXT;
             
