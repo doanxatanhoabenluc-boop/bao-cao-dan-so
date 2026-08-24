@@ -260,7 +260,7 @@ async function initDatabase() {
         console.error("Lỗi khởi tạo CSDL:", err);
     }
 }
-initDatabase();
+//initDatabase();
 
 // ==================== API XÁC THỰC & NGƯỜI DÙNG (CÓ LOG ĐĂNG NHẬP/ĐĂNG XUẤT) ====================
 app.get("/api/public/users-list", async (req, res) => {
@@ -858,6 +858,14 @@ app.delete('/api/admin/users/:id', async (req, res) => {
 });
 
 // Khởi chạy server
-// Thay thế đoạn app.listen cũ bằng đoạn này:
+/// Khởi chạy server sau khi CSDL đã sẵn sàng
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`==> Server đang chạy trên cổng ${PORT}`));
+
+async function startServer() {
+    await initDatabase(); // Chờ khởi tạo xong bảng và cột
+    app.listen(PORT, () => {
+        console.log(`==> Server đang chạy trên cổng ${PORT}`);
+    });
+}
+
+startServer();
