@@ -143,7 +143,7 @@ const tableConfigs = {
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ma_so_doi_tuong", label: "Mã số đối tượng", type: "text", required: false },
         { name: "ho_ten", label: "Họ tên người NCT", type: "text", required: true },
-        { name: "nam_sinh", label: "Năm sinh", type: "date", required: true },
+        { name: "nam_sinh", label: "Năm sinh", type: "text", required: true },
         { name: "ngay_kham", label: "Ngày khám", type: "date", required: true }
     ]}
 };
@@ -735,23 +735,33 @@ async function saveData(e) {
             let ngayTuan12Str = '';
             let ngayTuan21Str = '';
 
-            if (ngaySinhCon) {
+           if (ngaySinhCon) {
                 let birthDate = new Date(ngaySinhCon);
                 if (!isNaN(birthDate.getTime())) {
                     let lmpDate = new Date(birthDate);
+                    // Trừ 280 ngày (40 tuần) từ ngày sinh con để ra Ngày kinh cuối (LMP)
                     lmpDate.setDate(lmpDate.getDate() - 280);
                     ngayKinhCuoiStr = lmpDate.toISOString().split('T')[0];
 
-                    function getRandomDateInWeek(lmp, targetWeek) {
-                        let startDay = (targetWeek - 1) * 7;
-                        let randomOffset = startDay + Math.floor(Math.random() * 7);
-                        let d = new Date(lmp);
-                        d.setDate(d.getDate() + randomOffset);
-                        return d.toISOString().split('T')[0];
+                    /**
+                     * Lấy ngày ngẫu nhiên trong 7 ngày của một tuần thai cụ thể
+                     * @param {Date} lmp - Ngày kinh cuối
+                     * @param {number} targetWeek - Tuần thai cần lấy (ví dụ: 12 hoặc 21)
+                     */
+                    function getRandomDateInExactWeek(lmp, targetWeek) {
+                        let startDay = targetWeek * 7; // Ngày đầu tiên của tuần (ví dụ: 12 * 7 = 84 ngày)
+                        let randomOffset = startDay + Math.floor(Math.random() * 7); // Lấy ngẫu nhiên từ +0 đến +6 ngày
+
+                        let resultDate = new Date(lmp);
+                        resultDate.setDate(resultDate.getDate() + randomOffset);
+                        return resultDate.toISOString().split('T')[0];
                     }
 
-                    ngayTuan12Str = getRandomDateInWeek(lmpDate, 12);
-                    ngayTuan21Str = getRandomDateInWeek(lmpDate, 21);
+                    // Lấy ngẫu nhiên 1 trong 7 ngày thuộc Tuần 12 (từ ngày thứ 84 đến 90 sau LMP)
+                    ngayTuan12Str = getRandomDateInExactWeek(lmpDate, 12);
+
+                    // Lấy ngẫu nhiên 1 trong 7 ngày thuộc Tuần 21 (từ ngày thứ 147 đến 153 sau LMP)
+                    ngayTuan21Str = getRandomDateInExactWeek(lmpDate, 21);
                 }
             }
 

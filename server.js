@@ -9,24 +9,12 @@ const app = express();
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-
-    ssl: process.env.DATABASE_URL
-        ? { rejectUnauthorized: false }
-        : false,
-
-    // Giới hạn số connection
+    ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
     max: 5,
-
-    // Connection không hoạt động quá lâu thì đóng
     idleTimeoutMillis: 30000,
-
-    // Không chờ database quá 10 giây
     connectionTimeoutMillis: 10000,
-
-    // Giữ TCP connection hoạt động
     keepAlive: true,
     keepAliveInitialDelayMillis: 10000,
-
     options: '-c timezone=Asia/Ho_Chi_Minh'
 });
 
@@ -35,9 +23,7 @@ pool.on('error', (err) => {
     console.error('❌ PostgreSQL Pool Error:', err.message);
 });
 
-// ==========================================
-// POSTGRESQL KEEP-ALIVE
-// ==========================================
+// PostgreSQL Keep-Alive
 setInterval(async () => {
     try {
         await pool.query('SELECT 1');
@@ -51,7 +37,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(session({
-    secret: 'dan-so-luong-hoa-secret-key',
+    secret: process.env.SESSION_SECRET || 'dan-so-luong-hoa-secret-key',
     resave: false,
     saveUninitialized: false,
     cookie: { maxAge: 24 * 60 * 60 * 1000 }
