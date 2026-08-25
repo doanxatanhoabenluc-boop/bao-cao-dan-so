@@ -108,13 +108,55 @@
 
         <!-- Bảng Dữ Liệu -->
         <div class="card shadow-sm p-4 border-0">
-            <h4 class="text-secondary mb-3">📋 Dữ liệu trực tuyến</h4>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <h4 class="text-secondary mb-0">📋 Dữ liệu trực tuyến</h4>
+                <span id="dataTotalInfo" class="badge bg-primary fs-6">0 dữ liệu</span>
+            </div>
+
+            <!-- Bộ lọc dữ liệu theo tháng và năm -->
+            <div class="online-data-filter mb-3">
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-md-4">
+                        <label for="filterMonth" class="form-label fw-bold mb-1">📅 Tháng</label>
+                        <select id="filterMonth" class="form-select">
+                            <option value="">Tất cả các tháng</option>
+                            <option value="01">Tháng 01</option>
+                            <option value="02">Tháng 02</option>
+                            <option value="03">Tháng 03</option>
+                            <option value="04">Tháng 04</option>
+                            <option value="05">Tháng 05</option>
+                            <option value="06">Tháng 06</option>
+                            <option value="07">Tháng 07</option>
+                            <option value="08">Tháng 08</option>
+                            <option value="09">Tháng 09</option>
+                            <option value="10">Tháng 10</option>
+                            <option value="11">Tháng 11</option>
+                            <option value="12">Tháng 12</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label for="filterYear" class="form-label fw-bold mb-1">📆 Năm</label>
+                        <select id="filterYear" class="form-select">
+                            <option value="">Tất cả các năm</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <button type="button" id="btnResetDataFilter" class="btn btn-outline-secondary w-100">
+                            <i class="fa-solid fa-rotate-left me-1"></i> Xóa bộ lọc
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="table-responsive">
                 <table class="table table-bordered table-striped align-middle">
                     <thead class="table-dark" id="tableHeader"></thead>
                     <tbody id="tableBody"></tbody>
                 </table>
             </div>
+
+            <!-- Phân trang -->
+            <div id="onlineDataPagination" class="online-data-pagination mt-3"></div>
         </div>
     </div>
 
@@ -123,5 +165,6 @@
     <script src="vietnamese-formatter.js"></script>
     <script src="edit.js"></script>
     <script src="app.js"></script>
+    <script src="bhyt-search.js"></script>
 </body>
 </html>

@@ -150,6 +150,7 @@ const tableConfigs = {
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ma_so_doi_tuong", label: "Mã số đối tượng", type: "text", required: false },
         { name: "ho_ten", label: "Họ tên người NCT", type: "text", required: true },
+        { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
         { name: "nam_sinh", label: "Năm sinh", type: "text", required: true },
         { name: "ngay_kham", label: "Ngày khám", type: "date", required: true }
     ]}
@@ -169,43 +170,72 @@ window.onload = async function() {
         
         if ( role.includes("lãnh đạo") || role.includes("lanh dao") ) {
             let mainContainer = document.querySelector('.container') || document.body;
-            
             mainContainer.innerHTML = `
-                <div class="row justify-content-center mt-5">
-                    <div class="col-md-9 text-center">
-                        <div class="card shadow-lg p-5 border-0 rounded-4">
-                            <div class="card-body">
-                                <div class="mb-4">
-                                    <i class="fa-solid fa-user-shield text-primary fa-4x"></i>
+                <div class="card shadow-lg border-0 rounded-4 mb-4 leadership-dashboard">
+                    <div class="card-body p-4 p-lg-5">
+                        <div class="mb-4">
+                            <div class="text-success fw-bold small text-uppercase mb-1">Báo cáo nhanh</div>
+                            <div class="leader-heading-row d-flex flex-wrap align-items-center justify-content-between gap-3">
+                                <div class="leader-title-block">
+                                    <h2 class="fw-bold text-dark mb-1">📊 Tổng hợp dữ liệu 11 biểu mẫu</h2>
+                                    <p class="text-muted mb-0">Chọn tháng và năm để xem số trường hợp phát sinh trong từng bảng.</p>
                                 </div>
-                                <h2 class="fw-bold text-dark mb-2">Xin chào, Lãnh đạo / Quản trị viên!</h2>
-                                <p class="text-muted mb-4">Trang này dành riêng cho việc nhập liệu cấp cơ sở. Với tư cách là Lãnh đạo, vui lòng truy cập vào các trang quản lý hoặc báo cáo bên dưới để theo dõi hệ thống.</p>
-                                
-                                <div class="d-grid gap-3 d-sm-flex justify-content-sm-center flex-wrap">
-                                    <a href="admin.html" id="btnAdmin" class="btn btn-primary btn-lg px-4 fw-bold">
-                                        <i class="fa-solid fa-gears me-2"></i> Quản Trị
-                                    </a>
-                                    <a href="quan-ly-bieu-mau.html" class="btn btn-success btn-lg px-4 fw-bold">
-                                        <i class="fa-solid fa-table-list me-2"></i> Quản lý 11 Biểu mẫu
-                                    </a>
-                                    <a href="baocao.html" id="btnBaocaoToanXa" class="btn btn-success btn-lg px-4 fw-bold">
-                                        <i class="fa-solid fa-chart-pie me-2"></i> Xem Phiếu P0/CTV
-                                    </a>
-                                    <a href="baocao_toanxa.html" id="btnBaocaoTongHop" class="btn btn-info text-white btn-lg px-4 fw-bold">
-                                        <i class="fa-solid fa-file-invoice me-2"></i> Quản Lý Sổ
-                                    </a>
+                                <div class="leader-quick-actions d-flex flex-wrap gap-2">
+                                        <a href="quan-ly-bieu-mau.html" class="btn btn-success quick-nav-btn">
+                                            <i class="fa-solid fa-table-list me-1"></i> Quản lý 11 Biểu mẫu
+                                        </a>
+                                        <a href="baocao_toanxa.html" class="btn btn-primary quick-nav-btn">
+                                            <i class="fa-solid fa-book me-1"></i> Quản lý Sổ
+                                        </a>
+                                        <a href="baocao.html" class="btn btn-info text-white quick-nav-btn">
+                                            <i class="fa-solid fa-file-lines me-1"></i> Xem Phiếu P0/CTV
+                                        </a>
+                                        <a href="admin.html" class="btn btn-warning quick-nav-btn">
+                                            <i class="fa-solid fa-user-gear me-1"></i> Quản trị
+                                        </a>
                                 </div>
-
-                                <div class="mt-4 pt-3 border-top">
-                                    <button class="btn btn-outline-danger btn-sm" onclick="logout()">
-                                        <i class="fa-solid fa-right-from-bracket me-1"></i> Đăng xuất hệ thống
-                                    </button>
-                                </div>
+                                <button class="btn btn-outline-danger btn-sm leader-logout-btn" onclick="logout()">
+                                    <i class="fa-solid fa-right-from-bracket me-1"></i> Đăng xuất
+                                </button>
                             </div>
                         </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-12 col-md-5">
+                                <label class="form-label fw-bold">📅 Tháng</label>
+                                <select id="leaderFilterMonth" class="form-select form-select-lg">
+                                    <option value="">Tất cả các tháng</option>
+                                    <option value="01">Tháng 01</option><option value="02">Tháng 02</option>
+                                    <option value="03">Tháng 03</option><option value="04">Tháng 04</option>
+                                    <option value="05">Tháng 05</option><option value="06">Tháng 06</option>
+                                    <option value="07">Tháng 07</option><option value="08">Tháng 08</option>
+                                    <option value="09">Tháng 09</option><option value="10">Tháng 10</option>
+                                    <option value="11">Tháng 11</option><option value="12">Tháng 12</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-5">
+                                <label class="form-label fw-bold">📆 Năm</label>
+                                <select id="leaderFilterYear" class="form-select form-select-lg">
+                                    <option value="">Tất cả các năm</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-2 d-flex align-items-end">
+                                <button id="btnResetLeaderFilter" class="btn btn-outline-secondary btn-lg w-100">
+                                    <i class="fa-solid fa-rotate-left"></i> Xóa
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="leaderSummaryLoading" class="text-center py-4 text-muted">
+                            <div class="spinner-border text-success mb-2"></div>
+                            <div>Đang tải số liệu...</div>
+                        </div>
+                        <div id="leaderSummaryCards" class="row g-3"></div>
+                        <div id="leaderSummaryFooter" class="mt-4"></div>
                     </div>
                 </div>
             `;
+            setupLeadershipDashboard();
             return;
         }
 
@@ -490,8 +520,10 @@ function switchTableForm() {
                 <small class="text-muted mt-1 d-block">💡 Nhập thông tin để gợi ý kết quả từ Bảng 7, sau đó click chọn để hệ thống tự động điền các ô bên dưới.</small>
             `;
         } else {
-    // Kiểm tra xem bảng hiện tại có phải là Bảng 2 hoặc Bảng 10 hay không
+    // Bảng 2 và Bảng 10 vẫn đồng bộ dữ liệu từ Bảng 1,
+    // nhưng riêng ô BHYT luôn cho phép nhập/sửa trực tiếp khi CSDL BHYT không có kết quả.
     const isReadOnlyTable = (currentTable === 'table_2' || isTable10);
+    const isBhytField = ['so_the_bhyt', 'so_the_bhyt_me', 'ma_the_bhyt', 'ma_the_bhyt_me'].includes(field.name);
 
     if (field.name === 'ho_ten_con' || field.name === 'ho_ten_tre' || field.name === 'ho_ten') {
         col.innerHTML = `
@@ -515,8 +547,9 @@ function switchTableForm() {
 
         if (field.required && !isReadOnlyTable) input.required = true;
 
-        // 🔒 Khóa trường riêng của Bảng 8
-        if (currentTable === 'table_8' && ['ho_so', 'ho_ten_vo', 'so_the_bhyt', 'ngay_sinh'].includes(field.name)) {
+        // 🔒 Khóa các trường được đồng bộ từ Bảng 7 của Bảng 8.
+        // Riêng BHYT không khóa để cán bộ có thể nhập tay nếu không tra cứu được.
+        if (currentTable === 'table_8' && ['ho_so', 'ho_ten_vo', 'ngay_sinh'].includes(field.name)) {
             input.setAttribute('readonly', true);
             input.readOnly = true;
             input.style.backgroundColor = '#e9ecef';
@@ -526,8 +559,8 @@ function switchTableForm() {
             input.onpaste = (e) => e.preventDefault();
         }
 
-        // 🔒 Khóa toàn bộ input nếu là Bảng 2 hoặc Bảng 10
-        if (isReadOnlyTable) {
+        // 🔒 Khóa các input đồng bộ của Bảng 2/Bảng 10, nhưng luôn chừa ô BHYT để nhập tay.
+        if (isReadOnlyTable && !isBhytField) {
             input.setAttribute('readonly', true);
             input.readOnly = true;
             input.style.backgroundColor = '#e9ecef';
@@ -542,6 +575,11 @@ function switchTableForm() {
 }
         container.appendChild(col);
     });
+
+    // BHYT: sau khi đổi bảng, gắn lại ô nhập + nút Tìm sau khi form đã render xong.
+    if (typeof window.refreshBHYTSearch === 'function') {
+        window.refreshBHYTSearch();
+    }
 
     if (currentTable === 'table_1') {
         let extraCol = document.createElement('div');
@@ -846,40 +884,229 @@ async function saveData(e) {
 }
 }
 
+// ============================================================
+// DỮ LIỆU TRỰC TUYẾN - PHÂN TRANG + LỌC THÁNG/NĂM
+// ============================================================
+let onlineDataAll = [];
+let onlineDataFiltered = [];
+let onlineDataPage = 1;
+const ONLINE_DATA_PAGE_SIZE = 10;
+
+async function updateOnlineDataYearOptions() {
+    const yearSelect = document.getElementById('filterYear');
+    if (!yearSelect || !currentTable) return;
+
+    const current = yearSelect.value;
+    try {
+        const res = await fetch(`/api/data/${currentTable}/years`);
+        const result = await res.json();
+        const years = result.years || [];
+        yearSelect.innerHTML = '<option value="">Tất cả các năm</option>' +
+            years.map(y => `<option value="${y}">Năm ${y}</option>`).join('');
+        const yearStrings = years.map(String);
+        if (current && yearStrings.includes(String(current))) {
+            yearSelect.value = String(current);
+        } else {
+            const currentYear = String(new Date().getFullYear());
+            if (yearStrings.includes(currentYear)) yearSelect.value = currentYear;
+        }
+    } catch (e) {
+        console.error('Không tải được danh sách năm:', e);
+    }
+}
+
+function applyOnlineDataFilter(resetPage = true) {
+    // Bộ lọc được xử lý tại server để không bị giới hạn bởi 200 bản ghi.
+    if (resetPage) onlineDataPage = 1;
+    fetchTableData(currentTable);
+}
+
+function setupOnlineDataFilters() {
+    const month = document.getElementById('filterMonth');
+    const year = document.getElementById('filterYear');
+    const reset = document.getElementById('btnResetDataFilter');
+
+    if (month && !month.dataset.bound) {
+        month.addEventListener('change', () => applyOnlineDataFilter(true));
+        month.dataset.bound = '1';
+    }
+
+    if (year && !year.dataset.bound) {
+        year.addEventListener('change', () => applyOnlineDataFilter(true));
+        year.dataset.bound = '1';
+    }
+
+    if (reset && !reset.dataset.bound) {
+        reset.addEventListener('click', () => {
+            if (month) month.value = '';
+            if (year) year.value = '';
+            applyOnlineDataFilter(true);
+        });
+        reset.dataset.bound = '1';
+    }
+}
+
+function renderOnlineDataPage() {
+    const body = document.getElementById('tableBody');
+    const pagination = document.getElementById('onlineDataPagination');
+    const totalInfo = document.getElementById('dataTotalInfo');
+
+    if (!body) return;
+
+    const config = tableConfigs[currentTable];
+    const total = onlineDataFiltered.length;
+    const totalPages = Math.max(1, Math.ceil(total / ONLINE_DATA_PAGE_SIZE));
+
+    if (onlineDataPage > totalPages) onlineDataPage = totalPages;
+    if (onlineDataPage < 1) onlineDataPage = 1;
+
+    const start = (onlineDataPage - 1) * ONLINE_DATA_PAGE_SIZE;
+    const pageData = onlineDataFiltered.slice(start, start + ONLINE_DATA_PAGE_SIZE);
+
+    if (totalInfo) {
+        totalInfo.textContent = `${total} dữ liệu`;
+    }
+
+    if (!pageData.length) {
+        body.innerHTML =
+            `<tr><td colspan="${config.fields.length + 2}" class="text-center py-4 text-muted">
+                Không có dữ liệu phù hợp với bộ lọc
+            </td></tr>`;
+    } else {
+        body.innerHTML = pageData.map((item, idx) => {
+            const stt = start + idx + 1;
+            let rowHtml = `<tr><td>${stt}</td>`;
+
+            config.fields.forEach(f => {
+                const val = item[f.name];
+                rowHtml += `<td>${val !== undefined && val !== null ? val : ''}</td>`;
+            });
+
+            rowHtml += `<td>
+                <button class="btn btn-sm btn-warning text-white fw-bold" onclick="openEditModal('${item.id}')">
+                    <i class="fa-solid fa-pen-to-square"></i> Sửa
+                </button>
+            </td></tr>`;
+
+            return rowHtml;
+        }).join('');
+    }
+
+    if (pagination) {
+        if (total <= ONLINE_DATA_PAGE_SIZE) {
+            pagination.innerHTML = '';
+            return;
+        }
+
+        const maxButtons = 7;
+        let first = Math.max(1, onlineDataPage - 3);
+        let last = Math.min(totalPages, first + maxButtons - 1);
+        first = Math.max(1, last - maxButtons + 1);
+
+        let html = `
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div class="text-muted small">
+                    Hiển thị <strong>${total ? start + 1 : 0}</strong> -
+                    <strong>${Math.min(start + ONLINE_DATA_PAGE_SIZE, total)}</strong>
+                    / <strong>${total}</strong>
+                </div>
+                <nav aria-label="Phân trang dữ liệu">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item ${onlineDataPage === 1 ? 'disabled' : ''}">
+                            <button class="page-link" onclick="goOnlineDataPage(${onlineDataPage - 1})" ${onlineDataPage === 1 ? 'disabled' : ''}>
+                                ‹ Trước
+                            </button>
+                        </li>`;
+
+        if (first > 1) {
+            html += `<li class="page-item">
+                <button class="page-link" onclick="goOnlineDataPage(1)">1</button>
+            </li>`;
+            if (first > 2) html += `<li class="page-item disabled"><span class="page-link">…</span></li>`;
+        }
+
+        for (let p = first; p <= last; p++) {
+            html += `<li class="page-item ${p === onlineDataPage ? 'active' : ''}">
+                <button class="page-link" onclick="goOnlineDataPage(${p})">${p}</button>
+            </li>`;
+        }
+
+        if (last < totalPages) {
+            if (last < totalPages - 1) {
+                html += `<li class="page-item disabled"><span class="page-link">…</span></li>`;
+            }
+            html += `<li class="page-item">
+                <button class="page-link" onclick="goOnlineDataPage(${totalPages})">${totalPages}</button>
+            </li>`;
+        }
+
+        html += `
+                        <li class="page-item ${onlineDataPage === totalPages ? 'disabled' : ''}">
+                            <button class="page-link" onclick="goOnlineDataPage(${onlineDataPage + 1})" ${onlineDataPage === totalPages ? 'disabled' : ''}>
+                                Sau ›
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>`;
+
+        pagination.innerHTML = html;
+    }
+}
+
+function goOnlineDataPage(page) {
+    const totalPages = Math.max(1, Math.ceil(onlineDataFiltered.length / ONLINE_DATA_PAGE_SIZE));
+    onlineDataPage = Math.min(Math.max(1, page), totalPages);
+    renderOnlineDataPage();
+
+    const tableCard = document.getElementById('onlineDataPagination');
+    if (tableCard) {
+        tableCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
 async function fetchTableData(tableName) {
-    let header = document.getElementById('tableHeader');
-    let body = document.getElementById('tableBody');
+    const header = document.getElementById('tableHeader');
+    const body = document.getElementById('tableBody');
     if (!header || !body) return;
 
     header.innerHTML = '';
     body.innerHTML = '<tr><td colspan="10" class="text-center">Đang tải...</td></tr>';
 
-    let config = tableConfigs[tableName];
-    let res = await fetch(`/api/data/${tableName}`);
-    let data = await res.json();
+    const config = tableConfigs[tableName];
+    if (!config) return;
 
-    currentTableDataCache = data || [];
+    try {
+        // Cập nhật danh sách năm trước khi đọc giá trị bộ lọc để khi đổi bảng,
+        // năm cũ không làm bảng mới bị lọc nhầm.
+        await updateOnlineDataYearOptions();
 
-    header.innerHTML = `<tr><th>STT</th>` + config.fields.map(f => `<th>${f.label}</th>`).join('') + `<th>Thao tác</th></tr>`;
-    
-    if(!data || data.length === 0) {
-        body.innerHTML = `<tr><td colspan="${config.fields.length + 2}" class="text-center">Chưa có dữ liệu</td></tr>`;
-        return;
+        const month = document.getElementById('filterMonth')?.value || '';
+        const year = document.getElementById('filterYear')?.value || '';
+        const params = new URLSearchParams();
+        if (month) params.set('month', month);
+        if (year) params.set('year', year);
+
+        const url = `/api/data/${tableName}${params.toString() ? '?' + params.toString() : ''}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Không thể tải dữ liệu');
+        const data = await res.json();
+
+        currentTableDataCache = data || [];
+        onlineDataAll = data || [];
+        onlineDataFiltered = [...onlineDataAll];
+        onlineDataPage = 1;
+
+        header.innerHTML = `<tr><th>STT</th>` +
+            config.fields.map(f => `<th>${f.label}</th>`).join('') +
+            `<th>Thao tác</th></tr>`;
+
+        setupOnlineDataFilters();
+        renderOnlineDataPage();
+    } catch (error) {
+        console.error(error);
+        body.innerHTML = `<tr><td colspan="${config.fields.length + 2}" class="text-center text-danger py-4">Lỗi tải dữ liệu</td></tr>`;
     }
-
-    body.innerHTML = data.map((item, idx) => {
-        let rowHtml = `<tr><td>${idx + 1}</td>`;
-        config.fields.forEach(f => {
-            let val = item[f.name];
-            rowHtml += `<td>${val !== undefined && val !== null ? val : ''}</td>`;
-        });
-        rowHtml += `<td>
-            <button class="btn btn-sm btn-warning text-white fw-bold" onclick="openEditModal('${item.id}')">
-                <i class="fa-solid fa-pen-to-square"></i> Sửa
-            </button>
-        </td></tr>`;
-        return rowHtml;
-    }).join('');
 }
 
 function removeAccents(str) {
@@ -896,14 +1123,15 @@ function selectDataFromTable7(item) {
     let bhytInput = document.querySelector('[name="so_the_bhyt"]');
     let ngaySinhInput = document.querySelector('[name="ngay_sinh"]');
 
-    let fieldsToFill = [
+    // Đồng bộ từ Bảng 7: các thông tin nhận diện vẫn khóa,
+    // riêng BHYT chỉ tự điền nếu có nhưng luôn cho phép cán bộ sửa/nhập tay.
+    const lockedFields = [
         { el: hoSoInput, val: item.ho_so },
         { el: hoTenInput, val: item.ho_ten_vo },
-        { el: bhytInput, val: item.so_the_bhyt },
         { el: ngaySinhInput, val: item.ngay_sinh }
     ];
 
-    fieldsToFill.forEach(field => {
+    lockedFields.forEach(field => {
         if (field.el) {
             field.el.removeAttribute('readonly');
             field.el.readOnly = false;
@@ -916,6 +1144,16 @@ function selectDataFromTable7(item) {
             field.el.onpaste = (e) => e.preventDefault();
         }
     });
+
+    if (bhytInput) {
+        bhytInput.readOnly = false;
+        bhytInput.removeAttribute('readonly');
+        bhytInput.value = item.so_the_bhyt || '';
+        bhytInput.style.backgroundColor = '';
+        bhytInput.style.cursor = '';
+        bhytInput.onkeydown = null;
+        bhytInput.onpaste = null;
+    }
 
     if (ngaySinhInput && item.ngay_sinh) {
         let parts = item.ngay_sinh.split('-'); 
@@ -978,6 +1216,85 @@ async function searchDataFromTable7(keyword) {
     } catch(e) {
         console.error(e);
     }
+}
+
+async function loadLeadershipSummary() {
+    const month = document.getElementById('leaderFilterMonth')?.value || '';
+    const year = document.getElementById('leaderFilterYear')?.value || '';
+    const cards = document.getElementById('leaderSummaryCards');
+    const loading = document.getElementById('leaderSummaryLoading');
+    const footer = document.getElementById('leaderSummaryFooter');
+    if (!cards) return;
+
+    loading?.classList.remove('d-none');
+    cards.innerHTML = '';
+    if (footer) footer.innerHTML = '';
+
+    try {
+        const params = new URLSearchParams();
+        if (month) params.set('month', month);
+        if (year) params.set('year', year);
+        const res = await fetch(`/api/dashboard/summary${params.toString() ? '?' + params.toString() : ''}`);
+        const result = await res.json();
+        if (!res.ok || !result.success) throw new Error(result.message || 'Không thể tải thống kê');
+
+        const yearSelect = document.getElementById('leaderFilterYear');
+        if (yearSelect) {
+            const current = yearSelect.value;
+            yearSelect.innerHTML = '<option value="">Tất cả các năm</option>' +
+                (result.years || []).map(y => `<option value="${y}">Năm ${y}</option>`).join('');
+            if ((result.years || []).includes(current)) yearSelect.value = current;
+        }
+
+        cards.innerHTML = (result.counts || []).map((item, index) => `
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="card h-100 border-0 shadow-sm leadership-stat-card">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div class="d-flex gap-2">
+                                <div class="leadership-stat-number">${index + 1}</div>
+                                <div>
+                                    <div class="fw-bold text-dark">${item.title}</div>
+                                    <div class="text-muted small">${month || year ? `Dữ liệu đã nhập ${month ? `tháng ${month}` : ''}${month && year ? '/' : ''}${year || ''}` : 'Tất cả dữ liệu đã nhập'}</div>
+                                </div>
+                            </div>
+                            <div class="leadership-stat-value">${Number(item.total || 0).toLocaleString('vi-VN')}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        if (footer) {
+            footer.innerHTML = `
+                <div class="alert alert-success d-flex flex-wrap justify-content-between align-items-center gap-2 mb-0">
+                    <strong><i class="fa-solid fa-chart-column me-2"></i>Tổng cộng 11 bảng</strong>
+                    <span class="fs-5 fw-bold">${Number(result.grandTotal || 0).toLocaleString('vi-VN')} trường hợp</span>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error(error);
+        cards.innerHTML = `<div class="col-12"><div class="alert alert-danger">${error.message || 'Không tải được thống kê.'}</div></div>`;
+    } finally {
+        loading?.classList.add('d-none');
+    }
+}
+
+function setupLeadershipDashboard() {
+    const month = document.getElementById('leaderFilterMonth');
+    const year = document.getElementById('leaderFilterYear');
+    const reset = document.getElementById('btnResetLeaderFilter');
+
+    if (month) month.addEventListener('change', loadLeadershipSummary);
+    if (year) year.addEventListener('change', loadLeadershipSummary);
+    if (reset) reset.addEventListener('click', () => {
+        if (month) month.value = '';
+        if (year) year.value = '';
+        loadLeadershipSummary();
+    });
+
+    loadLeadershipSummary();
 }
 
 document.addEventListener("DOMContentLoaded", async function() {

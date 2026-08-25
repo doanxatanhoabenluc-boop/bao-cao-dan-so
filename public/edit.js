@@ -187,6 +187,11 @@ function openEditModal(recordId) {
         container.appendChild(col);
     });
 
+    // Đồng bộ chức năng Tìm BHYT trong cửa sổ sửa dữ liệu của trang Dữ liệu trực tuyến.
+    if (typeof window.attachBHYTSearchToIndexEdit === 'function') {
+        window.attachBHYTSearchToIndexEdit(currentTable);
+    }
+
     let modalElement = document.getElementById('editModal');
     let myModal = new bootstrap.Modal(modalElement);
     myModal.show();

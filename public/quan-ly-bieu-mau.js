@@ -507,6 +507,11 @@ async function openEditRecordModal(tableName, encodedRowJson) {
         container.appendChild(colDiv);
     });
 
+    // Đồng bộ chức năng Tìm BHYT trong cửa sổ sửa dữ liệu của trang Quản lý biểu mẫu.
+    if (typeof window.attachBHYTSearchToAdminEdit === 'function') {
+        window.attachBHYTSearchToAdminEdit(tableName);
+    }
+
     const editModal = new bootstrap.Modal(document.getElementById('editDataModal'));
     editModal.show();
 }

@@ -4,8 +4,27 @@ const express = require('express');
 const session = require('express-session');
 const { Pool } = require('pg');
 const path = require('path');
+const fs = require('fs');
+const { DatabaseSync } = require('node:sqlite');
 
 const app = express();
+
+// ============================================================
+// CSDL SQLITE TRA CỨU BHYT
+// Chỉ đọc, không ảnh hưởng PostgreSQL đang lưu dữ liệu 11 bảng
+// ============================================================
+const bhytDbPath = path.join(__dirname, 'data', 'bhyt.sqlite');
+let bhytDb = null;
+try {
+    if (fs.existsSync(bhytDbPath)) {
+        bhytDb = new DatabaseSync(bhytDbPath, { readOnly: true });
+        console.log('✅ Đã mở CSDL BHYT SQLite:', bhytDbPath);
+    } else {
+        console.warn('⚠️ Không tìm thấy CSDL BHYT:', bhytDbPath);
+    }
+} catch (err) {
+    console.error('❌ Không mở được CSDL BHYT:', err.message);
+}
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -221,7 +240,20 @@ async function initDatabase() {
             ALTER TABLE table_11 ADD COLUMN IF NOT EXISTS ho_ten TEXT;
             ALTER TABLE table_11 ADD COLUMN IF NOT EXISTS nam_sinh TEXT;
             ALTER TABLE table_11 ADD COLUMN IF NOT EXISTS ngay_kham TEXT;
+            ALTER TABLE table_11 ADD COLUMN IF NOT EXISTS so_the_bhyt TEXT;
             ALTER TABLE table_11 ADD COLUMN IF NOT EXISTS cong_so_nguoi_co TEXT;
+
+            -- Bảo đảm các trường BHYT đang có trong 11 biểu mẫu
+            ALTER TABLE table_1 ADD COLUMN IF NOT EXISTS so_the_bhyt_me TEXT;
+            ALTER TABLE table_2 ADD COLUMN IF NOT EXISTS ma_the_bhyt_me TEXT;
+            ALTER TABLE table_3 ADD COLUMN IF NOT EXISTS so_the_bhyt TEXT;
+            ALTER TABLE table_4 ADD COLUMN IF NOT EXISTS so_the_bhyt TEXT;
+            ALTER TABLE table_5 ADD COLUMN IF NOT EXISTS so_the_bhyt TEXT;
+            ALTER TABLE table_6 ADD COLUMN IF NOT EXISTS so_the_bhyt TEXT;
+            ALTER TABLE table_7 ADD COLUMN IF NOT EXISTS so_the_bhyt TEXT;
+            ALTER TABLE table_8 ADD COLUMN IF NOT EXISTS so_the_bhyt TEXT;
+            ALTER TABLE table_9 ADD COLUMN IF NOT EXISTS so_the_bhyt TEXT;
+            ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS ma_the_bhyt TEXT;
         `);
 
         // Thêm dữ liệu mẫu Biện pháp tránh thai (BPTT) kèm mã ký hiệu chuẩn
@@ -408,26 +440,263 @@ app.post("/api/admin/danh-sach-benh-vien", async (req, res) => {
     }
 });
 
+// ============================================================
+// API TRA CỨU SỐ THẺ BHYT
+// Dùng chung cho tất cả bảng có trường BHYT
+// ============================================================
+app.get("/api/bhyt/search", async (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json({ success: false, message: "Chưa đăng nhập" });
+    }
+
+    if (!bhytDb) {
+        return res.status(500).json({ success: false, message: "CSDL BHYT SQLite chưa được nạp." });
+    }
+
+    try {
+        const name = String(req.query.name || "").trim();
+        const year = String(req.query.year || "").trim();
+
+        if (!name && !year) {
+            return res.status(400).json({ success: false, message: "Vui lòng nhập Họ tên hoặc năm sinh." });
+        }
+
+        let sql = `
+            SELECT id, ho_ten, ngay_sinh, nam_sinh, gioi_tinh,
+                   so_the_bhyt, so_cccd, dia_chi
+            FROM bhyt
+            WHERE 1 = 1
+        `;
+        const params = [];
+
+        if (name) {
+            sql += ` AND ho_ten_norm LIKE ?`;
+            params.push(`%${name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase()}%`);
+        }
+
+        if (year) {
+            sql += ` AND nam_sinh = ?`;
+            params.push(year);
+        }
+
+        sql += ` ORDER BY ho_ten ASC, ngay_sinh ASC LIMIT 50`;
+
+        const rows = bhytDb.prepare(sql).all(...params);
+        return res.json({ success: true, count: rows.length, results: rows });
+    } catch (err) {
+        console.error("❌ Lỗi tra cứu BHYT:", err);
+        return res.status(500).json({ success: false, message: "Lỗi tra cứu BHYT: " + err.message });
+    }
+});
+
 // API Đọc dữ liệu các bảng nghiệp vụ (Lọc chuẩn theo Ấp và Địa bàn / Khu vực)
+// Cột ngày dùng để lọc/báo cáo theo tháng - năm cho từng biểu mẫu.
+// Ưu tiên ngày nghiệp vụ thay vì created_at để số liệu báo cáo đúng với thời điểm phát sinh.
+const reportDateFields = {
+    table_1: 'ngay_sinh_con',
+    table_2: 'ngay_sinh_tre',
+    table_3: 'ngay_chet',
+    table_4: 'ngay_den',
+    table_5: 'ngay_di',
+    table_6: 'created_at',
+    table_7: 'ngay_su_dung',
+    table_8: 'ngay_thoi_su_dung',
+    table_9: 'ngay_su_kien',
+    table_10: 'mang_thai_tuan_12',
+    table_11: 'ngay_kham'
+};
+
+function normalizeReportDateField(tableName) {
+    return reportDateFields[tableName] || 'created_at';
+}
+
+// created_at được lưu theo định dạng vi-VN: DD/MM/YYYY, HH:MM:SS.
+// Các trường ngày nghiệp vụ từ form được lưu theo YYYY-MM-DD.
+function reportDateExpr(tableName) {
+    if (tableName === 'table_10') {
+        return `COALESCE(NULLIF(mang_thai_tuan_12::text, ''), NULLIF(mang_thai_tuan_21::text, ''), NULLIF(created_at::text, ''))`;
+    }
+    const field = normalizeReportDateField(tableName);
+    return `COALESCE(NULLIF(${field}::text, ''), '')`;
+}
+
+function reportYearExpr(tableName) {
+    if (tableName === 'table_6') {
+        return `SUBSTRING(${reportDateExpr(tableName)}, 7, 4)`;
+    }
+    return `SUBSTRING(${reportDateExpr(tableName)}, 1, 4)`;
+}
+
+function reportMonthExpr(tableName) {
+    if (tableName === 'table_6') {
+        return `SUBSTRING(${reportDateExpr(tableName)}, 4, 2)`;
+    }
+    return `SUBSTRING(${reportDateExpr(tableName)}, 6, 2)`;
+}
+
+
+// Lọc "Dữ liệu trực tuyến" và thống kê Lãnh đạo theo THỜI ĐIỂM NHẬP DỮ LIỆU.
+// created_at được hệ thống tự động ghi khi POST /api/data/:table.
+// Hỗ trợ cả DD/M/YYYY, DD/MM/YYYY và YYYY-MM-DD.
+function createdAtYearExpr(tableName) {
+    // created_at trong dữ liệu cũ/mới có thể có các dạng:
+    // DD/M/YYYY, DD/MM/YYYY, YYYY-MM-DD, YYYY/MM/DD và có thể kèm giờ.
+    // Không dùng regexp_match() dạng mảng vì dễ phụ thuộc cách PostgreSQL xử lý chuỗi.
+    return `COALESCE(
+        CASE
+            WHEN trim(created_at::text) ~ '^[0-9]{4}[-/][0-9]{1,2}[-/][0-9]{1,2}'
+                THEN SUBSTRING(trim(created_at::text) FROM '^([0-9]{4})')
+            WHEN trim(created_at::text) ~ '^[0-9]{1,2}[-/][0-9]{1,2}[-/][0-9]{4}'
+                THEN SUBSTRING(trim(created_at::text) FROM '([0-9]{4})')
+            ELSE SUBSTRING(trim(created_at::text) FROM '([0-9]{4})')
+        END,
+        ''
+    )`;
+}
+
+function createdAtMonthExpr(tableName) {
+    return `COALESCE(
+        CASE
+            WHEN trim(created_at::text) ~ '^[0-9]{4}[-/][0-9]{1,2}[-/][0-9]{1,2}'
+                THEN LPAD(SUBSTRING(trim(created_at::text) FROM '^[0-9]{4}[-/]([0-9]{1,2})[-/]'), 2, '0')
+            WHEN trim(created_at::text) ~ '^[0-9]{1,2}[-/][0-9]{1,2}[-/][0-9]{4}'
+                THEN LPAD(SUBSTRING(trim(created_at::text) FROM '^[0-9]{1,2}[-/]([0-9]{1,2})[-/][0-9]{4}'), 2, '0')
+            ELSE ''
+        END,
+        ''
+    )`;
+}
+
+
 app.get("/api/data/:table", async (req, res) => {
     if (!req.session.user) return res.status(401).json({ success: false });
     const tableName = req.params.table;
     if (!/^table_([1-9]|1[01])$/.test(tableName)) return res.status(400).json({ success: false, message: "Bảng không hợp lệ" });
 
     try {
-        let user = req.session.user;
+        const user = req.session.user;
+        const month = req.query.month ? String(req.query.month) : '';
+        const year = req.query.year ? String(req.query.year) : '';
         let query = `SELECT * FROM ${tableName}`;
         let params = [];
 
+        const conditions = [];
         if (user.role !== 'admin' && user.role !== 'lãnh đạo') {
-            query += ` WHERE (ap = $1 AND diabanh = $2) OR nguoi_nhap ILIKE $3`;
+            conditions.push(`((ap = $1 AND diabanh = $2) OR nguoi_nhap ILIKE $3)`);
             params.push(user.ap, user.diabanh, `%${user.username}%`);
         }
 
-        query += ` ORDER BY id DESC LIMIT 200`;
+        if (month || year) {
+            const field = normalizeReportDateField(tableName);
+            if (year) {
+                params.push(year);
+                conditions.push(`${createdAtYearExpr(tableName)} = $${params.length}`);
+            }
+            if (month) {
+                params.push(month.padStart(2, '0'));
+                conditions.push(`${createdAtMonthExpr(tableName)} = $${params.length}`);
+            }
+        }
+
+        if (conditions.length) query += ` WHERE ${conditions.join(' AND ')}`;
+        query += ` ORDER BY id DESC LIMIT 1000`;
+
         const result = await pool.query(query, params);
         res.json(result.rows);
     } catch (err) {
+        console.error('❌ Lỗi lấy dữ liệu:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// Danh sách năm có dữ liệu cho bộ lọc của từng bảng.
+app.get('/api/data/:table/years', async (req, res) => {
+    if (!req.session.user) return res.status(401).json({ success: false });
+    const tableName = req.params.table;
+    if (!/^table_([1-9]|1[01])$/.test(tableName)) return res.status(400).json({ success: false, message: 'Bảng không hợp lệ' });
+
+    try {
+        const user = req.session.user;
+        let query = `
+            SELECT DISTINCT ${createdAtYearExpr(tableName)} AS year
+            FROM ${tableName}
+            WHERE ${createdAtYearExpr(tableName)} ~ '^[0-9]{4}$'
+        `;
+        const params = [];
+        if (user.role !== 'admin' && user.role !== 'lãnh đạo') {
+            query += ` AND ((ap = $1 AND diabanh = $2) OR nguoi_nhap ILIKE $3)`;
+            params.push(user.ap, user.diabanh, `%${user.username}%`);
+        }
+        query += ' ORDER BY year DESC';
+        const result = await pool.query(query, params);
+        res.json({ success: true, years: result.rows.map(r => r.year).filter(Boolean) });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ==================== API THỐNG KÊ 11 BẢNG CHO LÃNH ĐẠO ====================
+// Lưu ý: thống kê này đếm số BẢN GHI ĐÃ NHẬP vào hệ thống trong tháng/năm,
+// dựa trên created_at, KHÔNG dựa vào ngày nghiệp vụ (ngày sinh, ngày khám...).
+app.get('/api/dashboard/summary', async (req, res) => {
+    if (!req.session.user || !['admin', 'lãnh đạo'].includes(String(req.session.user.role || '').toLowerCase())) {
+        return res.status(403).json({ success: false, message: 'Không có quyền xem thống kê tổng hợp' });
+    }
+
+    try {
+        const month = req.query.month ? String(req.query.month).padStart(2, '0') : '';
+        const year = req.query.year ? String(req.query.year) : '';
+        const counts = [];
+        const yearSet = new Set();
+
+        for (let i = 1; i <= 11; i++) {
+            const tableName = `table_${i}`;
+    
+            // Lấy các năm đang có dữ liệu để dropdown không còn rỗng.
+            const yearsResult = await pool.query(`
+                SELECT DISTINCT ${createdAtYearExpr(tableName)} AS year
+                FROM ${tableName}
+                WHERE ${createdAtYearExpr(tableName)} ~ '^[0-9]{4}$'
+            `);
+            yearsResult.rows.forEach(r => { if (r.year) yearSet.add(r.year); });
+
+            let countQuery = `SELECT COUNT(*)::int AS total FROM ${tableName}`;
+            const params = [];
+            const conditions = [];
+            if (year) {
+                params.push(year);
+                conditions.push(`${createdAtYearExpr(tableName)} = $${params.length}`);
+            }
+            if (month) {
+                params.push(month);
+                conditions.push(`${createdAtMonthExpr(tableName)} = $${params.length}`);
+            }
+            if (conditions.length) countQuery += ` WHERE ${conditions.join(' AND ')}`;
+
+            const countResult = await pool.query(countQuery, params);
+            counts.push({
+                table: tableName,
+                title: [
+                    'Danh sách trẻ sinh ra', 'Danh sách SL sơ sinh', 'Danh sách người chết',
+                    'Danh sách người chuyển đến từ xã khác', 'Danh sách người chuyển đi khỏi xã',
+                    'Danh sách thay đổi thông tin cơ bản', 'Vợ chồng mới sử dụng BPTT',
+                    'Vợ chồng thôi sử dụng BPTT', 'Phụ nữ có thông tin thai sản',
+                    'Sàng lọc trước sinh', 'Người cao tuổi khám sức khỏe'
+                ][i - 1],
+                total: countResult.rows[0].total
+            });
+        }
+
+        res.json({
+            success: true,
+            month,
+            year,
+            years: [...yearSet].sort((a, b) => Number(b) - Number(a)),
+            counts,
+            grandTotal: counts.reduce((sum, item) => sum + Number(item.total || 0), 0)
+        });
+    } catch (err) {
+        console.error('❌ Lỗi thống kê 11 bảng:', err);
         res.status(500).json({ success: false, message: err.message });
     }
 });

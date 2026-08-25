@@ -192,7 +192,7 @@ async function fetchAndRenderTable(tableIndex, month, year, filterAp, filterDiaB
 }
 
 function getColumnCount(idx) {
-    const counts = {1: 10, 2: 8, 3: 8, 4: 11, 5: 9, 6: 8, 7: 6, 8: 6, 9: 7, 10: 12, 11: 6};
+    const counts = {1: 10, 2: 9, 3: 8, 4: 11, 5: 9, 6: 8, 7: 6, 8: 6, 9: 7, 10: 12, 11: 7};
     return counts[idx] || 5;
 }
 
@@ -217,6 +217,7 @@ function generateRowHtml(idx, r, stt) {
             return `<tr>
                 <td>${r.so_ho || stt}</td>
                 <td class="text-left">${r.ho_ten_tre || r.ho_ten_con || ''}</td>
+                <td>${r.ma_the_bhyt_me || r.so_the_bhyt || ''}</td>
                 <td>${r.suy_giap || r.benh_suy_giap || ''}</td>
                 <td>${r.g6pd || r.thieu_men_g6pd || ''}</td>
                 <td>${r.thuong_than || r.tang_san_thuong_than || ''}</td>
@@ -339,6 +340,7 @@ function generateRowHtml(idx, r, stt) {
             <td>${r.ho_so || stt}</td>
             <td>${r.ma_so_doi_tuong || ''}</td>
             <td class="text-left">${r.ho_ten || ''}</td>
+            <td>${r.so_the_bhyt || ''}</td>
             <td>${r.nam_sinh || ''}</td>
             <td>${formatDateVN(r.ngay_kham)}</td>
             <td class="text-left">${r.ghi_chu || ''}</td>

@@ -12,6 +12,7 @@ body {
     padding: 14px 16px !important;
     box-shadow: 0 3px 6px rgba(0,0,0,0.15);
 }
+
 .navbar-brand {
     font-weight: 800;
     font-size: 1.15rem !important;
@@ -34,11 +35,16 @@ body {
     padding: 20px !important;
 }
 
-/* 1. MÁY TÍNH (PC): GIỮ NGUYÊN 100% */
+/* ============================================================
+   MÁY TÍNH
+   ============================================================ */
+
 @media (min-width: 992px) {
+
     body {
         font-size: 1.15rem !important;
     }
+
     label {
         font-weight: 800 !important;
         color: #1e293b !important;
@@ -46,7 +52,9 @@ body {
         display: block;
         font-size: 1.1rem !important;
     }
-    .form-control, .form-select {
+
+    .form-control,
+    .form-select {
         border-radius: 12px !important;
         border: 2px solid #64748b !important;
         height: auto !important;
@@ -55,16 +63,22 @@ body {
         font-size: 1.2rem !important;
         padding: 14px 18px !important;
     }
-    .form-control:focus, .form-select:focus {
+
+    .form-control:focus,
+    .form-select:focus {
         border-color: #198754 !important;
-        box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25) !important;
+        box-shadow:
+            0 0 0 0.25rem
+            rgba(25, 135, 84, 0.25) !important;
     }
+
     .btn-success {
         font-size: 1.3rem !important;
         padding: 14px 30px !important;
         font-weight: 800 !important;
         width: auto !important;
     }
+
     #dynamic-fields .col-md-6 {
         width: 50% !important;
         flex: 0 0 50% !important;
@@ -75,25 +89,28 @@ body {
     }
 }
 
-/* 2. ĐIỆN THOẠI (MOBILE): ĐÃ FIX LỖI TRÀN CHỮ VÀ LỆCH KHUNG */
+/* ============================================================
+   ĐIỆN THOẠI
+   ============================================================ */
+
 @media (max-width: 991px) {
+
     body {
-        font-size: 1.1rem !important; 
+        font-size: 1.1rem !important;
     }
-    
-    /* Cho thanh Navbar xuống dòng gọn gàng, không đè nút Đăng Xuất */
+
     .navbar {
         flex-direction: column !important;
         align-items: flex-start !important;
         gap: 10px !important;
         padding: 12px 16px !important;
     }
+
     .navbar-brand {
         font-size: 1.1rem !important;
         white-space: normal !important;
     }
 
-    /* Ép container và card phủ rộng đều màn hình, không bị khoảng trống bên phải */
     .container {
         width: 100% !important;
         padding-left: 10px !important;
@@ -101,24 +118,24 @@ body {
         margin-left: auto !important;
         margin-right: auto !important;
     }
+
     .card {
         padding: 16px !important;
         width: 100% !important;
     }
 
-    /* Tiêu đề ô nhập */
     label {
-        font-size: 1.15rem !important; 
+        font-size: 1.15rem !important;
         font-weight: 800 !important;
         color: #1e293b !important;
         margin-bottom: 8px !important;
         display: block !important;
     }
 
-    /* Ô nhập liệu cân đối, tràn đầy khung */
-    .form-control, .form-select {
-        font-size: 1.2rem !important; 
-        padding: 12px 14px !important; 
+    .form-control,
+    .form-select {
+        font-size: 1.2rem !important;
+        padding: 12px 14px !important;
         border-radius: 10px !important;
         border: 2px solid #475569 !important;
         background-color: #fff !important;
@@ -126,28 +143,32 @@ body {
         color: #0f172a !important;
         width: 100% !important;
     }
-    .form-control:focus, .form-select:focus {
+
+    .form-control:focus,
+    .form-select:focus {
         border-color: #198754 !important;
-        box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25) !important;
+        box-shadow:
+            0 0 0 0.2rem
+            rgba(25, 135, 84, 0.25) !important;
     }
 
-    /* Nút Lưu Dữ Liệu */
     .btn-success {
         display: block !important;
         width: 100% !important;
-        font-size: 1.25rem !important; 
+        font-size: 1.25rem !important;
         padding: 14px 16px !important;
         border-radius: 12px !important;
         font-weight: 800 !important;
         background-color: #198754 !important;
         border: none !important;
-        box-shadow: 0 4px 10px rgba(25, 135, 84, 0.3) !important;
+        box-shadow:
+            0 4px 10px
+            rgba(25, 135, 84, 0.3) !important;
         margin-top: 20px !important;
         margin-bottom: 5px !important;
         text-align: center !important;
     }
-    
-    /* Ép 1 cột dọc duy nhất và căn khít 100% */
+
     #dynamic-fields .row {
         display: flex;
         flex-wrap: wrap;
@@ -155,6 +176,7 @@ body {
         margin-left: 0 !important;
         width: 100% !important;
     }
+
     #dynamic-fields .col-md-6 {
         width: 100% !important;
         flex: 0 0 100% !important;
@@ -165,7 +187,10 @@ body {
     }
 }
 
-/* Bảng dữ liệu trực tuyến */
+/* ============================================================
+   BẢNG DỮ LIỆU TRỰC TUYẾN
+   ============================================================ */
+
 .table-responsive {
     width: 100%;
     overflow-x: auto;
@@ -189,11 +214,310 @@ table td {
     padding: 14px 12px !important;
     white-space: nowrap;
     font-weight: 600;
-}/* Tùy chỉnh cụm 3 ô chọn Ngày - Tháng - Năm cho dễ nhìn */
+}
+
+/* ============================================================
+   CỤM 3 Ô CHỌN NGÀY - THÁNG - NĂM
+   ============================================================ */
+
 .row.g-2 > div {
     padding-right: 4px;
     padding-left: 4px;
 }
 
-/* Ẩn hoặc hiển thị ô input date gốc tùy ý bạn (nếu muốn hiện cả lịch bên dưới để bấm) */
-/* Nếu muốn hiện hẳn ô lịch bên dưới các ô chọn, bạn có thể xóa class 'd-none' ở trên đi */
+/* ============================================================
+   CỤM TÌM KIẾM BHYT
+   - Luôn nằm cùng một hàng
+   - Không bị nút Tìm rơi xuống dòng trên mobile
+   - Ô nhập tự co giãn
+   ============================================================ */
+
+.bhyt-search-group {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+    align-items: stretch !important;
+    min-width: 0 !important;
+}
+
+/* Ô nhập BHYT */
+.bhyt-search-group .form-control {
+    width: 1% !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    margin: 0 !important;
+
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+/* Nút Tìm */
+.bhyt-search-btn {
+    flex: 0 0 auto !important;
+
+    width: auto !important;
+    min-width: 82px !important;
+
+    white-space: nowrap !important;
+
+    display: inline-flex !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+
+    gap: 4px !important;
+
+    padding: 10px 14px !important;
+
+    border: 2px solid #0d6efd !important;
+    border-left: 0 !important;
+
+    border-radius: 0 10px 10px 0 !important;
+
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+
+    line-height: 1.2 !important;
+
+    box-shadow: none !important;
+
+    margin: 0 !important;
+
+    /* Quan trọng: không cho Bootstrap làm nút full-width */
+    display: inline-flex !important;
+}
+
+/* Hiệu ứng rê chuột */
+.bhyt-search-btn:hover {
+    filter: brightness(0.95);
+}
+
+/* Khi focus */
+.bhyt-search-btn:focus {
+    filter: brightness(0.95);
+
+    box-shadow:
+        0 0 0 0.2rem
+        rgba(13, 110, 253, 0.2) !important;
+}
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 991px) {
+
+    .bhyt-search-group {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .bhyt-search-group .form-control {
+        width: 1% !important;
+        min-width: 0 !important;
+        flex: 1 1 auto !important;
+
+        font-size: 1.05rem !important;
+
+        padding: 11px 12px !important;
+
+        border-top-right-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+    }
+
+    .bhyt-search-btn {
+        flex: 0 0 70px !important;
+
+        width: 70px !important;
+        min-width: 70px !important;
+
+        max-width: 70px !important;
+
+        padding: 10px 8px !important;
+
+        font-size: 1rem !important;
+
+        white-space: nowrap !important;
+
+        display: inline-flex !important;
+
+        align-items: center !important;
+        justify-content: center !important;
+
+        flex-shrink: 0 !important;
+
+        border-left: 0 !important;
+    }
+}
+
+/* ============================================================
+   ĐIỆN THOẠI RẤT NHỎ
+   Chỉ giữ biểu tượng kính lúp để tiết kiệm chiều rộng
+   ============================================================ */
+
+@media (max-width: 380px) {
+
+    .bhyt-search-btn {
+        flex: 0 0 58px !important;
+
+        width: 58px !important;
+        min-width: 58px !important;
+        max-width: 58px !important;
+
+        padding-left: 5px !important;
+        padding-right: 5px !important;
+    }
+
+    .bhyt-search-text {
+        display: none !important;
+    }
+}
+
+/* ============================================================
+   DỮ LIỆU TRỰC TUYẾN - BỘ LỌC + PHÂN TRANG
+   ============================================================ */
+
+.online-data-filter {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.online-data-filter .form-select {
+    min-height: 46px;
+}
+
+.online-data-filter .btn {
+    min-height: 46px;
+    font-weight: 700;
+}
+
+.online-data-pagination {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 12px;
+}
+
+.online-data-pagination .pagination {
+    flex-wrap: wrap;
+}
+
+.online-data-pagination .page-link {
+    min-width: 40px;
+    text-align: center;
+    font-weight: 700;
+}
+
+#dataTotalInfo {
+    white-space: nowrap;
+}
+
+@media (max-width: 575px) {
+    .online-data-filter {
+        padding: 10px;
+    }
+
+    .online-data-pagination > div {
+        justify-content: center !important;
+    }
+
+    .online-data-pagination .pagination {
+        justify-content: center;
+    }
+
+    .online-data-pagination .page-link {
+        min-width: 36px;
+        padding: 7px 9px;
+    }
+}
+
+/* ============================================================
+   DASHBOARD TÀI KHOẢN LÃNH ĐẠO - THỐNG KÊ 11 BẢNG
+   ============================================================ */
+.leadership-dashboard {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.leadership-stat-card {
+    border-left: 4px solid #198754 !important;
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.leadership-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.10) !important;
+}
+
+.leadership-stat-number {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: #e8f5ee;
+    color: #198754;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    flex: 0 0 34px;
+}
+
+.leadership-stat-value {
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: #198754;
+    white-space: nowrap;
+}
+
+@media (max-width: 575px) {
+    .leadership-dashboard .card-body {
+        padding: 1rem !important;
+    }
+    .leadership-stat-value {
+        font-size: 1.2rem;
+    }
+}
+
+/* Nút chuyển nhanh trên Báo cáo nhanh của tài khoản Lãnh đạo */
+.leader-heading-row {
+    width: 100%;
+}
+.leader-quick-actions {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+.leader-quick-actions .quick-nav-btn {
+    flex: 0 0 190px;
+    width: 190px;
+    height: 40px;
+    padding: .45rem .65rem;
+    font-size: .82rem;
+    font-weight: 700;
+    line-height: 1.1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+@media (max-width: 1400px) {
+    .leader-quick-actions .quick-nav-btn {
+        flex-basis: 170px;
+        width: 170px;
+        font-size: .78rem;
+    }
+}
+@media (max-width: 991.98px) {
+    .leader-quick-actions {
+        width: 100%;
+    }
+    .leader-quick-actions .quick-nav-btn {
+        flex: 1 1 calc(50% - .5rem);
+        width: auto;
+    }
+}
+@media (max-width: 575.98px) {
+    .leader-quick-actions .quick-nav-btn {
+        flex: 1 1 100%;
+    }
+}
