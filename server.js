@@ -201,7 +201,9 @@ async function initDatabase() {
 
             -- Bảng 4: Nhân khẩu
             ALTER TABLE table_4 ADD COLUMN IF NOT EXISTS ho_so TEXT, ADD COLUMN IF NOT EXISTS ho_ten TEXT, ADD COLUMN IF NOT EXISTS so_the_bhyt TEXT, ADD COLUMN IF NOT EXISTS quan_he TEXT, ADD COLUMN IF NOT EXISTS gioi_tinh TEXT, ADD COLUMN IF NOT EXISTS ngay_sinh TEXT, ADD COLUMN IF NOT EXISTS dan_toc TEXT, ADD COLUMN IF NOT EXISTS trinh_do_hoc_van TEXT, ADD COLUMN IF NOT EXISTS tinh_trang_hon_nhan TEXT, ADD COLUMN IF NOT EXISTS ngay_den TEXT, ADD COLUMN IF NOT EXISTS noi_di TEXT;
-
+            
+            ALTER TABLE table_5 ADD COLUMN IF NOT EXISTS dan_toc TEXT;
+            
             -- Bảng 7: Cập nhật đúng và đủ các cột thực tế
             ALTER TABLE table_7 ADD COLUMN IF NOT EXISTS ho_so TEXT;
             ALTER TABLE table_7 ADD COLUMN IF NOT EXISTS ho_ten_vo TEXT;
