@@ -47,6 +47,7 @@ setInterval(async () => {
     try {
         await pool.query('SELECT 1');
         console.log('✅ PostgreSQL: connection OK');
+
     } catch (err) {
         console.error('❌ PostgreSQL Keep-Alive Error:', err.message);
     }
@@ -132,6 +133,18 @@ async function initDatabase() {
             );
             CREATE TABLE IF NOT EXISTS logs (
                 id SERIAL PRIMARY KEY, user_id INTEGER, username TEXT, action TEXT, target_id INTEGER, target_name TEXT, created_at TEXT
+            );
+
+            -- Từ điển chuẩn hóa họ tên tiếng Việt. 
+            -- loai = word: một từ; fullname: cả cụm họ tên.
+            CREATE TABLE IF NOT EXISTS vietnamese_name_map (
+                id SERIAL PRIMARY KEY,
+                tu_khoa TEXT NOT NULL,
+                ten_hien_thi TEXT NOT NULL,
+                loai TEXT NOT NULL DEFAULT 'word',
+                trang_thai INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (tu_khoa, loai)
             );
         `);
 
@@ -330,6 +343,25 @@ async function initDatabase() {
         }
 
         console.log("==> HỆ THỐNG CSDL ĐÃ SẴN SÀNG!");
+        // Nạp các từ mặc định vào DB một lần; dữ liệu do Admin thêm/sửa vẫn được giữ nguyên.
+        // Chỉ seed các ánh xạ mặc định tương đối an toàn.
+        // Các từ dễ nhầm (dung, anh, thanh, minh...) không được seed tự động;
+        // muốn xác định một người cụ thể thì thêm ánh xạ fullname trong Database.
+        const defaultNameMap = {"nguyen": "Nguyễn", "tran": "Trần", "le": "Lê", "pham": "Phạm", "hoang": "Hoàng", "huynh": "Huỳnh", "phan": "Phan", "vu": "Vũ", "vo": "Võ", "danh": "Danh", "bui": "Bùi", "dang": "Đặng", "ho": "Hồ", "ngo": "Ngô", "duong": "Dương", "ly": "Lý", "thi": "Thị", "huu": "Hữu", "duc": "Đức", "cong": "Công", "ngoc": "Ngọc", "xuan": "Xuân", "phuong": "Phương", "thuan": "Thuận", "khanh": "Khánh"};
+        // Tắt ánh xạ mặc định cũ nguy hiểm nếu hệ thống đã từng seed dũng.
+        await pool.query(`
+            UPDATE vietnamese_name_map
+            SET trang_thai = 0
+            WHERE loai = 'word' AND tu_khoa = 'dung' AND ten_hien_thi = 'Dũng'
+        `);
+        for (const [tuKhoa, tenHienThi] of Object.entries(defaultNameMap)) {
+            await pool.query(`
+                INSERT INTO vietnamese_name_map (tu_khoa, ten_hien_thi, loai, trang_thai)
+                VALUES ($1, $2, 'word', 1)
+                ON CONFLICT (tu_khoa, loai) DO NOTHING
+            `, [tuKhoa, tenHienThi]);
+        }
+
     } catch (err) {
         console.error("Lỗi khởi tạo CSDL:", err);
     }
@@ -820,6 +852,129 @@ app.put("/api/data/:table/:id", async (req, res) => {
         await logAction(user, `Cập nhật dữ liệu ${tableName} (ID: ${recordId})`, parseInt(recordId), `[${targetName}] Thay đổi: ${changeDetails}`);
 
         res.json({ success: true, message: "Cập nhật dữ liệu thành công!" });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ==================== TỪ ĐIỂN CHUẨN HÓA HỌ TÊN TIẾNG VIỆT ====================
+function normalizeVietnameseKey(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/đ/g, 'd')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+// Public: formatter trên các trang nhập liệu chỉ cần đọc danh mục đang hoạt động.
+app.get("/api/vietnamese-name-map", async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, tu_khoa, ten_hien_thi, loai
+            FROM vietnamese_name_map
+            WHERE trang_thai = 1
+            ORDER BY loai ASC, tu_khoa ASC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get("/api/admin/vietnamese-name-map", async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, tu_khoa, ten_hien_thi, loai, trang_thai, created_at
+            FROM vietnamese_name_map
+            ORDER BY loai ASC, tu_khoa ASC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post("/api/admin/vietnamese-name-map", async (req, res) => {
+    try {
+        const { tu_khoa, ten_hien_thi, loai = 'word' } = req.body;
+        const key = normalizeVietnameseKey(tu_khoa);
+        const value = String(ten_hien_thi || '').trim();
+
+        if (!key || !value) {
+            return res.status(400).json({ success: false, message: "Từ khóa và tên hiển thị không được để trống." });
+        }
+        if (!['word', 'fullname'].includes(loai)) {
+            return res.status(400).json({ success: false, message: "Loại ánh xạ không hợp lệ." });
+        }
+
+        const exists = await pool.query(
+            "SELECT id FROM vietnamese_name_map WHERE tu_khoa = $1 AND loai = $2",
+            [key, loai]
+        );
+        if (exists.rows.length) {
+            return res.status(409).json({ success: false, message: "Từ khóa này đã tồn tại." });
+        }
+
+        const result = await pool.query(`
+            INSERT INTO vietnamese_name_map (tu_khoa, ten_hien_thi, loai, trang_thai)
+            VALUES ($1, $2, $3, 1)
+            RETURNING id
+        `, [key, value, loai]);
+
+        await logAction(req.session.user, "Thêm ánh xạ tên tiếng Việt", result.rows[0].id, `${key} → ${value}`);
+        res.json({ success: true, message: "Đã thêm ánh xạ tên.", id: result.rows[0].id });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.put("/api/admin/vietnamese-name-map/:id", async (req, res) => {
+    try {
+        const { tu_khoa, ten_hien_thi, loai = 'word' } = req.body;
+        const key = normalizeVietnameseKey(tu_khoa);
+        const value = String(ten_hien_thi || '').trim();
+
+        if (!key || !value) {
+            return res.status(400).json({ success: false, message: "Từ khóa và tên hiển thị không được để trống." });
+        }
+        if (!['word', 'fullname'].includes(loai)) {
+            return res.status(400).json({ success: false, message: "Loại ánh xạ không hợp lệ." });
+        }
+
+        const old = await pool.query("SELECT * FROM vietnamese_name_map WHERE id = $1", [req.params.id]);
+        if (!old.rows.length) return res.status(404).json({ success: false, message: "Không tìm thấy ánh xạ." });
+
+        const conflict = await pool.query(
+            "SELECT id FROM vietnamese_name_map WHERE tu_khoa = $1 AND loai = $2 AND id <> $3",
+            [key, loai, req.params.id]
+        );
+        if (conflict.rows.length) {
+            return res.status(409).json({ success: false, message: "Từ khóa này đã tồn tại." });
+        }
+
+        await pool.query(`
+            UPDATE vietnamese_name_map
+            SET tu_khoa = $1, ten_hien_thi = $2, loai = $3
+            WHERE id = $4
+        `, [key, value, loai, req.params.id]);
+
+        await logAction(req.session.user, "Sửa ánh xạ tên tiếng Việt", parseInt(req.params.id), `${key} → ${value}`);
+        res.json({ success: true, message: "Đã cập nhật ánh xạ tên." });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.delete("/api/admin/vietnamese-name-map/:id", async (req, res) => {
+    try {
+        const old = await pool.query("SELECT tu_khoa, ten_hien_thi FROM vietnamese_name_map WHERE id = $1", [req.params.id]);
+        if (!old.rows.length) return res.status(404).json({ success: false, message: "Không tìm thấy ánh xạ." });
+
+        await pool.query("DELETE FROM vietnamese_name_map WHERE id = $1", [req.params.id]);
+        await logAction(req.session.user, "Xóa ánh xạ tên tiếng Việt", parseInt(req.params.id), `${old.rows[0].tu_khoa} → ${old.rows[0].ten_hien_thi}`);
+        res.json({ success: true, message: "Đã xóa ánh xạ tên." });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }

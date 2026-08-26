@@ -92,6 +92,11 @@
                         <i class="fa-solid fa-people-arrows me-1"></i> Mối quan hệ
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold py-2 px-3 shadow-sm" id="nameMap-tab" data-bs-toggle="tab" data-bs-target="#nameMapContent" type="button" role="tab" onclick="loadVietnameseNameMapList()">
+                        <i class="fa-solid fa-language me-1"></i> Từ điển tên
+                    </button>
+                </li>
             </ul>
         </div>
 
@@ -189,7 +194,45 @@
                 </div>
             </div>
 
-         <!-- TAB 4: NHẬT KÝ HỆ THỐNG (LOGS) -->
+         <!-- TAB: TỪ ĐIỂN TÊN TIẾNG VIỆT -->
+        <div class="tab-pane fade" id="nameMapContent" role="tabpanel">
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center flex-wrap gap-2 py-3">
+                    <div>
+                        <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-language me-1"></i> Từ điển chuẩn hóa tên tiếng Việt</h5>
+                        <small>Ưu tiên ánh xạ cả cụm họ tên để xử lý các trường hợp dễ nhầm như Phẩm/Phạm, Ánh/Anh.</small>
+                    </div>
+                    <button class="btn btn-light btn-sm text-primary fw-bold" data-bs-toggle="modal" data-bs-target="#nameMapModal" onclick="resetVietnameseNameMapForm()">
+                        <i class="fa-solid fa-plus me-1"></i> Thêm ánh xạ
+                    </button>
+                </div>
+                <div class="card-body p-2 p-md-3">
+                    <div class="alert alert-info small">
+                        <b>Gợi ý:</b> Với tên riêng dễ nhầm, chọn <b>Cả họ tên</b>.
+                        Ví dụ: <code>pham thi hang</code> → <b>Phẩm Thị Hằng</b> và
+                        <code>nguyen anh thi</code> → <b>Nguyễn Ánh Thi</b>.
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover align-middle">
+                            <thead class="table-dark text-center">
+                                <tr>
+                                    <th style="width:70px;">STT</th>
+                                    <th>Từ khóa chuẩn hóa</th>
+                                    <th>Tên hiển thị</th>
+                                    <th>Loại</th>
+                                    <th style="width:160px;">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="nameMapTableBody">
+                                <tr><td colspan="5" class="text-center">Đang tải dữ liệu...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: NHẬT KÝ HỆ THỐNG (LOGS) -->
         <div class="tab-pane fade" id="logsContent" role="tabpanel">
             <div class="card shadow-sm mb-4 border-0">
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
@@ -353,6 +396,45 @@
                         <div class="mb-3">
                             <label class="form-label">Xã</label>
                             <input type="text" class="form-control" id="xa" value="Lương Hòa">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary">Lưu lại</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Thêm/Sửa Từ điển tên tiếng Việt -->
+    <div class="modal fade" id="nameMapModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form onsubmit="saveVietnameseNameMap(event)">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="nameMapModalTitle">Thêm ánh xạ tên</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="nameMapId">
+                        <div class="mb-3">
+                            <label class="form-label">Từ khóa *</label>
+                            <input type="text" class="form-control" id="nameMapKey" required
+                                   placeholder="Ví dụ: pham thi hang">
+                            <div class="form-text">Có thể nhập không dấu hoặc có dấu. Hệ thống sẽ tự lưu khóa dạng không dấu.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tên hiển thị *</label>
+                            <input type="text" class="form-control" id="nameMapValue" required
+                                   placeholder="Ví dụ: Phẩm Thị Hằng">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Loại ánh xạ *</label>
+                            <select class="form-select" id="nameMapType" required>
+                                <option value="word">Một từ</option>
+                                <option value="fullname">Cả họ tên</option>
+                            </select>
                         </div>
                     </div>
                     <div class="modal-footer">

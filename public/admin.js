@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (document.getElementById('noiThucHienTableBody')) loadNoiThucHienList();
     if (document.getElementById('logsTableBody')) loadLogs();
     if (document.getElementById('moiQuanHeTableBody')) loadMoiQuanHeList();
+    if (document.getElementById('nameMapTableBody')) loadVietnameseNameMapList();
 
     // Lắng nghe sự kiện chuyển tab của Bootstrap để tự động tải lại dữ liệu khi người dùng click
     const tabElements = document.querySelectorAll('button[data-bs-toggle="tab"], a[data-bs-toggle="tab"], .nav-link');
@@ -23,6 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
             else if (targetId.includes('noi-thuc-hien')) loadNoiThucHienList();
             else if (targetId.includes('logs')) loadLogs();
             else if (targetId.includes('quan-he')) loadMoiQuanHeList();
+            else if (targetId.includes('nameMap')) loadVietnameseNameMapList();
             else if (targetId.includes('user') || targetId.includes('tai-khoan')) loadUsers();
         });
     });
@@ -427,6 +429,118 @@ async function deleteMoiQuanHe(id) {
         loadMoiQuanHeList();
         alert('Xóa thành công!');
     } else alert(res.message || 'Có lỗi xảy ra.');
+}
+
+// ==================== TAB: QUẢN LÝ TỪ ĐIỂN TÊN TIẾNG VIỆT ====================
+const vietnameseNameMapRecords = {};
+
+function resetVietnameseNameMapForm() {
+    document.getElementById('nameMapModalTitle').innerText = 'Thêm ánh xạ tên';
+    document.getElementById('nameMapId').value = '';
+    document.getElementById('nameMapKey').value = '';
+    document.getElementById('nameMapValue').value = '';
+    document.getElementById('nameMapType').value = 'word';
+}
+
+async function loadVietnameseNameMapList() {
+    const tbody = document.getElementById('nameMapTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center">Đang tải dữ liệu...</td></tr>';
+    const list = await apiCall('/api/admin/vietnamese-name-map');
+
+    if (!Array.isArray(list) || list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center">${Array.isArray(list) ? 'Chưa có dữ liệu.' : 'Lỗi tải dữ liệu.'}</td></tr>`;
+        return;
+    }
+
+    Object.keys(vietnameseNameMapRecords).forEach(k => delete vietnameseNameMapRecords[k]);
+
+    tbody.innerHTML = list.map((item, idx) => {
+        vietnameseNameMapRecords[item.id] = item;
+        const typeLabel = item.loai === 'fullname'
+            ? '<span class="badge bg-success">Cả họ tên</span>'
+            : '<span class="badge bg-secondary">Một từ</span>';
+
+        return `<tr>
+            <td class="text-center">${idx + 1}</td>
+            <td><code>${escapeHtml(item.tu_khoa)}</code></td>
+            <td><b>${escapeHtml(item.ten_hien_thi)}</b></td>
+            <td class="text-center">${typeLabel}</td>
+            <td class="text-center text-nowrap">
+                <button class="btn btn-sm btn-warning me-1" onclick="openEditVietnameseNameMap(${item.id})" title="Sửa">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteVietnameseNameMap(${item.id})" title="Xóa">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    }[char]));
+}
+
+function openEditVietnameseNameMap(id) {
+    const item = vietnameseNameMapRecords[id];
+    if (!item) return;
+
+    document.getElementById('nameMapModalTitle').innerText = 'Chỉnh sửa ánh xạ tên';
+    document.getElementById('nameMapId').value = item.id;
+    document.getElementById('nameMapKey').value = item.tu_khoa;
+    document.getElementById('nameMapValue').value = item.ten_hien_thi;
+    document.getElementById('nameMapType').value = item.loai;
+
+    new bootstrap.Modal(document.getElementById('nameMapModal')).show();
+}
+
+async function saveVietnameseNameMap(event) {
+    event.preventDefault();
+
+    const id = document.getElementById('nameMapId').value;
+    const body = {
+        tu_khoa: document.getElementById('nameMapKey').value.trim(),
+        ten_hien_thi: document.getElementById('nameMapValue').value.trim(),
+        loai: document.getElementById('nameMapType').value
+    };
+
+    const result = await apiCall(
+        id ? `/api/admin/vietnamese-name-map/${id}` : '/api/admin/vietnamese-name-map',
+        id ? 'PUT' : 'POST',
+        body
+    );
+
+    if (!result.success) {
+        alert(result.message || 'Không thể lưu ánh xạ tên.');
+        return;
+    }
+
+    const modal = bootstrap.Modal.getInstance(document.getElementById('nameMapModal'));
+    if (modal) modal.hide();
+
+    loadVietnameseNameMapList();
+
+    // Nếu trang nhập liệu đang mở ở tab khác, formatter sẽ tự tải lại khi trang được tải lại.
+    alert(result.message || 'Đã lưu ánh xạ tên.');
+}
+
+async function deleteVietnameseNameMap(id) {
+    const item = vietnameseNameMapRecords[id];
+    if (!item) return;
+
+    if (!confirm(`Xóa ánh xạ "${item.tu_khoa}" → "${item.ten_hien_thi}"?`)) return;
+
+    const result = await apiCall(`/api/admin/vietnamese-name-map/${id}`, 'DELETE');
+    if (result.success) {
+        loadVietnameseNameMapList();
+        alert(result.message || 'Đã xóa ánh xạ.');
+    } else {
+        alert(result.message || 'Không thể xóa ánh xạ.');
+    }
 }
 
 // ==================== ĐĂNG XUẤT ====================
