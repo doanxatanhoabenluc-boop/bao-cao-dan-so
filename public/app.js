@@ -28,8 +28,8 @@ const tableConfigs = {
         { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"], required: true },
         { name: "dan_toc", label: "Dân tộc", type: "select-dantoc", options: uniqueDanToc, required: true },
         { name: "ho_ten_me", label: "Họ và tên mẹ", type: "text", required: true },
-        { name: "so_the_bhyt_me", label: "Số thẻ BHYT của mẹ", type: "text" },
         { name: "ngay_sinh_me", label: "Ngày sinh của mẹ", type: "date", required: true },
+        { name: "so_the_bhyt_me", label: "Số thẻ BHYT của mẹ", type: "text" },
         { name: "noi_de", label: "Nơi đẻ", type: "select-benhvien", required: true },
         { name: "con_thu_may", label: "Là con thứ mấy của mẹ", type: "number", required: true }
     ]},
@@ -53,20 +53,20 @@ const tableConfigs = {
     "table_3": { title: "3. Danh sách người chết", fields: [
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ho_ten", label: "Họ và tên người chết", type: "text", required: true },
+        { name: "ngay_sinh", label: "Ngày sinh", type: "date" },
         { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
         { name: "quan_he", label: "Quan hệ với chủ hộ", type: "select-quanhe", required: true }, // 🔄 Đổi thành select-quanhe
         { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"], required: true },
-        { name: "ngay_sinh", label: "Ngày sinh", type: "date" },
         { name: "ngay_chet", label: "Ngày chết", type: "date", required: true },
         { name: "ghi_chu", label: "Ghi chú", type: "text" }
     ]},
     "table_4": { title: "4. Danh sách người chuyển đến từ xã khác", fields: [
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ho_ten", label: "Họ tên người đến", type: "text", required: true },
+        { name: "ngay_sinh", label: "Ngày sinh", type: "date", required: true },
         { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
         { name: "quan_he", label: "Quan hệ với chủ hộ", type: "select-quanhe", required: true }, // 🔄 Đổi thành select-quanhe
         { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"], required: true },
-        { name: "ngay_sinh", label: "Ngày sinh", type: "date", required: true },
         { name: "dan_toc", label: "Dân tộc", type: "select-dantoc", options: uniqueDanToc, required: true },
         { name: "trinh_do_hoc_van", label: "Trình độ học vấn", type: "select", options: trinhDoHocVanOptions },
         { name: "tinh_trang_hon_nhan", label: "Tình trạng hôn nhân", type: "select", options: tinhTrangHonNhanOptions },
@@ -76,10 +76,10 @@ const tableConfigs = {
     "table_5": { title: "5. Danh sách người chuyển đi khỏi xã", fields: [
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ho_ten", label: "Họ tên người đi", type: "text", required: true },
+        { name: "ngay_sinh", label: "Ngày sinh", type: "date", required: true },
         { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
         { name: "quan_he", label: "Quan hệ với chủ hộ", type: "select-quanhe", required: true }, // 🔄 Đổi thành select-quanhe
         { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"], required: true },
-        { name: "ngay_sinh", label: "Ngày sinh", type: "date", required: true },
         { name: "dan_toc", label: "Dân tộc", type: "select-dantoc", options: uniqueDanToc, required: true },
         { name: "ngay_di", label: "Ngày đi", type: "date", required: true },
         { name: "noi_den", label: "Nơi đến", type: "text" },
@@ -88,9 +88,9 @@ const tableConfigs = {
     "table_6": { title: "6. Danh sách thay đổi thông tin cơ bản", fields: [
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ho_ten", label: "Họ tên người có thay đổi", type: "text", required: true },
+        { name: "ngay_sinh", label: "Ngày sinh", type: "date", required: true },
         { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
         { name: "gioi_tinh", label: "Giới tính", type: "select", options: ["Nam", "Nữ"], required: true },
-        { name: "ngay_sinh", label: "Ngày sinh", type: "date", required: true },
         { name: "thong_tin_cu", label: "Thông tin cũ", type: "text", required: true },
         { name: "thong_tin_moi", label: "Thông tin mới", type: "text", required: true },
         { name: "ghi_chu", label: "Ghi chú", type: "text" }
@@ -98,8 +98,8 @@ const tableConfigs = {
    "table_7": { title: "7. Vợ chồng mới sử dụng BPTT", fields: [
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ho_ten_vo", label: "Họ tên người vợ (từ 15-49 tuổi)", type: "text", required: true },
-        { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
         { name: "ngay_sinh", label: "Ngày sinh", type: "date", required: true },
+        { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" }, 
         { name: "ngay_su_dung", label: "Ngày sử dụng", type: "date", required: true },
         { name: "bptt_moi", label: "Biện pháp tránh thai mới", type: "select-bptt", required: true },
         { name: "so_con_hien_co", label: "Số con hiện có", type: "number", required: true },
@@ -118,8 +118,8 @@ const tableConfigs = {
     "table_9": { title: "9. Phụ nữ có thông tin thai sản", fields: [
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ho_ten", label: "Họ tên phụ nữ", type: "text", required: true },
-        { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
         { name: "ngay_sinh", label: "Ngày sinh", type: "date", required: true },
+        { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
         { name: "ngay_su_kien", label: "Ngày có sự kiện", type: "date", required: true },
         { name: "su_kien", label: "Sự kiện thai sản", type: "select", options: ["Mang thai", "Sảy thai", "Phá thai"], required: true },
         { name: "mang_thai_lan_thu", label: "Mang thai lần thứ", type: "number", required: true }
@@ -150,8 +150,8 @@ const tableConfigs = {
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ma_so_doi_tuong", label: "Mã số đối tượng", type: "text", required: false },
         { name: "ho_ten", label: "Họ tên người NCT", type: "text", required: true },
-        { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
         { name: "nam_sinh", label: "Năm sinh", type: "text", required: true },
+        { name: "so_the_bhyt", label: "Số thẻ BHYT", type: "text" },
         { name: "ngay_kham", label: "Ngày khám", type: "date", required: true }
     ]}
 };
