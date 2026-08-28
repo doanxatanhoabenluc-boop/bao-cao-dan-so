@@ -349,7 +349,7 @@ function generateRowHtml(idx, r, stt) {
             return `<tr><td>${stt}</td><td colspan="5">Dữ liệu bảng ${idx}</td></tr>`;
     }
 }
-// Hàm xuất nội dung báo cáo ra file Word (đã tối ưu chiều rộng cột để tiêu đề không bị xuống dòng vô lý)
+// Hàm xuất nội dung báo cáo ra file Word (đã thu gọn khoảng cách, chỉnh font chữ 13pt và sửa lỗi khung bảng 7-8)
 function exportToWord() {
     const reporterName = document.getElementById("lblReporterName").innerText || "........................................";
     const month = document.getElementById("filterMonth").value;
@@ -360,36 +360,83 @@ function exportToWord() {
     const adminSignName = document.getElementById("signAdminName").innerText || "..............................................";
     const ctvSignName = document.getElementById("signCtvName").innerText || reporterName;
 
-    // Lấy nội dung báo cáo gốc và tối ưu lại các bảng cho Word
     const reportPageEl = document.querySelector('.report-page').cloneNode(true);
     
-    // Gắn cố định chiều rộng (width) cho các ô tiêu đề bảng
+    // Thiết lập chung cho các bảng: cỡ chữ 13pt, padding rất sát (2px 4px) để loại bỏ khoảng trống thừa
     const tables = reportPageEl.querySelectorAll('table');
-    tables.forEach((tbl, idx) => {
+    tables.forEach((tbl) => {
         tbl.setAttribute("border", "1");
-        tbl.setAttribute("cellpadding", "4");
+        tbl.setAttribute("cellpadding", "2");
         tbl.setAttribute("cellspacing", "0");
-        tbl.style.cssText = "border-collapse: collapse; width: 100%; font-size: 10pt; font-family: 'Times New Roman', Times, serif;";
+        tbl.style.cssText = "border-collapse: collapse; width: 100%; font-size: 13pt; font-family: 'Times New Roman', Times, serif; margin-bottom: 10px;";
     });
 
-    // 1. Tạo Header dạng bảng ẩn không viền cho Word
+    // 1. Tạo layout bảng 7 & 8 cạnh nhau hoàn toàn không bị ô chữ nhật thừa ở giữa
+    const tbl7Html = reportPageEl.querySelector('#tbl7_body') ? reportPageEl.querySelector('#tbl7_body').innerHTML : '<tr><td colspan="6" style="text-align:center; font-style:italic;">Trống</td></tr>';
+    const tbl8Html = reportPageEl.querySelector('#tbl8_body') ? reportPageEl.querySelector('#tbl8_body').innerHTML : '<tr><td colspan="6" style="text-align:center; font-style:italic;">Trống</td></tr>';
+
+    const customTbl7_8Html = `
+        <table style="width: 100%; border: none !important; margin-bottom: 10px; font-family: 'Times New Roman', Times, serif; font-size: 13pt;">
+            <tr style="border: none !important;">
+                <td style="width: 49.5%; vertical-align: top; border: none !important; padding: 0;">
+                    <p style="font-weight: bold; font-size: 13pt; margin: 0 0 3px 0;">7. Danh sách cặp vợ chồng mới sử dụng BPTT</p>
+                    <table border="1" cellpadding="2" cellspacing="0" style="border-collapse: collapse; width: 100%; font-size: 13pt;">
+                        <tr style="background-color: #f2f2f2; font-weight: bold; text-align: center;">
+                            <td style="width: 35px;">Hộ số</td>
+                            <td>Họ và tên người vợ<br>(từ 15-49 tuổi)</td>
+                            <td style="width: 75px;">Số thẻ BHYT</td>
+                            <td style="width: 70px;">Ngày sinh</td>
+                            <td style="width: 70px;">Ngày sử dụng</td>
+                            <td style="width: 65px;">BPTT mới</td>
+                        </tr>
+                        ${tbl7Html}
+                    </table>
+                </td>
+                <td style="width: 1%; border: none !important; padding: 0;"></td>
+                <td style="width: 49.5%; vertical-align: top; border: none !important; padding: 0;">
+                    <p style="font-weight: bold; font-size: 13pt; margin: 0 0 3px 0;">8. Danh sách vợ chồng thôi sử dụng BPTT</p>
+                    <table border="1" cellpadding="2" cellspacing="0" style="border-collapse: collapse; width: 100%; font-size: 13pt;">
+                        <tr style="background-color: #f2f2f2; font-weight: bold; text-align: center;">
+                            <td style="width: 35px;">Hộ số</td>
+                            <td>Họ và tên người vợ<br>(từ 15-49 tuổi)</td>
+                            <td style="width: 75px;">Số thẻ BHYT</td>
+                            <td style="width: 70px;">Ngày sinh</td>
+                            <td style="width: 70px;">Ngày thôi sử dụng</td>
+                            <td style="width: 65px;">BPTT thôi sử dụng</td>
+                        </tr>
+                        ${tbl8Html}
+                    </table>
+                </td>
+            </tr>
+        </table>
+    `;
+
+    // Thay thế cụm bảng 7 & 8 cũ bằng layout chuẩn
+    const oldTbl78Row = reportPageEl.querySelector('.row.mb-4:has(#tbl7_body)') || reportPageEl.querySelector('#tbl7_body').closest('.row') || reportPageEl.querySelector('#tbl7_body').parentNode.parentNode;
+    if (oldTbl78Row && oldTbl78Row !== reportPageEl) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = customTbl7_8Html;
+        oldTbl78Row.parentNode.replaceChild(tempDiv.firstElementChild, oldTbl78Row);
+    }
+
+    // 2. Tạo Header dạng bảng ẩn không viền cho Word
     const headerTableHtml = `
-        <table style="width: 100%; border: none !important; margin-bottom: 15px; font-family: 'Times New Roman', Times, serif; font-size: 11pt;">
+        <table style="width: 100%; border: none !important; margin-bottom: 10px; font-family: 'Times New Roman', Times, serif; font-size: 13pt;">
             <tr style="border: none !important;">
                 <td style="width: 55%; text-align: left; vertical-align: top; border: none !important; padding: 0;">
                     <p style="margin: 0; font-weight: bold;">Phiếu P0/CTV (tờ 1)</p>
-                    <p style="margin: 0; font-style: italic; font-size: 10pt;">(Ban hành kèm theo Thông tư số 01/2022/TT-BYT)</p>
-                    <p style="margin: 0; font-size: 10pt;">Thời điểm lập: Ngày 01 của tháng sau tháng báo cáo</p>
+                    <p style="margin: 0; font-style: italic; font-size: 12pt;">(Ban hành kèm theo Thông tư số 01/2022/TT-BYT)</p>
+                    <p style="margin: 0; font-size: 12pt;">Thời điểm lập: Ngày 01 của tháng sau tháng báo cáo</p>
                 </td>
-                <td style="width: 45%; text-align: right; vertical-align: top; border: none !important; padding: 0; font-size: 10pt;">
+                <td style="width: 45%; text-align: right; vertical-align: top; border: none !important; padding: 0; font-size: 12pt;">
                     <p style="margin: 0;">Người báo cáo: ${reporterName}</p>
                     <p style="margin: 0;">Nơi nhận báo cáo: Trạm Y Tế Xã Lương Hòa</p>
                 </td>
             </tr>
         </table>
-        <div style="text-align: center; margin: 15px 0;">
-            <h3 style="margin: 0; font-weight: bold; font-size: 13pt; text-transform: uppercase;">PHIẾU THU TIN VỀ DÂN SỐ THÁNG ${month} NĂM ${year}</h3>
-            <p style="margin: 5px 0 0 0; font-size: 10.5pt;">
+        <div style="text-align: center; margin: 10px 0;">
+            <h3 style="margin: 0; font-weight: bold; font-size: 15pt; text-transform: uppercase;">PHIẾU THU TIN VỀ DÂN SỐ THÁNG ${month} NĂM ${year}</h3>
+            <p style="margin: 3px 0 0 0; font-size: 13pt;">
                 Địa bàn: ${diaBan} &nbsp;&nbsp;&nbsp; 
                 Thôn: ${ap} &nbsp;&nbsp;&nbsp; 
                 Xã: ${xa}
@@ -397,32 +444,32 @@ function exportToWord() {
         </div>
     `;
 
-    // 2. Tạo Footer (Chữ ký) dạng bảng ẩn không viền cho Word
-  const today = new Date();
+    // 3. Tạo Footer (Chữ ký)
+    const today = new Date();
     const curDay = today.getDate();
     const curMonth = today.getMonth() + 1;
     const curYear = today.getFullYear();
 
     const footerTableHtml = `
-        <table style="width: 100%; border: none !important; margin-top: 30px; font-family: 'Times New Roman', Times, serif; font-size: 11pt;">
+        <table style="width: 100%; border: none !important; margin-top: 20px; font-family: 'Times New Roman', Times, serif; font-size: 13pt;">
             <tr style="border: none !important;">
                 <td style="width: 50%; text-align: center; vertical-align: top; border: none !important; padding: 0;">
                     <p style="margin: 0; font-weight: bold;">Cán bộ dân số xã thẩm định</p>
-                    <p style="margin: 0; font-style: italic; font-size: 10pt;">(Ký, ghi rõ họ và tên)</p>
-                    <div style="height: 70px;"></div>
+                    <p style="margin: 0; font-style: italic; font-size: 12pt;">(Ký, ghi rõ họ và tên)</p>
+                    <div style="height: 50px;"></div>
                     <p style="margin: 0; font-weight: bold;">${adminSignName}</p>
                 </td>
                 <td style="width: 50%; text-align: center; vertical-align: top; border: none !important; padding: 0;">
-                    <p style="margin: 0; font-size: 10pt; font-style: italic;">Lương Hòa, ngày ${curDay} tháng ${curMonth} năm ${curYear}</p>
+                    <p style="margin: 0; font-size: 12pt; font-style: italic;">Lương Hòa, ngày ${curDay} tháng ${curMonth} năm ${curYear}</p>
                     <p style="margin: 2px 0 0 0; font-weight: bold;">Cộng tác viên dân số lập phiếu</p>
-                    <p style="margin: 0; font-style: italic; font-size: 10pt;">(Ký, ghi rõ họ và tên)</p>
-                    <div style="height: 70px;"></div>
+                    <p style="margin: 0; font-style: italic; font-size: 12pt;">(Ký, ghi rõ họ và tên)</p>
+                    <div style="height: 50px;"></div>
                     <p style="margin: 0; font-weight: bold;">${ctvSignName}</p>
                 </td>
             </tr>
         </table>
     `;
-    // Xóa các phần thừa trong bản sao
+
     const oldHeaderDiv = reportPageEl.querySelector('.row.mb-3');
     const oldTitleDiv = reportPageEl.querySelector('.text-center.my-3');
     const oldFooterDiv = reportPageEl.querySelector('.row.mt-5');
@@ -433,8 +480,6 @@ function exportToWord() {
 
     const finalBodyContent = headerTableHtml + reportPageEl.innerHTML + footerTableHtml;
 
-    // Đóng gói thành file tài liệu Word hoàn chỉnh với khổ ngang (Landscape)
-    // Đóng gói thành file tài liệu Word hoàn chỉnh với khổ ngang (Landscape)
     const htmlHeader = `
         <html xmlns:o='urn:schemas-microsoft-com:office:office' 
               xmlns:w='urn:schemas-microsoft-com:office:word' 
@@ -442,7 +487,6 @@ function exportToWord() {
         <head>
             <meta charset='utf-8'>
             <title>Phiếu P0/CTV</title>
-            <!-- Đoạn XML này ép buộc Microsoft Word hiển thị khổ ngang -->
             <xml>
                 <w:WordDocument>
                     <w:View>Print</w:View>
@@ -450,29 +494,24 @@ function exportToWord() {
                 </w:WordDocument>
             </xml>
             <style>
-                @page {
-                    size: 29.7cm 21cm;
-                    mso-page-orientation: landscape;
-                    margin: 1.5cm;
-                }
-                /* Định nghĩa class để Word áp dụng khổ ngang */
                 @page Section1 {
                     size: 29.7cm 21cm;
                     mso-page-orientation: landscape;
+                    margin: 1.2cm;
                 }
                 div.Section1 { page: Section1; }
-
-                body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; }
-                table { border-collapse: collapse; width: 100%; margin-top: 10px; margin-bottom: 20px; mso-table-lspace:0pt; mso-table-rspace:0pt; }
-                th, td { border: 1px solid black; padding: 5px 6px; text-align: center; vertical-align: middle; }
-                th { white-space: nowrap; background-color: #f2f2f2; font-weight: bold; }
+                body { font-family: 'Times New Roman', Times, serif; font-size: 13pt; }
+                table { border-collapse: collapse; width: 100%; margin-top: 3px; margin-bottom: 10px; mso-table-lspace:0pt; mso-table-rspace:0pt; }
+                th, td { border: 1px solid black; padding: 2px 4px; text-align: center; vertical-align: middle; font-size: 13pt; }
+                th { background-color: #f2f2f2; font-weight: bold; }
                 .text-left { text-align: left; }
+                p { margin-bottom: 4px; }
             </style>
         </head>
         <body>
             <div class="Section1">
     `;
-    const htmlFooter = "</div></body></html>"; // Đóng thẻ div Section1
+    const htmlFooter = "</div></body></html>";
     const completeHtml = htmlHeader + finalBodyContent + htmlFooter;
 
     const blob = new Blob(['\ufeff' + completeHtml], {
