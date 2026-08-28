@@ -349,7 +349,8 @@ function generateRowHtml(idx, r, stt) {
             return `<tr><td>${stt}</td><td colspan="5">Dữ liệu bảng ${idx}</td></tr>`;
     }
 }
-// Hàm xuất nội dung báo cáo ra file Word (đã thu gọn khoảng cách, chỉnh font chữ 13pt và sửa lỗi khung bảng 7-8)
+// Hàm xuất nội dung báo cáo ra file Word (đã xử lý tách hẳn khoảng cách giữa Bảng 6 và cụm Bảng 7-8)
+// Hàm xuất nội dung báo cáo ra fileWord (đã đưa Bảng 7-8 về đúng vị trí sau Bảng 6 và tạo khoảng cách thoáng)
 function exportToWord() {
     const reporterName = document.getElementById("lblReporterName").innerText || "........................................";
     const month = document.getElementById("filterMonth").value;
@@ -362,7 +363,7 @@ function exportToWord() {
 
     const reportPageEl = document.querySelector('.report-page').cloneNode(true);
     
-    // Thiết lập chung cho các bảng: cỡ chữ 13pt, padding rất sát (2px 4px) để loại bỏ khoảng trống thừa
+    // Thiết lập chung cho các bảng: cỡ chữ 13pt, padding sát 2px 4px
     const tables = reportPageEl.querySelectorAll('table');
     tables.forEach((tbl) => {
         tbl.setAttribute("border", "1");
@@ -371,15 +372,15 @@ function exportToWord() {
         tbl.style.cssText = "border-collapse: collapse; width: 100%; font-size: 13pt; font-family: 'Times New Roman', Times, serif; margin-bottom: 10px;";
     });
 
-    // 1. Tạo layout bảng 7 & 8 cạnh nhau hoàn toàn không bị ô chữ nhật thừa ở giữa
+    // 1. Lấy dữ liệu nội dung của bảng 7 và 8
     const tbl7Html = reportPageEl.querySelector('#tbl7_body') ? reportPageEl.querySelector('#tbl7_body').innerHTML : '<tr><td colspan="6" style="text-align:center; font-style:italic;">Trống</td></tr>';
     const tbl8Html = reportPageEl.querySelector('#tbl8_body') ? reportPageEl.querySelector('#tbl8_body').innerHTML : '<tr><td colspan="6" style="text-align:center; font-style:italic;">Trống</td></tr>';
 
     const customTbl7_8Html = `
-        <table style="width: 100%; border: none !important; margin-bottom: 10px; font-family: 'Times New Roman', Times, serif; font-size: 13pt;">
+        <table style="width: 100%; border: none !important; margin-top: 35px; margin-bottom: 10px; font-family: 'Times New Roman', Times, serif; font-size: 13pt;">
             <tr style="border: none !important;">
                 <td style="width: 49.5%; vertical-align: top; border: none !important; padding: 0;">
-                    <p style="font-weight: bold; font-size: 13pt; margin: 0 0 3px 0;">7. Danh sách cặp vợ chồng mới sử dụng BPTT</p>
+                    <div style="font-weight: bold; font-size: 13pt; margin-bottom: 5px;">7. Danh sách cặp vợ chồng mới sử dụng BPTT</div>
                     <table border="1" cellpadding="2" cellspacing="0" style="border-collapse: collapse; width: 100%; font-size: 13pt;">
                         <tr style="background-color: #f2f2f2; font-weight: bold; text-align: center;">
                             <td style="width: 35px;">Hộ số</td>
@@ -394,7 +395,7 @@ function exportToWord() {
                 </td>
                 <td style="width: 1%; border: none !important; padding: 0;"></td>
                 <td style="width: 49.5%; vertical-align: top; border: none !important; padding: 0;">
-                    <p style="font-weight: bold; font-size: 13pt; margin: 0 0 3px 0;">8. Danh sách vợ chồng thôi sử dụng BPTT</p>
+                    <div style="font-weight: bold; font-size: 13pt; margin-bottom: 5px;">8. Danh sách vợ chồng thôi sử dụng BPTT</div>
                     <table border="1" cellpadding="2" cellspacing="0" style="border-collapse: collapse; width: 100%; font-size: 13pt;">
                         <tr style="background-color: #f2f2f2; font-weight: bold; text-align: center;">
                             <td style="width: 35px;">Hộ số</td>
@@ -411,15 +412,39 @@ function exportToWord() {
         </table>
     `;
 
-    // Thay thế cụm bảng 7 & 8 cũ bằng layout chuẩn
-    const oldTbl78Row = reportPageEl.querySelector('.row.mb-4:has(#tbl7_body)') || reportPageEl.querySelector('#tbl7_body').closest('.row') || reportPageEl.querySelector('#tbl7_body').parentNode.parentNode;
-    if (oldTbl78Row && oldTbl78Row !== reportPageEl) {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = customTbl7_8Html;
-        oldTbl78Row.parentNode.replaceChild(tempDiv.firstElementChild, oldTbl78Row);
+    // Tìm và xóa bảng 7-8 cũ trong bản sao
+    const oldTbl7 = reportPageEl.querySelector('#tbl7_body');
+    if (oldTbl7) {
+        let parentBox = oldTbl7.closest('.row') || oldTbl7.parentNode.parentNode.parentNode;
+        if (parentBox && parentBox !== reportPageEl) parentBox.remove();
+    }
+    const oldTbl8 = reportPageEl.querySelector('#tbl8_body');
+    if (oldTbl8) {
+        let parentBox8 = oldTbl8.closest('.row') || oldTbl8.parentNode.parentNode.parentNode;
+        if (parentBox8 && parentBox8 !== reportPageEl) parentBox8.remove();
     }
 
-    // 2. Tạo Header dạng bảng ẩn không viền cho Word
+    // 2. Tìm bảng số 6 để chèn cụm bảng 7-8 hoàn toàn đúng vị trí ngay phía dưới bảng 6
+    const allTablesInPage = reportPageEl.querySelectorAll('table');
+    let targetElement = null;
+    allTablesInPage.forEach(tbl => {
+        // Tìm bảng có chứa tiêu đề hoặc nội dung liên quan đến bảng 6
+        let prevText = tbl.previousElementSibling ? tbl.previousElementSibling.innerText : "";
+        if (prevText.includes("6.") || tbl.innerHTML.includes("thông tin cơ bản")) {
+            targetElement = tbl.closest('.row') || tbl.parentNode;
+        }
+    });
+
+    if (targetElement && targetElement !== reportPageEl) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = customTbl7_8Html;
+        targetElement.parentNode.insertBefore(tempDiv.firstElementChild, targetElement.nextSibling);
+    } else {
+        // Fallback nếu không tìm thấy chính xác thì chèn vào giữa
+        reportPageEl.innerHTML += customTbl7_8Html;
+    }
+
+    // 3. Tạo Header dạng bảng ẩn không viền cho Word
     const headerTableHtml = `
         <table style="width: 100%; border: none !important; margin-bottom: 10px; font-family: 'Times New Roman', Times, serif; font-size: 13pt;">
             <tr style="border: none !important;">
@@ -444,14 +469,14 @@ function exportToWord() {
         </div>
     `;
 
-    // 3. Tạo Footer (Chữ ký)
+    // 4. Tạo Footer (Chữ ký)
     const today = new Date();
     const curDay = today.getDate();
     const curMonth = today.getMonth() + 1;
     const curYear = today.getFullYear();
 
     const footerTableHtml = `
-        <table style="width: 100%; border: none !important; margin-top: 20px; font-family: 'Times New Roman', Times, serif; font-size: 13pt;">
+        <table style="width: 100%; border: none !important; margin-top: 25px; font-family: 'Times New Roman', Times, serif; font-size: 13pt;">
             <tr style="border: none !important;">
                 <td style="width: 50%; text-align: center; vertical-align: top; border: none !important; padding: 0;">
                     <p style="margin: 0; font-weight: bold;">Cán bộ dân số xã thẩm định</p>
