@@ -174,7 +174,23 @@ async function fetchAndRenderTable(tableIndex, month, year, filterAp, filterDiaB
             return true;
         });
 
-        if (filtered.length === 0) {
+       if (filtered.length === 0) {
+            if (tableIndex === 9) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td></td><td></td><td></td><td>..../..../........</td><td>..../..../........</td><td></td><td></td>
+                        <td rowspan="2" class="text-left align-middle" style="font-size: 9pt;">
+                            <div>Số phụ nữ mang thai đến cuối tháng (T):....</div>
+                            <div style="margin-top: 6px;">Số phụ nữ phá thai/sảy thai trong tháng (N):</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td><td></td><td></td><td>..../..../........</td><td>..../..../........</td><td></td><td></td>
+                    </tr>
+                `;
+                return;
+            }
+
             let colCount = getColumnCount(tableIndex);
             tbody.innerHTML = `<tr><td colspan="${colCount}" class="text-muted fst-italic">Không có phát sinh trong tháng ${month}/${year} theo khu vực này</td></tr>`;
             return;
@@ -192,7 +208,7 @@ async function fetchAndRenderTable(tableIndex, month, year, filterAp, filterDiaB
 }
 
 function getColumnCount(idx) {
-    const counts = {1: 10, 2: 9, 3: 8, 4: 11, 5: 9, 6: 8, 7: 6, 8: 6, 9: 7, 10: 12, 11: 7};
+    const counts = {1: 10, 2: 9, 3: 8, 4: 11, 5: 9, 6: 8, 7: 6, 8: 6, 9: 8, 10: 12, 11: 7};
     return counts[idx] || 5;
 }
 
@@ -292,15 +308,33 @@ function generateRowHtml(idx, r, stt) {
                 <td>${r.bptt_thoi || ''}</td>
             </tr>`;
         case 9:
-            return `<tr>
+            let rightSummaryContent = "";
+            let totalRows = filtered.length;
+            
+            if (stt === 1) {
+                rightSummaryContent = `
+                    <td rowspan="${totalRows}" class="text-left align-middle" style="font-size: 9pt; background-color: #fff;">
+                        <div>Số phụ nữ mang thai đến cuối tháng (T): <span id="sumMangThai" class="fw-bold">0</span></div>
+                        <div style="margin-top: 6px;">Số phụ nữ phá thai/sảy thai trong tháng (N): <span id="sumSayPhaThai" class="fw-bold">0</span></div>
+                    </td>
+                `;
+            }
+
+            let htmlRow = `<tr>
                 <td>${r.ho_so || stt}</td>
                 <td class="text-left">${r.ho_ten || ''}</td>
                 <td>${r.so_the_bhyt || ''}</td>
                 <td>${formatDateVN(r.ngay_sinh)}</td>
                 <td>${formatDateVN(r.ngay_su_kien)}</td>
                 <td>${r.su_kien || ''}</td>
-                <td>${r.mang_thai_lan_thu || ''}</td>
-            </tr>`;
+                <td>${r.mang_thai_lan_thu || ''}</td>`;
+            
+            if (stt === 1) {
+                htmlRow += rightSummaryContent;
+            }
+            
+            htmlRow += `</tr>`;
+            return htmlRow;
         case 10:
             // Tách riêng ngày thực hiện cho mốc 12 tuần và 21 tuần từ database
             let ngayThucHien12 = formatDateVN(r.ngay_thuc_hien_12 || r.ngay_kham_12 || r.ngay_sieu_am_12 || r.ngay_thuc_hien_dich_vu_12 || r.ngay_thuc_hien || r.ngay_thuc_hien_dich_vu || r.mang_thai_tuan_12);
@@ -350,7 +384,6 @@ function generateRowHtml(idx, r, stt) {
     }
 }
 // Hàm xuất nội dung báo cáo ra file Word (đã xử lý tách hẳn khoảng cách giữa Bảng 6 và cụm Bảng 7-8)
-// Hàm xuất nội dung báo cáo ra fileWord (đã đưa Bảng 7-8 về đúng vị trí sau Bảng 6 và tạo khoảng cách thoáng)
 function exportToWord() {
     const reporterName = document.getElementById("lblReporterName").innerText || "........................................";
     const month = document.getElementById("filterMonth").value;
@@ -372,7 +405,99 @@ function exportToWord() {
         tbl.style.cssText = "border-collapse: collapse; width: 100%; font-size: 13pt; font-family: 'Times New Roman', Times, serif; margin-bottom: 10px;";
     });
 
-    // 1. Lấy dữ liệu nội dung của bảng 7 và 8
+ // 1. Chuẩn hóa Bảng 9 cho Word (Xử lý triệt để không bị lặp dòng)
+    const allTablesInCopy = reportPageEl.querySelectorAll('table');
+    allTablesInCopy.forEach((tbl) => {
+        let prevText = tbl.previousElementSibling ? tbl.previousElementSibling.innerText : "";
+        if (prevText.includes("9.") || tbl.innerHTML.includes("sự kiện thai sản")) {
+            
+            let thead = tbl.querySelector('thead');
+            if (!thead) {
+                thead = document.createElement('thead');
+                let firstRow = tbl.querySelector('tr');
+                if (firstRow) thead.appendChild(firstRow);
+                tbl.insertBefore(thead, tbl.firstChild);
+            }
+
+            let headerTr = thead.querySelector('tr');
+            if (headerTr) {
+                headerTr.innerHTML = `
+                    <th style="width: 40px; text-align: center; vertical-align: middle;">Hộ số</th>
+                    <th style="text-align: center; vertical-align: middle;">Họ và tên phụ nữ</th>
+                    <th style="width: 80px; text-align: center; vertical-align: middle;">Số thẻ BHYT</th>
+                    <th style="width: 80px; text-align: center; vertical-align: middle;">Ngày sinh</th>
+                    <th style="width: 80px; text-align: center; vertical-align: middle;">Ngày có sự kiện</th>
+                    <th style="width: 85px; text-align: center; vertical-align: middle;">Sự kiện thai sản</th>
+                    <th style="width: 70px; text-align: center; vertical-align: middle;">Mang thai lần thứ</th>
+                    <th style="width: 220px; text-align: center; vertical-align: middle;">Cộng số người có sự kiện thai sản</th>
+                `;
+            }
+
+            let tbody9 = tbl.querySelector('tbody');
+            if (!tbody9) {
+                tbody9 = document.createElement('tbody');
+                tbl.appendChild(tbody9);
+            }
+
+            // Kiểm tra xem thực tế có dữ liệu hay không (dựa vào nội dung văn bản bên trong)
+            let textContent = tbody9.innerText.trim();
+            let hasRealData = textContent !== "" && 
+                              !textContent.includes("..../..../........") && 
+                              !textContent.includes("Không có phát sinh") && 
+                              !textContent.includes("Không có dữ liệu");
+
+            if (!hasRealData) {
+                // Ép cứng luôn luôn chỉ tạo đúng 2 dòng trống mẫu, không bị nhân đôi
+                tbody9.innerHTML = `
+                    <tr>
+                        <td style="width: 40px;"></td>
+                        <td></td>
+                        <td style="width: 80px;"></td>
+                        <td style="width: 80px; text-align:center;">..../..../........</td>
+                        <td style="width: 80px; text-align:center;">..../..../........</td>
+                        <td style="width: 85px;"></td>
+                        <td style="width: 70px;"></td>
+                        <td rowspan="2" style="width: 220px; text-align: left; vertical-align: middle; font-size: 11pt; padding: 4px; background-color: #ffffff;">
+                            Số phụ nữ mang thai đến cuối tháng (T): ....<br>
+                            Số phụ nữ phá thai/sảy thai trong tháng (N): 
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 40px;"></td>
+                        <td></td>
+                        <td style="width: 80px;"></td>
+                        <td style="width: 80px; text-align:center;">..../..../........</td>
+                        <td style="width: 80px; text-align:center;">..../..../........</td>
+                        <td style="width: 85px;"></td>
+                        <td style="width: 70px;"></td>
+                    </tr>
+                `;
+            } else {
+                let rows9 = Array.from(tbody9.querySelectorAll('tr'));
+                let totalR = rows9.length;
+                rows9.forEach((row, idx) => {
+                    while (row.cells.length > 7) {
+                        row.deleteCell(row.cells.length - 1);
+                    }
+                    while (row.cells.length < 7) {
+                        let td = document.createElement('td');
+                        row.appendChild(td);
+                    }
+                    if (idx === 0) {
+                        let tdSummary = document.createElement('td');
+                        tdSummary.setAttribute("rowspan", totalR);
+                        tdSummary.style.cssText = "width: 220px; text-align: left; vertical-align: middle; font-size: 11pt; padding: 4px; background-color: #ffffff;";
+                        tdSummary.innerHTML = `
+                            Số phụ nữ mang thai đến cuối tháng (T): <b>0</b><br>
+                            Số phụ nữ phá thai/sảy thai trong tháng (N): <b>0</b>
+                        `;
+                        row.appendChild(tdSummary);
+                    }
+                });
+            }
+        }
+    });
+    // 2. Lấy dữ liệu nội dung của bảng 7 và 8 để đưa vào cụm bảng song song
     const tbl7Html = reportPageEl.querySelector('#tbl7_body') ? reportPageEl.querySelector('#tbl7_body').innerHTML : '<tr><td colspan="6" style="text-align:center; font-style:italic;">Trống</td></tr>';
     const tbl8Html = reportPageEl.querySelector('#tbl8_body') ? reportPageEl.querySelector('#tbl8_body').innerHTML : '<tr><td colspan="6" style="text-align:center; font-style:italic;">Trống</td></tr>';
 
@@ -412,7 +537,7 @@ function exportToWord() {
         </table>
     `;
 
-    // Tìm và xóa bảng 7-8 cũ trong bản sao
+    // Xóa bảng 7-8 cũ trong bản sao mẫu
     const oldTbl7 = reportPageEl.querySelector('#tbl7_body');
     if (oldTbl7) {
         let parentBox = oldTbl7.closest('.row') || oldTbl7.parentNode.parentNode.parentNode;
@@ -424,11 +549,10 @@ function exportToWord() {
         if (parentBox8 && parentBox8 !== reportPageEl) parentBox8.remove();
     }
 
-    // 2. Tìm bảng số 6 để chèn cụm bảng 7-8 hoàn toàn đúng vị trí ngay phía dưới bảng 6
+    // 3. Tìm vị trí bảng số 6 để chèn cụm bảng 7-8 ngay phía dưới đúng vị trí
     const allTablesInPage = reportPageEl.querySelectorAll('table');
     let targetElement = null;
     allTablesInPage.forEach(tbl => {
-        // Tìm bảng có chứa tiêu đề hoặc nội dung liên quan đến bảng 6
         let prevText = tbl.previousElementSibling ? tbl.previousElementSibling.innerText : "";
         if (prevText.includes("6.") || tbl.innerHTML.includes("thông tin cơ bản")) {
             targetElement = tbl.closest('.row') || tbl.parentNode;
@@ -440,11 +564,10 @@ function exportToWord() {
         tempDiv.innerHTML = customTbl7_8Html;
         targetElement.parentNode.insertBefore(tempDiv.firstElementChild, targetElement.nextSibling);
     } else {
-        // Fallback nếu không tìm thấy chính xác thì chèn vào giữa
         reportPageEl.innerHTML += customTbl7_8Html;
     }
 
-    // 3. Tạo Header dạng bảng ẩn không viền cho Word
+    // 4. Tạo Header dạng bảng ẩn không viền cho file Word
     const headerTableHtml = `
         <table style="width: 100%; border: none !important; margin-bottom: 10px; font-family: 'Times New Roman', Times, serif; font-size: 13pt;">
             <tr style="border: none !important;">
@@ -469,7 +592,7 @@ function exportToWord() {
         </div>
     `;
 
-    // 4. Tạo Footer (Chữ ký)
+    // 5. Tạo Footer (Phần chữ ký cuối trang)
     const today = new Date();
     const curDay = today.getDate();
     const curMonth = today.getMonth() + 1;
