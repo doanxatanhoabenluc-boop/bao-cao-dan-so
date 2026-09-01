@@ -312,13 +312,16 @@ async function loadData() {
                     <td>${item.ghi_chu || ''}</td>
                 </tr>`;
             } else if (loai === 'di_den') {
+                // Lấy trực tiếp mã/tên Địa bàn (ví dụ: 137, 138...) thay vì tên ấp
+                let diaBan = item.dia_ban || item.diabanh || item.dia_ban_to || '';
+
                 let hoTen = item.ho_ten || item.ho_va_ten || '';
                 let ngaySinh = formatDate(item.ngay_sinh) || item.ngay_sinh || '';
                 let ngayDi = formatDate(item.ngay_di) || item.ngay_di || '';
                 let diDau = item.di_dau || item.noi_den || ''; 
                 let ngayDen = formatDate(item.ngay_den) || item.ngay_den || '';
                 let dauDen = item.noi_di || item.dau_den || ''; 
-                let diaBan = item.dia_ban || item.dia_ban_to || '';
+
                 row = `<tr>
                     <td>${index + 1}</td>
                     <td>${item.so_ho || item.ho_so || ''}</td>
@@ -333,6 +336,7 @@ async function loadData() {
                     <td>${dauDen}</td>
                     <td>${item.ly_do || item.ghi_chu || ''}</td>
                 </tr>`;
+            
             } else if (loai === 'sang_loc_truoc_sinh') {
                 let rawCTV = item.nguoi_nhap || '';
                 let tenCTV = rawCTV.replace(/\s*\(.*?\)\s*/g, '').trim();
