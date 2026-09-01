@@ -828,7 +828,7 @@ app.put("/api/data/:table/:id", async (req, res) => {
         }
 
         delete dataObj.id;
-        delete dataObj.created_at;
+        //delete dataObj.created_at;
 
         // So sánh để ghi rõ thay đổi
         let changes = [];

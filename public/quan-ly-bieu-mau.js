@@ -490,6 +490,11 @@ async function openEditRecordModal(tableName, encodedRowJson) {
             });
             inputHtml = `<select class="form-select" id="edit_field_${key}">${options}</select>`;
         }
+        else if (lowerKey === 'created_at') {
+            // Xử lý riêng hiển thị và chỉnh sửa trường thời gian tạo
+            let formattedVal = val ? val.toString().replace('T', ' ').substring(0, 19) : '';
+            inputHtml = `<input type="text" class="form-control" id="edit_field_${key}" value="${formattedVal}" placeholder="YYYY-MM-DD HH:mm:ss">`;
+        }
         else if (lowerKey.includes('ngay') || lowerKey.includes('date')) {
             let formattedDate = val ? val.toString().split('T')[0] : '';
             inputHtml = `<input type="date" class="form-control" id="edit_field_${key}" value="${formattedDate}">`;
