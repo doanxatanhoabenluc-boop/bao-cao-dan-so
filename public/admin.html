@@ -97,6 +97,11 @@
                         <i class="fa-solid fa-language me-1"></i> Từ điển tên
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold py-2 px-3 shadow-sm text-success" id="phunu1549-tab" data-bs-toggle="tab" data-bs-target="#phunu1549Content" type="button" role="tab" onclick="loadPhuNu1549List()">
+                        <i class="fa-solid fa-file-excel me-1"></i> Danh sách 15-49 (Excel)
+                    </button>
+                </li>
             </ul>
         </div>
 
@@ -627,8 +632,107 @@
             </div>
         </div>
     </div>
+<!-- TAB: QUẢN LÝ DANH SÁCH PHỤ NỮ 15-49 (IMPORT EXCEL & XEM TRÙNG) -->
+<div class="tab-pane fade" id="phunu1549Content" role="tabpanel">
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center flex-wrap gap-2 py-3">
+            <div>
+                <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-file-excel me-1"></i> Quản lý Danh sách Phụ nữ 15-49 tuổi</h5>
+                <small>Import file Excel, rà soát danh sách và kiểm tra dữ liệu trùng lặp</small>
+            </div>
+            <div class="d-flex gap-2">
+                <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" class="d-none" onchange="handleExcelImport(event)">
+                <button class="btn btn-light btn-sm text-success fw-bold" onclick="document.getElementById('excelFileInput').click()">
+                    <i class="fa-solid fa-file-import me-1"></i> Chọn file Excel nạp CSDL
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-2 p-md-3">
+            
+            <!-- THANH TAB CON: TẤT CẢ VÀ TRÙNG LẶP -->
+            <ul class="nav nav-tabs mb-3" id="subPhuNuTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active fw-bold" id="sub-all-tab" data-bs-toggle="tab" data-bs-target="#subAllContent" type="button" role="tab" onclick="loadPhuNu1549List()">
+                        <i class="fa-solid fa-list me-1"></i> Tất cả danh sách
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold text-danger" id="sub-duplicate-tab" data-bs-toggle="tab" data-bs-target="#subDuplicateContent" type="button" role="tab" onclick="loadDuplicatePhuNuList()">
+                        <i class="fa-solid fa-triangle-exclamation me-1"></i> Danh sách trùng lặp (<span id="dupCount" class="badge bg-danger">0</span>)
+                    </button>
+                </li>
+            </ul>
 
+            <!-- NỘI DUNG CỦA CÁC TAB CON -->
+            <div class="tab-content" id="subPhuNuTabsContent">
+                
+                <!-- Tab con 1: Tất cả danh sách -->
+                <div class="tab-pane fade show active" id="subAllContent" role="tabpanel">
+                    <div class="alert alert-info small mb-3 py-2">
+                        💡 <b>Mẫu file Excel chuẩn:</b> File cần có các cột tên: <code>mã hộ</code> (hoặc <code>hộ số</code>), <code>địa bàn</code>, <code>họ tên</code>, <code>ngày sinh</code>, <code>số thẻ bhyt</code>, <code>số con</code>.
+                    </div>
+                    
+                    <div id="importProgress" class="d-none mb-3">
+                        <div class="progress" style="height: 20px;">
+                            <div id="importProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 0%">0%</div>
+                        </div>
+                        <small id="importProgressStatus" class="text-muted mt-1 d-block">Đang xử lý dữ liệu...</small>
+                    </div>
+
+                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                        <table class="table table-bordered table-hover align-middle">
+                            <thead class="table-dark text-center sticky-top">
+                                <tr>
+                                    <th style="width: 60px;">STT</th>
+                                    <th>Mã định danh</th>
+                                    <th>Mã hộ</th>
+                                    <th>Địa bàn</th>
+                                    <th>Họ và tên</th>
+                                    <th>Ngày sinh</th>
+                                    <th>Số thẻ BHYT</th>
+                                    <th>Số con</th>
+                                </tr>
+                            </thead>
+                            <tbody id="phuNu1549TableBody">
+                                <tr><td colspan="8" class="text-center">Đang tải dữ liệu...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab con 2: Danh sách trùng lặp -->
+                <div class="tab-pane fade" id="subDuplicateContent" role="tabpanel">
+                    <div class="alert alert-warning small mb-3 py-2">
+                        ⚠️ <b>Ghi chú:</b> Dưới đây là các trường hợp bị trùng lặp Mã hộ/Địa bàn hoặc trùng số thẻ BHYT trong hệ thống để cán bộ xã dễ dàng kiểm tra, rà soát.
+                    </div>
+                    
+                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                        <table class="table table-bordered table-hover align-middle">
+                            <thead class="table-danger text-center sticky-top">
+                                <tr>
+                                    <th style="width: 60px;">STT</th>
+                                    <th>Mã định danh</th>
+                                    <th>Mã hộ</th>
+                                    <th>Địa bàn</th>
+                                    <th>Họ và tên</th>
+                                    <th>Ngày sinh</th>
+                                    <th>Số thẻ BHYT</th>
+                                </tr>
+                            </thead>
+                            <tbody id="duplicateTableBody">
+                                <tr><td colspan="7" class="text-center">Chưa tải dữ liệu trùng...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="admin.js"></script>
 </body>
 </html>

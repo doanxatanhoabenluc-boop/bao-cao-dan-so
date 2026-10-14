@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Quản lý Phụ nữ 15-49 & Lịch sử BPTT - Xã Lương Hòa</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+   <style>
+    /* Font Times New Roman toàn trang báo cáo */
+    #reportSection, #reportSection * {
+        font-family: "Times New Roman", Times, serif !important;
+    }
+
+    @media print {
+        body { background: white !important; font-size: 11pt; }
+        .no-print { display: none !important; }
+        .container { max-width: 100% !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+        .card { border: none !important; box-shadow: none !important; }
+        table { font-size: 10pt !important; border-collapse: collapse !important; width: 100% !important; }
+        th, td { border: 1px solid black !important; padding: 4px 2px !important; }
+    }
+
+    /* Định dạng độ rộng các cột phân bổ đều và cân đối */
+    .report-table {
+        border: 1px solid #000 !important;
+        border-collapse: collapse !important;
+        width: 100%;
+        margin-bottom: 15px;
+        table-layout: fixed; /* Cố định tỉ lệ chia đều các cột */
+    }
+    
+    /* Phân bổ tỷ lệ chiều rộng từng cột cụ thể */
+    .report-table th:nth-child(1), .report-table td:nth-child(1) { width: 55px; }   /* STT hộ */
+    .report-table th:nth-child(2), .report-table td:nth-child(2) { width: 140px; }  /* HỌ VÀ TÊN (Đã thu gọn lại vừa vặn) */
+    .report-table th:nth-child(3), .report-table td:nth-child(3) { width: 85px; }   /* Năm sinh */
+    .report-table th:nth-child(4), .report-table td:nth-child(4) { width: 45px; }   /* Số con */
+    .report-table th:nth-child(5), .report-table td:nth-child(5) { width: 75px; }   /* Năm sinh con nhỏ nhất */
+    /* 12 cột tháng (từ cột 6 đến 17) sẽ tự động chia đều khoảng không gian còn lại */
+    .report-table th:last-child, .report-table td:last-child { width: 70px; }       /* Ghi chú */
+
+    .report-table th, .report-table td {
+        border: 1px solid #000 !important;
+        vertical-align: middle;
+        text-align: center;
+        font-size: 12px;
+        padding: 5px 2px;
+        color: #000;
+        word-wrap: break-word;
+    }
+    .report-table td.text-left { 
+        text-align: left !important; 
+        padding-left: 6px !important;
+    }
+
+    .report-footer-note {
+        font-size: 12px;
+        color: #000;
+        line-height: 1.5;
+    }
+</style>
+</head>
+<body class="bg-light">
+    <div class="container my-4">
+        <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+            <h2 class="fw-bold text-primary">QUẢN LÝ DANH SÁCH PHỤ NỮ 15-49 & BPTT</h2>
+            <a href="/" class="btn btn-outline-secondary">Trang chủ</a>
+        </div>
+        
+        <!-- Thanh Tabs chuyển đổi -->
+        <ul class="nav nav-tabs mb-4 no-print" id="managerTabs">
+            <li class="nav-item">
+                <button class="nav-link active fw-bold" id="tabListBtn" onclick="switchTab('list')">📋 Quản lý Nhân khẩu & BPTT</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link fw-bold" id="tabReportBtn" onclick="switchTab('report')">📊 Sổ Theo Dõi 12 Tháng (Mẫu A4)</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link fw-bold" id="tabBienDong" type="button" onclick="switchTab('bienDong')">📊 Biến động 15–49</button>
+            </li>
+        </ul>
+
+        <!-- KHU VỰC 1: QUẢN LÝ DANH SÁCH CHÍNH -->
+        <div id="listSection">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <input type="text" id="searchInput" class="form-control" placeholder="Nhập họ tên hoặc mã hộ..." onkeyup="handleSearchKeyup(event)">
+                        </div>
+                        <div class="col-md-2" id="apFilterContainer">
+                            <select id="apFilterSelect" class="form-select" onchange="onApChange()">
+                                <option value="">-- Tất cả các Ấp --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2" id="diabanhFilterContainer">
+                            <select id="diabanhFilterSelect" class="form-select" onchange="doSearch()">
+                                <option value="">-- Tất cả Địa bàn --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select id="bpttFilterSelect" class="form-select" onchange="doSearch()">
+                                <option value="">-- Chọn BPTT --</option>
+                                <option value="NONE">❌ Không dùng BPTT</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex gap-1">
+                            <button class="btn btn-primary flex-grow-1" onclick="doSearch()">Lọc</button>
+                            <button class="btn btn-outline-secondary" onclick="resetSearch()">Xóa</button>
+                            <button class="btn btn-success" onclick="openPreviewSyncModal()">🔄 Đồng bộ con</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <span id="tableTitle">Danh sách Nhân khẩu Phụ nữ 15-49 toàn xã</span>
+                    <span id="totalInfo" class="badge bg-secondary">Tổng số: 0</span>
+                </div>
+                <div class="card-body table-responsive">
+                    <table class="table table-bordered table-striped align-middle">
+                        <thead class="table-secondary text-center">
+                            <tr>
+                                <th>Mã Hộ</th>
+                                <th>Họ và Tên</th>
+                                <th>Ngày Sinh</th>
+                                <th>Địa bàn</th>
+                                <th>Số Con</th>
+                                <th>Năm sinh con gần nhất</th>
+                                <th>Số Thẻ BHYT</th>
+                                <th>BPTT Đang Dùng</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tblPhuNuBody">
+                            <tr><td colspan="9" class="text-center text-muted">Đang tải dữ liệu...</td></tr>
+                        </tbody>
+                    </table>
+
+                    <nav class="d-flex justify-content-between align-items-center mt-3">
+                        <div id="pageInfo" class="small text-muted">Đang hiển thị trang 1 / 1</div>
+                        <ul class="pagination mb-0" id="paginationNav"></ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+       <!-- KHU VỰC BÁO CÁO 12 THÁNG (CHUẨN MẪU A4 EXCEL) -->
+        <div id="reportSection" style="display: none;">
+            <div class="card shadow-sm mb-4 no-print">
+                <div class="card-body">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold small mb-1">Năm báo cáo</label>
+                            <select id="reportYear" class="form-select form-select-sm" onchange="loadReportData(1)">
+                                <option value="2026">2026</option>
+                                <option value="2025">2025</option>
+                                <option value="2024">2024</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3" id="reportApContainer">
+                            <label class="form-label fw-bold small mb-1">Lọc theo Ấp</label>
+                            <select id="reportApSelect" class="form-select form-select-sm" onchange="onReportApChange()">
+                                <option value="">-- Tất cả các Ấp --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3" id="reportDiabanhContainer">
+                            <label class="form-label fw-bold small mb-1">Lọc Địa bàn</label>
+                            <select id="reportDiabanhSelect" class="form-select form-select-sm" onchange="loadReportData(1)">
+                                <option value="">-- Tất cả Địa bàn --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex gap-2">
+                            <button class="btn btn-success btn-sm flex-grow-1" onclick="xuatExcel()">📥 Xuất Excel</button>
+                            <button class="btn btn-secondary btn-sm flex-grow-1" onclick="window.print()">🖨️ In / Xuất PDF</button>
+                        </div>
+                        <div class="col-md-4 d-flex gap-2">
+                            <button class="btn btn-secondary btn-sm flex-grow-1" onclick="window.print()">🖨️ In / Xuất PDF (Trang này)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trang A4 chuẩn kích thước & font Times New Roman -->
+            <div class="card shadow bg-white p-4 mx-auto" style="width: 297mm; min-height: 210mm;">
+                <!-- Tiêu đề & Năm nằm bên phải -->
+                <div class="position-relative text-center mb-3">
+                    <h4 class="fw-bold text-uppercase mb-1" style="font-size: 16pt;">THEO DÕI PHỤ NỮ ĐỘ TUỔI 15-49 CÓ CHỒNG</h4>
+                    <div class="text-end fw-bold" style="font-size: 13pt; margin-top: 5px;">
+                        Năm: <span id="lblReportYear">2026</span>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table report-table mb-2">
+                        <thead class="align-middle">
+                            <tr>
+                                <th rowspan="2" style="width: 55px;">STT hộ</th>
+                                <th rowspan="2" style="min-width: 180px;">HỌ VÀ TÊN</th>
+                                <th rowspan="2" style="width: 85px;">Năm sinh</th>
+                                <th rowspan="2" style="width: 40px;">Số con</th>
+                                <th rowspan="2" style="width: 70px;">Năm sinh con nhỏ nhất</th>
+                                <th colspan="12">Theo dõi thực hiện KHHGĐ và thai sản</th>
+                                <th rowspan="2" style="width: 70px;">Ghi chú</th>
+                            </tr>
+                            <tr>
+                                <th style="width: 28px;">1</th><th style="width: 28px;">2</th><th style="width: 28px;">3</th>
+                                <th style="width: 28px;">4</th><th style="width: 28px;">5</th><th style="width: 28px;">6</th>
+                                <th style="width: 28px;">7</th><th style="width: 28px;">8</th><th style="width: 28px;">9</th>
+                                <th style="width: 28px;">10</th><th style="width: 28px;">11</th><th style="width: 28px;">12</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tblReportBody">
+                            <tr><td colspan="18" class="text-center text-muted">Đang tải dữ liệu...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Thanh phân trang A4 -->
+                <div class="d-flex justify-content-between align-items-center no-print my-2">
+                    <span id="reportPageInfo" class="small text-muted">Trang A4 số 1 / 1 (Tổng số: 0 phụ nữ)</span>
+                    <ul class="pagination pagination-sm mb-0" id="reportPaginationNav"></ul>
+                </div>
+
+                <!-- Chú thích bố cục 3 cột y hệt mẫu Excel gốc -->
+                <div class="row mt-2 report-footer-note pt-2">
+                    <div class="col-5">
+                        <div><strong>N2:</strong> Nạo hút thai do không sử dụng BPTT</div>
+                        <div><strong>TS1:</strong> Sàng lọc trước sinh lần 1</div>
+                        <div><strong>TS2:</strong> Sàng lọc trước sinh lần 2</div>
+                    </div>
+                    <div class="col-3">
+                        <div><strong>1:</strong> Đặt vòng</div>
+                        <div><strong>1/1:</strong> Thay vòng</div>
+                        <div><strong>2:</strong> Triệt sản nam</div>
+                        <div><strong>3:</strong> Triệt sản nữ</div>
+                        <div><strong>4:</strong> Bao cao su</div>
+                    </div>
+                    <div class="col-4">
+                        <div><strong>5:</strong> Thuốc viên</div>
+                        <div><strong>6:</strong> Thuốc tiêm</div>
+                        <div><strong>7:</strong> Thuốc cấy</div>
+                        <div><strong>7/7:</strong> Thay que cấy</div>
+                        <div><strong>8:</strong> Biện pháp khác</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- KHU VỰC BIẾN ĐỘNG 15-49 -->
+         <div id="bienDongPane" style="display: none;">
+
+    <div class="card border-0 shadow-sm mt-3">
+        <div class="card-body">
+            <h5 class="fw-bold">
+                Thống kê biến động phụ nữ 15–49
+            </h5>
+
+            <div class="row g-2 mb-3">
+                <div class="col-md-5">
+                    <label class="form-label">
+                        Lọc theo địa bàn
+                    </label>
+                    <input type="text"
+                           id="bdDiaBan"
+                           class="form-control"
+                           placeholder="Nhập tên ấp hoặc địa bàn">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">
+                        Loại biến động
+                    </label>
+                    <select id="bdLoai" class="form-select">
+                        <option value="">Tất cả biến động</option>
+                        <option value="THEM_MOI">Thêm mới hồ sơ</option>
+                        <option value="XOA_BO">Xóa hồ sơ</option>
+                        <option value="THEM_BPTT">Thêm lịch sử BPTT</option>
+                        <option value="XOA_BPTT">Xóa lịch sử BPTT</option>
+                        <option value="CAP_NHAT">Cập nhật hồ sơ</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <button class="btn btn-primary w-100 mt-4"
+                            onclick="loadBienDong()">
+                        Xem thống kê
+                    </button>
+                </div>
+            </div>
+
+            <div class="alert alert-info py-2 mb-3" id="bdPhamViThongKe">
+                Đang xem thống kê biến động theo địa bàn được phân quyền.
+            </div>
+
+            <div class="row g-3 mb-4" id="bdTheThongKe">
+                <div class="col-6 col-lg-3"><div class="card h-100 border-primary"><div class="card-body py-3"><div class="text-muted small">Tổng lượt biến động</div><div class="fs-3 fw-bold" id="bdTongLuot">0</div></div></div></div>
+                <div class="col-6 col-lg-3"><div class="card h-100 border-success"><div class="card-body py-3"><div class="text-muted small">Hồ sơ thêm mới</div><div class="fs-3 fw-bold text-success" id="bdTongThemMoi">0</div></div></div></div>
+                <div class="col-6 col-lg-3"><div class="card h-100 border-danger"><div class="card-body py-3"><div class="text-muted small">Hồ sơ xóa bỏ</div><div class="fs-3 fw-bold text-danger" id="bdTongXoaBo">0</div></div></div></div>
+                <div class="col-6 col-lg-3"><div class="card h-100 border-secondary"><div class="card-body py-3"><div class="text-muted small">Chênh lệch thêm mới - xóa bỏ</div><div class="fs-3 fw-bold" id="bdChenhLech">0</div></div></div></div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-lg-8"><div class="card h-100"><div class="card-body">
+                    <h6 class="fw-bold">Mỗi ấp/địa bàn có bao nhiêu hồ sơ thêm mới và xóa bỏ?</h6>
+                    <p class="text-muted small mb-2">Cột xanh: thêm mới · Cột đỏ: xóa bỏ. Trục ngang là tên ấp/địa bàn.</p>
+                    <div style="position:relative; min-height:300px;"><canvas id="bdChartDiaBan"></canvas></div>
+                </div></div></div>
+                <div class="col-lg-4"><div class="card h-100"><div class="card-body">
+                    <h6 class="fw-bold">Tổng số lượt theo loại biến động</h6>
+                    <p class="text-muted small mb-2">Cho biết trong phạm vi đang xem, có bao nhiêu lượt thêm mới và xóa bỏ.</p>
+                    <div style="position:relative; min-height:260px;"><canvas id="bdChartLoai"></canvas></div>
+                    <div id="bdTomTatLoai" class="small mt-2"></div>
+                </div></div></div>
+            </div>
+
+            <div class="card mb-4"><div class="card-body">
+                <h6 class="fw-bold">Bảng tổng hợp theo từng ấp/địa bàn</h6>
+                <div class="table-responsive"><table class="table table-bordered table-striped table-sm align-middle mb-0">
+                    <thead class="table-light"><tr><th>Ấp / địa bàn</th><th class="text-end">Thêm mới</th><th class="text-end">Xóa bỏ</th><th class="text-end">Tổng biến động</th><th class="text-end">Chênh lệch</th></tr></thead>
+                    <tbody id="bdTongHopBody"><tr><td colspan="5" class="text-center text-muted">Đang tải thống kê...</td></tr></tbody>
+                </table></div>
+            </div></div>
+
+            <div class="d-flex justify-content-between
+                        align-items-center mb-2">
+                <h6 class="fw-bold mb-0">
+                    Chi tiết từng dòng biến động
+                </h6>
+                <button class="btn btn-outline-secondary btn-sm"
+                        onclick="loadChiTietBienDong()">
+                    Làm mới
+                </button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover
+                              table-sm align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Địa bàn</th>
+                            <th>Loại biến động</th>
+                            <th>Mã hộ</th>
+                            <th>Họ tên</th>
+                            <th>Người thực hiện</th>
+                            <th>Thời gian</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bdDetailBody">
+                        <tr>
+                            <td colspan="8" class="text-center">
+                                Chọn xem thống kê để tải dữ liệu.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+    </div>
+
+    <!-- Modals (Xem trước & Sửa) giữ nguyên -->
+    <!-- Modal Xem trước Đồng bộ (Preview) -->
+    <div class="modal fade" id="previewSyncModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Xem trước thay đổi đồng bộ năm sinh con & BPTT</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Danh sách đối chiếu chính xác theo Mã hộ và Địa bàn. Kiểm tra kỹ trước khi bấm xác nhận ghi đè.</p>
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-bordered table-striped align-middle table-sm">
+                            <thead class="table-secondary text-center sticky-top">
+                                <tr>
+                                    <th>Mã Hộ</th>
+                                    <th>Họ và Tên Phụ Nữ</th>
+                                    <th>Địa bàn</th>
+                                    <th>Số con (Cũ ➔ Mới)</th>
+                                    <th>Năm sinh con (Cũ ➔ Mới)</th>
+                                    <th>BPTT (Cũ ➔ S)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tblPreviewBody">
+                                <tr><td colspan="6" class="text-center text-muted">Đang phân tích dữ liệu đối chiếu...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmSyncData()">Xác nhận ghi đè vào 15-49</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal sửa thông tin & Lịch sử BPTT -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Cập nhật Hồ sơ & Theo dõi Lịch sử BPTT</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editForm">
+                        <input type="hidden" id="editMaDinhDanh">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Họ và tên</label>
+                                <input type="text" id="editHoTen" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Mã hộ</label>
+                                <input type="text" id="editMaHo" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Ngày sinh</label>
+                                <input type="date" id="editNgaySinh" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Số con</label>
+                                <input type="number" id="editSoCon" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Năm sinh con nhỏ nhất</label>
+                                <input type="text" id="editNamSinhCon" class="form-control" placeholder="VD: 1996">
+                            </div>
+                            <div class="col-12 text-end mt-3">
+                                <button type="button" class="btn btn-success" onclick="savePhuNu()">Lưu thay đổi nhân khẩu</button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+                    <h5 class="fw-bold text-secondary">Lịch sử thay đổi Biện pháp tránh thai (BPTT)</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light text-center">
+                                <tr>
+                                    <th>Mã BPTT</th>
+                                    <th>Ngày áp dụng</th>
+                                    <th>Nơi thực hiện</th>
+                                    <th>Xóa</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tblHistoryBody"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="row g-2 align-items-end bg-light p-3 rounded mt-3">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Mã BPTT</label>
+                            <select id="newMaBptt" class="form-select form-select-sm" required>
+                                <option value="">-- Chọn BPTT --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Ngày áp dụng</label>
+                            <input type="date" id="newNgayApDung" class="form-control form-control-sm">
+                        </div>
+                       <div class="col-md-4">
+                            <label class="form-label small fw-bold">Nơi thực hiện</label>
+                            <select id="newNoiThucHien" class="form-select form-select-sm">
+                                <option value="">-- Chọn nơi thực hiện --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <button type="button" class="btn btn-primary btn-sm w-100" onclick="addHistory()">Thêm</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nhúng các thư viện và file JS riêng -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="quanly_phunu.js"></script>
+</body>
+</html>

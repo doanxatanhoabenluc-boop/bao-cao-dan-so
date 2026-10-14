@@ -542,7 +542,166 @@ async function deleteVietnameseNameMap(id) {
         alert(result.message || 'Không thể xóa ánh xạ.');
     }
 }
+// ==================== QUẢN LÝ IMPORT DANH SÁCH PHỤ NỮ 15-49 ====================
 
+// ==================== QUẢN LÝ IMPORT DANH SÁCH PHỤ NỮ 15-49 ====================
+
+// 1. Tải danh sách phụ nữ hiện có trong CSDL lên bảng Admin
+async function loadPhuNu1549List() {
+    const tbody = document.getElementById('phuNu1549TableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center">Đang tải dữ liệu từ CSDL...</td></tr>';
+    
+    try {
+        const res = await apiCall('/api/admin/phu-nu-15-49-list?limit=1000');
+        
+        // Hỗ trợ cả 2 dạng phản hồi (Mảng thuần OR Object phân trang { success, data: [...] })
+        let list = [];
+        if (Array.isArray(res)) {
+            list = res;
+        } else if (res && Array.isArray(res.data)) {
+            list = res.data;
+        }
+
+        if (!list || list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center">Chưa có dữ liệu. Vui lòng bấm nút "Chọn file Excel" để import.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = list.map((item, idx) => `
+            <tr>
+                <td class="text-center">${idx + 1}</td>
+                <td><code>${item.ma_dinh_danh}</code></td>
+                <td><b>${item.ma_ho}</b></td>
+                <td>${item.diabanh}</td>
+                <td>${item.ho_ten}</td>
+                <td class="text-center">${item.ngay_sinh || ''}</td>
+                <td>${item.so_the_bhyt || ''}</td>
+                <td class="text-center">${item.so_con || 0}</td>
+            </tr>
+        `).join('');
+    } catch (e) {
+        console.error("Lỗi tải danh sách 15-49 admin:", e);
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Lỗi tải dữ liệu từ máy chủ.</td></tr>';
+    }
+}
+
+// 2. Đọc file Excel từ máy tính và gửi lên Server Import
+async function handleExcelImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Chặn file lớn hơn 5MB để bảo vệ server tài khoản Free
+    if (file.size > 5 * 1024 * 1024) {
+        alert("⚠️ File quá lớn! Vui lòng chọn file Excel dưới 5MB để đảm bảo hệ thống không bị tràn bộ nhớ.");
+        event.target.value = '';
+        return;
+    }
+
+    const progressContainer = document.getElementById('importProgress');
+    const progressBar = document.getElementById('importProgressBar');
+    const progressStatus = document.getElementById('importProgressStatus');
+
+    if (progressContainer) progressContainer.classList.remove('d-none');
+    if (progressBar) { progressBar.style.width = '30%'; progressBar.textContent = '30%'; }
+    if (progressStatus) progressStatus.textContent = 'Đang tải file lên hệ thống...';
+
+    try {
+        const formData = new FormData();
+        formData.append("excel", file); // Phải khớp với upload.single("excel") ở backend
+
+        if (progressBar) { progressBar.style.width = '60%'; progressBar.textContent = '60%'; }
+        if (progressStatus) progressStatus.textContent = 'Server đang xử lý và nạp dữ liệu...';
+
+        const response = await fetch('/api/admin/import-phu-nu-15-49', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (progressBar) { progressBar.style.width = '100%'; progressBar.textContent = '100%'; }
+
+        if (result.success) {
+            let alertMsg = "✅ " + result.message;
+            
+            // Nếu có danh sách trùng, ghi log console hoặc xử lý hiển thị thêm nếu cần
+            if (result.duplicates && result.duplicates.length > 0) {
+                console.warn("Các trường hợp trùng mã hộ/khu vực:", result.duplicates);
+            }
+            
+            alert(alertMsg);
+
+            // Gọi lại hàm load danh sách hiển thị
+            if (typeof loadPhuNu1549List === 'function') {
+                loadPhuNu1549List();
+            }
+        } else {
+            alert("❌ Lỗi: " + result.message);
+        }
+    } catch (err) {
+        console.error("Lỗi khi import file Excel:", err);
+        alert("Lỗi xử lý file Excel: " + err.message);
+    } finally {
+        setTimeout(() => {
+            if (progressContainer) progressContainer.classList.add('d-none');
+        }, 1000);
+        event.target.value = ''; // Reset input file
+    }
+}
+// Hàm tải danh sách các trường hợp bị trùng
+async function loadDuplicatePhuNuList() {
+    try {
+        const response = await fetch('/api/admin/phu-nu-15-49-trung');
+        const result = await response.json();
+        
+        const tbody = document.getElementById('duplicateTableBody'); // ID tbody của bảng trùng
+        if (!tbody) return;
+
+        if (!result.success || result.data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Không có trường hợp dữ liệu nào bị trùng lặp.</td></tr>`;
+            document.getElementById('dupCount').textContent = '0';
+            return;
+        }
+
+        document.getElementById('dupCount').textContent = result.data.length;
+
+        let html = '';
+        result.data.forEach((item, index) => {
+            html += `
+                <tr class="table-warning">
+                    <td>${index + 1}</td>
+                    <td><strong>${item.ma_dinh_danh}</strong></td>
+                    <td>${item.ma_ho}</td>
+                    <td>${item.diabanh}</td>
+                    <td class="fw-bold text-primary">${item.ho_ten}</td>
+                    <td>${item.ngay_sinh || ''}</td>
+                    <td>${item.so_the_bhyt || '<span class="text-muted">Chưa có</span>'}</td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    } catch (err) {
+        console.error("Lỗi tải danh sách trùng:", err);
+    }
+}
+
+// Tự động đếm số lượng trùng khi vừa mở trang để hiển thị badge trên tab
+async function updateDuplicateBadge() {
+    try {
+        const response = await fetch('/api/admin/phu-nu-15-49-trung');
+        const result = await response.json();
+        if (result.success && document.getElementById('dupCount')) {
+            document.getElementById('dupCount').textContent = result.data.length;
+        }
+    } catch (e) {}
+}
+
+// Gọi hàm này khi trang được tải xong
+document.addEventListener("DOMContentLoaded", () => {
+    updateDuplicateBadge();
+});
 // ==================== ĐĂNG XUẤT ====================
 function logout() {
     apiCall('/api/logout', 'POST').then(() => window.location.href = 'index.html');

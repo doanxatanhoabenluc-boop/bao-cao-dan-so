@@ -17,14 +17,72 @@ function formatDate(dateStr) {
     return dateStr; 
 }
 
-function doiLoaiBaoCao() {
+// Tải danh mục Ấp & Địa bàn khi chuyển loại báo cáo
+async function doiLoaiBaoCao() {
     const loai = document.getElementById('filterLoaiBaoCao').value;
+    
+    // An/Hiện các bảng báo cáo tương ứng
     document.getElementById('wrapper_sinh').style.display = (loai === 'sinh') ? 'block' : 'none';
     document.getElementById('wrapper_sang_loc_so_sinh').style.display = (loai === 'sang_loc_so_sinh') ? 'block' : 'none';
     document.getElementById('wrapper_tu').style.display = (loai === 'tu') ? 'block' : 'none';
     document.getElementById('wrapper_di_den').style.display = (loai === 'di_den') ? 'block' : 'none';
     document.getElementById('wrapper_bptt').style.display = (loai === 'bptt') ? 'block' : 'none';
     document.getElementById('wrapper_sang_loc_truoc_sinh').style.display = (loai === 'sang_loc_truoc_sinh') ? 'block' : 'none';
+    document.getElementById('wrapper_phu_nu_15_49').style.display = (loai === 'phu_nu_15_49') ? 'block' : 'none';
+
+    // Xử lý riêng giao diện thanh lọc cho Phụ nữ 15-49
+    if (loai === 'phu_nu_15_49') {
+        document.getElementById('filterThangContainer').style.display = 'none'; // Ẩn chọn tháng
+        document.getElementById('filterApContainer').style.display = 'block';  // Hiện chọn Ấp
+        document.getElementById('filterDiabanhContainer').style.display = 'block'; // Hiện chọn Địa bàn
+
+        await loadApCatalogToanXa();
+        await loadDiaBanhCatalogToanXa(''); // Tải toàn xã và tự động chọn địa bàn đầu tiên (101)
+    } else {
+        document.getElementById('filterThangContainer').style.display = 'block';
+        document.getElementById('filterApContainer').style.display = 'none';
+        document.getElementById('filterDiabanhContainer').style.display = 'none';
+    }
+
+    loadData();
+}
+
+// Tải danh sách Ấp
+async function loadApCatalogToanXa() {
+    try {
+        let res = await fetch('/api/danh-sach-ap').then(r => r.json());
+        let select = document.getElementById('filterAp');
+        select.innerHTML = `<option value="">-- Tất cả các Ấp --</option>`;
+        if (Array.isArray(res)) {
+            res.forEach(item => {
+                select.innerHTML += `<option value="${item.ten_ap}">${item.ten_ap}</option>`;
+            });
+        }
+    } catch (e) { console.error("Lỗi tải ấp:", e); }
+}
+
+// Tải danh sách Địa bàn & tự động chọn dòng đầu tiên (VD: 101)
+async function loadDiaBanhCatalogToanXa(apName) {
+    try {
+        let select = document.getElementById('filterDiabanh');
+        select.innerHTML = `<option value="">-- Tất cả Địa bàn --</option>`;
+
+        let url = apName ? `/api/admin/danh-sach-dia-ban-by-ap?ap=${encodeURIComponent(apName)}` : `/api/admin/danh-sach-dia-ban-by-ap?ap=`;
+        let res = await fetch(url).then(r => r.json());
+
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+            res.data.forEach(db => {
+                select.innerHTML += `<option value="${db}">Địa bàn ${db}</option>`;
+            });
+            // TỰ ĐỘNG CHỌN NGAY ĐỊA BÀN ĐẦU TIÊN
+            select.value = res.data[0];
+        }
+    } catch (e) { console.error("Lỗi tải địa bàn:", e); }
+}
+
+async function onApChangeBaoCao() {
+    let apVal = document.getElementById('filterAp').value;
+    await loadDiaBanhCatalogToanXa(apVal);
     loadData();
 }
 
@@ -62,6 +120,60 @@ async function loadData() {
         tableId = '#tbl_sang_loc_truoc_sinh';
         colSpanNum = 15;
         tenBaoCao = 'SỔ SÀNG LỌC TRƯỚC SINH';
+    } else if (loai === 'phu_nu_15_49') {
+            let namChon = nam || new Date().getFullYear();
+            let apVal = document.getElementById('filterAp') ? document.getElementById('filterAp').value : '';
+            let dbVal = document.getElementById('filterDiabanh') ? document.getElementById('filterDiabanh').value : '';
+            let page = window.currentReportPage || 1;
+
+            let url = `/api/bao-cao-bptt-12-thang?year=${namChon}&page=${page}`;
+            if (apVal) url += `&ap=${encodeURIComponent(apVal)}`;
+            if (dbVal) url += `&diabanh=${encodeURIComponent(dbVal)}`;
+
+            let res = await fetch(url).then(r => r.json()).catch(() => ({}));
+            let listPN = (res.success && Array.isArray(res.data)) ? res.data : [];
+
+            let tbody = document.querySelector('#tbl_phu_nu_15_49_body');
+            tbody.innerHTML = "";
+
+            if (listPN.length === 0) {
+                tbody.innerHTML = `<tr><td colspan='18' class='text-center text-muted'>Chưa có dữ liệu phụ nữ 15-49 trong năm ${namChon}.</td></tr>`;
+                renderReportPagination(1, 1, 0);
+                return;
+            }
+
+            listPN.forEach((item) => {
+                let namSinh = item.ngay_sinh ? item.ngay_sinh.substring(6, 10) : '';
+                let row = `<tr>
+                    <td class="fw-bold">${item.ma_ho || ''}</td>
+                    <td class="fw-bold text-left">${item.ho_ten || ''}</td>
+                    <td>${namSinh}</td>
+                    <td>${item.so_con || ''}</td>
+                    <td>${item.nam_sinh_con || ''}</td>
+                    <td>${item.t1 || ''}</td><td>${item.t2 || ''}</td><td>${item.t3 || ''}</td>
+                    <td>${item.t4 || ''}</td><td>${item.t5 || ''}</td><td>${item.t6 || ''}</td>
+                    <td>${item.t7 || ''}</td><td>${item.t8 || ''}</td><td>${item.t9 || ''}</td>
+                    <td>${item.t10 || ''}</td><td>${item.t11 || ''}</td><td>${item.t12 || ''}</td>
+                    <td>${item.ghi_chu || ''}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+
+            // Đệm đủ dòng nếu trang chưa đủ cấu trúc hiển thị
+            let emptyRowsCount = 16 - listPN.length;
+            for (let i = 0; i < emptyRowsCount; i++) {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                        <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                        <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                        <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                    </tr>
+                `;
+            }
+
+            renderReportPagination(res.currentPage, res.totalPages, res.totalRows);
+            return;
     } else {
         apiEndpoints = ['/api/data/table_1'];
     }
@@ -84,6 +196,42 @@ async function loadData() {
     tbody.innerHTML = "";
 
     try {
+        if (loai === 'phu_nu_15_49') {
+            let namChon = nam || new Date().getFullYear();
+            let res = await fetch(`/api/bao-cao-bptt-12-thang?year=${namChon}`).then(r => r.json()).catch(() => ({}));
+            let listPN = (res.success && Array.isArray(res.data)) ? res.data : [];
+
+            if (listPN.length === 0) {
+                tbody.innerHTML = `<tr><td colspan='${colSpanNum}' class='text-center text-muted'>Chưa có dữ liệu phụ nữ 15-49 trong năm ${namChon}.</td></tr>`;
+                return;
+            }
+
+            listPN.forEach((item) => {
+                let namSinh = item.ngay_sinh ? item.ngay_sinh.substring(6, 10) : '';
+                let row = `<tr>
+                    <td>${item.ma_ho || ''}</td>
+                    <td class="fw-bold text-start">${item.ho_ten || ''}</td>
+                    <td>${namSinh}</td>
+                    <td>${item.so_con || ''}</td>
+                    <td>${item.nam_sinh_con || ''}</td>
+                    <td>${item.t1 || ''}</td>
+                    <td>${item.t2 || ''}</td>
+                    <td>${item.t3 || ''}</td>
+                    <td>${item.t4 || ''}</td>
+                    <td>${item.t5 || ''}</td>
+                    <td>${item.t6 || ''}</td>
+                    <td>${item.t7 || ''}</td>
+                    <td>${item.t8 || ''}</td>
+                    <td>${item.t9 || ''}</td>
+                    <td>${item.t10 || ''}</td>
+                    <td>${item.t11 || ''}</td>
+                    <td>${item.t12 || ''}</td>
+                    <td></td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+            return;
+        }
         // Xử lý đặc biệt gộp Bảng 7 và Bảng 8 cho Sổ BPTT
         if (loai === 'bptt') {
             let res7 = await fetch('/api/data/table_7').then(r => r.json()).catch(() => []);
@@ -388,7 +536,41 @@ async function loadData() {
         tbody.innerHTML = `<tr><td colspan='${colSpanNum}' class='text-center text-danger'>Lỗi kết nối tới Server!</td></tr>`;
     }
 }
+function renderReportPagination(page, totalPages, totalRows) {
+    window.currentReportPage = page;
+    let pageInfoEl = document.getElementById('reportPageInfo');
+    if (pageInfoEl) {
+        pageInfoEl.textContent = `Trang A4 số ${page} / ${totalPages || 1} (Tổng số: ${totalRows} phụ nữ)`;
+    }
 
+    let nav = document.getElementById('reportPaginationNav');
+    if (!nav) return;
+    nav.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    nav.innerHTML += `
+        <li class="page-item ${page === 1 ? 'disabled' : ''}">
+            <button class="page-link" onclick="window.currentReportPage = ${page - 1}; loadData()">Trước</button>
+        </li>
+    `;
+
+    let start = Math.max(1, page - 2);
+    let end = Math.min(totalPages, page + 2);
+
+    for (let i = start; i <= end; i++) {
+        nav.innerHTML += `
+            <li class="page-item ${i === page ? 'active' : ''}">
+                <button class="page-link" onclick="window.currentReportPage = ${i}; loadData()">Trang ${i}</button>
+            </li>
+        `;
+    }
+
+    nav.innerHTML += `
+        <li class="page-item ${page === totalPages ? 'disabled' : ''}">
+            <button class="page-link" onclick="window.currentReportPage = ${page + 1}; loadData()">Sau</button>
+        </li>
+    `;
+}
 function xuatExcel() {
     const loai = document.getElementById('filterLoaiBaoCao').value;
     const thang = document.getElementById('filterThang').value;
@@ -424,44 +606,93 @@ function xuatExcel() {
         tenFile = 'Bao_Cao_Sang_Loc_Truoc_Sinh';
         tenTieuDe = 'SỔ SÀNG LỌC TRƯỚC SINH';
         colSpanVal = 15;
+    } else if (loai === 'phu_nu_15_49') {
+        tenFile = 'Bao_Cao_Phu_Nu_15_49';
+        tenTieuDe = 'THEO DÕI PHỤ NỮ ĐỘ TUỔI 15-49 CÓ CHỒNG';
+        colSpanVal = 18;
     }
     
-    let tieuDeThoiGian = (thang && nam) ? `Tháng ${thang}/${nam}` : (nam ? `Năm ${nam}` : "Tất cả các tháng");
-    const table = document.getElementById(tableId);
+    let tieuDeThoiGian = loai === 'phu_nu_15_49' ? `Năm: ${nam || new Date().getFullYear()}` : ((thang && nam) ? `Tháng ${thang}/${nam}` : (nam ? `Năm ${nam}` : "Tất cả các tháng"));
+    
+    // Lấy bảng dữ liệu tương ứng (nếu là 15-49 lấy theo ID tbl_phu_nu_15_49)
+    let table = (loai === 'phu_nu_15_49') ? document.getElementById('tbl_phu_nu_15_49') : document.getElementById(tableId);
 
-    // Tạo cấu trúc HTML kèm CSS kẻ viền và canh lề chuẩn khi mở bằng Microsoft Excel
-    let htmlContent = `
-        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-        <head>
-            <meta charset="utf-8">
-            <style>
-                table { border-collapse: collapse; width: 100%; font-family: 'Times New Roman', Times, serif; font-size: 11pt; }
-                th, td { border: 0.5pt solid #000000; padding: 6px; vertical-align: middle; }
-                th { background-color: #f2f2f2; text-align: center; font-weight: bold; }
-                .text-center { text-align: center; }
-                .text-start { text-align: left; }
-                .fw-bold { font-weight: bold; }
-                .title { font-size: 14pt; font-weight: bold; text-align: center; border: none; }
-                .subtitle { font-size: 12pt; text-align: center; border: none; }
-            </style>
-        </head>
-        <body>
-            <table>
-                <tr><td colspan="${colSpanVal}" class="title">${tenTieuDe}</td></tr>
-                <tr><td colspan="${colSpanVal}" class="subtitle">${tieuDeThoiGian}</td></tr>
-                <tr><td colspan="${colSpanVal}" style="border:none;"></td></tr>
-            </table>
-            ${table ? table.outerHTML : ''}
-        </body>
-        </html>
-    `;
+    let htmlContent = '';
+    if (loai === 'phu_nu_15_49') {
+        htmlContent = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="utf-8">
+                <style>
+                    table { border-collapse: collapse; width: 100%; font-family: 'Times New Roman', Times, serif; font-size: 11pt; }
+                    th, td { border: 0.5pt solid #000000; padding: 5px; vertical-align: middle; text-align: center; }
+                    th { background-color: #f2f2f2; font-weight: bold; }
+                    .title { font-size: 14pt; font-weight: bold; text-align: center; border: none; }
+                    .year-label { font-size: 12pt; font-weight: bold; text-align: right; border: none; }
+                    .text-start, .text-left { text-align: left !important; padding-left: 6px !important; }
+                    .fw-bold { font-weight: bold; }
+                </style>
+            </head>
+            <body>
+                <table>
+                    <tr><td colspan="18" class="title">${tenTieuDe}</td></tr>
+                    <tr><td colspan="18" class="year-label">${tieuDeThoiGian}</td></tr>
+                    <tr><td colspan="18" style="border:none;"></td></tr>
+                </table>
+                ${table ? table.outerHTML : ''}
+                <br><br>
+                <table>
+                    <tr>
+                        <td colspan="5" style="border:none; text-align:left;"><b>N2:</b> Nạo hút thai do không sử dụng BPTT</td>
+                        <td colspan="6" style="border:none; text-align:left;"><b>1:</b> Đặt vòng<br><b>1/1:</b> Thay vòng<br><b>2:</b> Triệt sản nam<br><b>3:</b> Triệt sản nữ<br><b>4:</b> Bao cao su</td>
+                        <td colspan="7" style="border:none; text-align:left;"><b>5:</b> Thuốc viên<br><b>6:</b> Thuốc tiêm<br><b>7:</b> Thuốc cấy<br><b>7/7:</b> Thay que cấy<br><b>8:</b> Biện pháp khác</td>
+                    </tr>
+                    <tr>
+                        <td colspan="5" style="border:none; text-align:left;"><b>TS1:</b> Sàng lọc trước sinh lần 1</td>
+                        <td colspan="13" style="border:none;"></td>
+                    </tr>
+                    <tr>
+                        <td colspan="5" style="border:none; text-align:left;"><b>TS2:</b> Sàng lọc trước sinh lần 2</td>
+                        <td colspan="13" style="border:none;"></td>
+                    </tr>
+                </table>
+            </body>
+            </html>
+        `;
+    } else {
+        htmlContent = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="utf-8">
+                <style>
+                    table { border-collapse: collapse; width: 100%; font-family: 'Times New Roman', Times, serif; font-size: 11pt; }
+                    th, td { border: 0.5pt solid #000000; padding: 6px; vertical-align: middle; }
+                    th { background-color: #f2f2f2; text-align: center; font-weight: bold; }
+                    .text-center { text-align: center; }
+                    .text-start { text-align: left; }
+                    .fw-bold { font-weight: bold; }
+                    .title { font-size: 14pt; font-weight: bold; text-align: center; border: none; }
+                    .subtitle { font-size: 12pt; text-align: center; border: none; }
+                </style>
+            </head>
+            <body>
+                <table>
+                    <tr><td colspan="${colSpanVal}" class="title">${tenTieuDe}</td></tr>
+                    <tr><td colspan="${colSpanVal}" class="subtitle">${tieuDeThoiGian}</td></tr>
+                    <tr><td colspan="${colSpanVal}" style="border:none;"></td></tr>
+                </table>
+                ${table ? table.outerHTML : ''}
+            </body>
+            </html>
+        `;
+    }
 
     // Xuất file dưới định dạng .xls tương thích hoàn toàn với Excel
     const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/vnd.ms-excel' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${tenFile}_Thang_${thang || 'All'}_${nam}.xls`;
+    a.download = `${tenFile}_${nam || 'All'}.xls`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
