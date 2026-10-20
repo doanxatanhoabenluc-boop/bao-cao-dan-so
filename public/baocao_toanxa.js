@@ -1,3 +1,9 @@
+function formatSoHoBaoCao(row) {
+    const ma = row?.ma_ho ?? row?.so_ho ?? row?.ho_so ?? '';
+    const ghiChu = row?.ghi_chu_ma_ho ?? '';
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    return `${esc(ma)}${ghiChu ? `<br><small>${esc(ghiChu)}</small>` : ''}`;
+}
 function formatDate(dateStr) {
     if (!dateStr) return '';
     let timeMatch = dateStr.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
@@ -145,7 +151,7 @@ async function loadData() {
             listPN.forEach((item) => {
                 let namSinh = item.ngay_sinh ? item.ngay_sinh.substring(6, 10) : '';
                 let row = `<tr>
-                    <td class="fw-bold">${item.ma_ho || ''}</td>
+                    <td class="fw-bold">${formatSoHoBaoCao(item)}</td>
                     <td class="fw-bold text-left">${item.ho_ten || ''}</td>
                     <td>${namSinh}</td>
                     <td>${item.so_con || ''}</td>
@@ -209,7 +215,7 @@ async function loadData() {
             listPN.forEach((item) => {
                 let namSinh = item.ngay_sinh ? item.ngay_sinh.substring(6, 10) : '';
                 let row = `<tr>
-                    <td>${item.ma_ho || ''}</td>
+                    <td>${formatSoHoBaoCao(item)}</td>
                     <td class="fw-bold text-start">${item.ho_ten || ''}</td>
                     <td>${namSinh}</td>
                     <td>${item.so_con || ''}</td>
@@ -326,7 +332,7 @@ async function loadData() {
 
                 let row = `<tr>
                     <td>${index + 1}</td>
-                    <td>${item.so_ho || item.ho_so || ''}</td>
+                    <td>${formatSoHoBaoCao(item)}</td>
                     <td class="text-center">
                         <div class="fw-bold">${tenCTV}</div>
                         <div class="text-muted small">${apDisplay}</div>
@@ -390,7 +396,7 @@ async function loadData() {
                 let apDisplay = tenAp ? "Ấp " + tenAp.replace(/^ấp\s+/i, '').trim() : "";
                 row = `<tr>
                     <td>${index + 1}</td>
-                    <td>${item.so_ho || item.ho_so || ''}</td>
+                    <td>${formatSoHoBaoCao(item)}</td>
                     <td class="text-center"><div class="fw-bold">${tenCTV}</div><div class="text-muted small">${apDisplay}</div></td>
                     <td>${item.ho_ten_me || ''}</td>
                     <td>${formatDate(item.ngay_sinh_me)}</td>
@@ -418,7 +424,7 @@ async function loadData() {
                         <div class="fw-bold">${tenCTV}</div>
                         <div class="text-muted small">${apDisplay}</div>
                     </td>
-                    <td>${item.so_ho || item.ho_so || ''}</td>
+                    <td>${formatSoHoBaoCao(item)}</td>
                     <td>${item.ma_the_bhyt_me || item.ma_the_bhyt || ''}</td>
                     <td class="fw-bold text-start">${item.ho_ten_me || ''}</td>
                     <td class="text-start">${item.noi_cu_tru || ''}</td>
@@ -447,7 +453,7 @@ async function loadData() {
 
                 row = `<tr>
                     <td>${index + 1}</td>
-                    <td>${item.so_ho || item.ho_so || ''}</td>
+                    <td>${formatSoHoBaoCao(item)}</td>
                     <td class="text-center">
                         <div class="fw-bold">${tenCTV}</div>
                         <div class="text-muted small">${apDisplay}</div>
@@ -472,7 +478,7 @@ async function loadData() {
 
                 row = `<tr>
                     <td>${index + 1}</td>
-                    <td>${item.so_ho || item.ho_so || ''}</td>
+                    <td>${formatSoHoBaoCao(item)}</td>
                     <td>${diaBan}</td>
                     <td class="fw-bold">${hoTen}</td>
                     <td>${ngaySinh}</td>
@@ -491,7 +497,7 @@ async function loadData() {
                 let tenAp = item.ap || '';
                 let apDisplay = tenAp ? "Ấp " + tenAp.replace(/^ấp\s+/i, '').trim() : "";
                 
-                let soHo = item.so_ho || '';
+                let soHo = formatSoHoBaoCao(item);
                 let maBhyt = item.ma_the_bhyt || '';
                 let hoTen = item.ho_ten || '';
                 let noiCuTru = item.noi_cu_tru || '';

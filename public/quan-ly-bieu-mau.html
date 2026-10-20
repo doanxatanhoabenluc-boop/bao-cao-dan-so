@@ -70,6 +70,11 @@
                     </div>
                 </div>
 
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                    <button type="button" class="btn btn-danger btn-sm" onclick="deleteSelectedRecords()"><i class="fa-solid fa-trash me-1"></i>Xóa các dòng đã chọn</button>
+                    <span id="selectedRowsCount" class="text-muted small">Đã chọn: 0 dòng</span>
+                </div>
+
                 <!-- Bảng hiển thị dữ liệu -->
                 <div class="table-responsive">
                     <table class="table table-bordered table-striped table-hover align-middle small">

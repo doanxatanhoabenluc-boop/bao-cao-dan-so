@@ -1,3 +1,9 @@
+function formatSoHoBaoCao(row, fallback = '') {
+    const ma = row?.ho_so ?? row?.so_ho ?? row?.ma_ho ?? fallback;
+    const ghiChu = row?.ghi_chu_ma_ho ?? '';
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    return `${esc(ma)}${ghiChu ? `<br><small>${esc(ghiChu)}</small>` : ''}`;
+}
 document.addEventListener("DOMContentLoaded", function () {
     fetchUserDataAndInit();
 });
@@ -218,7 +224,7 @@ function generateRowHtml(idx, r, stt) {
             let isNam = r.gioi_tinh === 'Nam';
             let ngaySinhConFormatted = formatDateVN(r.ngay_sinh_con);
             return `<tr>
-                <td>${r.ho_so || stt}</td>
+                <td>${formatSoHoBaoCao(r, stt)}</td>
                 <td class="text-left">${r.ho_ten_con || ''}</td>
                 <td>${isNam ? ngaySinhConFormatted : ''}</td>
                 <td>${!isNam ? ngaySinhConFormatted : ''}</td>
@@ -231,7 +237,7 @@ function generateRowHtml(idx, r, stt) {
             </tr>`;
         case 2:
             return `<tr>
-                <td>${r.so_ho || stt}</td>
+                <td>${formatSoHoBaoCao(r, stt)}</td>
                 <td class="text-left">${r.ho_ten_tre || r.ho_ten_con || ''}</td>
                 <td>${r.ma_the_bhyt_me || r.so_the_bhyt || ''}</td>
                 <td>${r.suy_giap || r.benh_suy_giap || ''}</td>
@@ -243,7 +249,7 @@ function generateRowHtml(idx, r, stt) {
             </tr>`;
         case 3:
             return `<tr>
-                <td>${r.ho_so || stt}</td>
+                <td>${formatSoHoBaoCao(r, stt)}</td>
                 <td class="text-left">${r.ho_ten || ''}</td>
                 <td>${r.so_the_bhyt || ''}</td>
                 <td>${r.quan_he || ''}</td>
@@ -254,7 +260,7 @@ function generateRowHtml(idx, r, stt) {
             </tr>`;
         case 4:
             return `<tr>
-                <td>${r.ho_so || stt}</td>
+                <td>${formatSoHoBaoCao(r, stt)}</td>
                 <td class="text-left">${r.ho_ten || ''}</td>
                 <td>${r.so_the_bhyt || ''}</td>
                 <td>${r.quan_he || ''}</td>
@@ -268,7 +274,7 @@ function generateRowHtml(idx, r, stt) {
             </tr>`;
         case 5:
             return `<tr>
-                <td>${r.ho_so || stt}</td>
+                <td>${formatSoHoBaoCao(r, stt)}</td>
                 <td class="text-left">${r.ho_ten || ''}</td>
                 <td>${r.so_the_bhyt || ''}</td>
                 <td>${r.quan_he || ''}</td>
@@ -280,7 +286,7 @@ function generateRowHtml(idx, r, stt) {
             </tr>`;
         case 6:
             return `<tr>
-                <td>${r.ho_so || stt}</td>
+                <td>${formatSoHoBaoCao(r, stt)}</td>
                 <td class="text-left">${r.ho_ten || ''}</td>
                 <td>${r.so_the_bhyt || ''}</td>
                 <td>${r.gioi_tinh || ''}</td>
@@ -291,7 +297,7 @@ function generateRowHtml(idx, r, stt) {
             </tr>`;
         case 7:
             return `<tr>
-                <td>${r.ho_so || stt}</td>
+                <td>${formatSoHoBaoCao(r, stt)}</td>
                 <td class="text-left">${r.ho_ten_vo || ''}</td>
                 <td>${r.so_the_bhyt || ''}</td>
                 <td>${formatDateVN(r.ngay_sinh)}</td>
@@ -300,7 +306,7 @@ function generateRowHtml(idx, r, stt) {
             </tr>`;
         case 8:
             return `<tr>
-                <td>${r.ho_so || stt}</td>
+                <td>${formatSoHoBaoCao(r, stt)}</td>
                 <td class="text-left">${r.ho_ten_vo || ''}</td>
                 <td>${r.so_the_bhyt || ''}</td>
                 <td>${formatDateVN(r.ngay_sinh)}</td>
@@ -321,7 +327,7 @@ function generateRowHtml(idx, r, stt) {
             }
 
             let htmlRow = `<tr>
-                <td>${r.ho_so || stt}</td>
+                <td>${formatSoHoBaoCao(r, stt)}</td>
                 <td class="text-left">${r.ho_ten || ''}</td>
                 <td>${r.so_the_bhyt || ''}</td>
                 <td>${formatDateVN(r.ngay_sinh)}</td>
@@ -343,7 +349,7 @@ function generateRowHtml(idx, r, stt) {
             
             // Dòng 1: Tuần 12 (Đã bổ sung biến ${ngayThucHien12} vào ô tương ứng)
             let row1 = `<tr>
-                <td rowspan="2">${r.so_ho || stt}</td>
+                <td rowspan="2">${formatSoHoBaoCao(r, stt)}</td>
                 <td rowspan="2">${r.ma_the_bhyt || r.so_the_bhyt || ''}</td>
                 <td rowspan="2" class="text-left">${r.ho_ten || ''}</td>
                 <td rowspan="2" class="text-left">${r.noi_cu_tru || ''}</td>
@@ -371,7 +377,7 @@ function generateRowHtml(idx, r, stt) {
             return row1 + row2;
        case 11:
         return `<tr>
-            <td>${r.ho_so || stt}</td>
+            <td>${formatSoHoBaoCao(r, stt)}</td>
             <td>${r.ma_so_doi_tuong || ''}</td>
             <td class="text-left">${r.ho_ten || ''}</td>
             <td>${r.so_the_bhyt || ''}</td>

@@ -2,6 +2,9 @@
 const columnLabels = {
     id: "ID",
     ho_so: "Số hộ",
+    so_ho: "Số hộ",
+    ma_ho: "Số hộ",
+    ghi_chu_ma_ho: "Ghi chú mã hộ",
     ho_ten_con: "Họ tên con",
     ngay_sinh_con: "Ngày sinh con",
     gioi_tinh: "Giới tính",
@@ -55,7 +58,71 @@ const columnLabels = {
 
 let allTableData = []; 
 let currentPage = 1;   
-const rowsPerPage = 10; 
+const rowsPerPage = 10;
+
+
+function renderSoHo(row) {
+    const maHo =
+        row?.ma_ho ??
+        row?.ho_so ??
+        row?.so_ho ??
+        row?.maho ??
+        '';
+
+    const ghiChu =
+        row?.ghi_chu_ma_ho ??
+        row?.ghi_chu_maho ??
+        row?.ghichumaho ??
+        '';
+
+    const escapeHtml = value =>
+        String(value ?? '').replace(/[&<>"']/g, ch => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[ch]));
+
+    return `
+        ${escapeHtml(maHo)}
+        ${ghiChu
+            ? `<br><span class="text-muted">${escapeHtml(ghiChu)}</span>`
+            : ''}
+    `;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function updateSelectedRowsCount() {
+    const count = document.querySelectorAll('.admin-row-select:checked').length;
+    const el = document.getElementById('selectedRowsCount');
+    if (el) el.textContent = `Đã chọn: ${count} dòng`;
+}
+function toggleSelectAllRows(master) {
+    document.querySelectorAll('.admin-row-select').forEach(cb => cb.checked = master.checked);
+    updateSelectedRowsCount();
+}
+async function deleteSelectedRecords() {
+    const selected = [...document.querySelectorAll('.admin-row-select:checked')];
+    if (!selected.length) { alert('Bạn hãy chọn ít nhất một dòng cần xóa.'); return; }
+    if (!confirm(`Bạn có chắc chắn muốn xóa ${selected.length} dòng đã chọn? Thao tác này không thể hoàn tác.`)) return;
+    const table = document.getElementById('selectManagedTable')?.value;
+    let deleted = 0, failed = 0;
+    for (const cb of selected) {
+        try {
+            const res = await fetch(`/api/data/${table}/${encodeURIComponent(cb.dataset.id)}`, { method: 'DELETE' });
+            const result = await res.json();
+            if (res.ok && result.success) deleted++; else failed++;
+        } catch (_) { failed++; }
+    }
+    alert(`Đã xóa ${deleted} dòng.${failed ? ` Có ${failed} dòng xóa chưa thành công.` : ''}`);
+    window.currentTableLoaded = false;
+    window.currentLoadedTableName = null;
+    await loadTableDataAdmin(1);
+}
+ 
 
 document.addEventListener("DOMContentLoaded", () => {
     if (document.getElementById('adminTableBody')) {
@@ -138,6 +205,7 @@ async function loadTableDataAdmin(page = 1) {
     if (tableName === 'table_10' || tableName.includes('10')) {
         let headerHtml = `
             <tr>
+                <th rowspan="2" class="align-middle text-center"><input type="checkbox" onchange="toggleSelectAllRows(this)" aria-label="Chọn tất cả"></th>
                 <th rowspan="2" class="align-middle text-center">TT</th>
                 <th rowspan="2" class="align-middle text-center">Tên CTV</th>
                 <th rowspan="2" class="align-middle text-center">Số hộ</th>
@@ -172,12 +240,13 @@ async function loadTableDataAdmin(page = 1) {
             const absoluteIndex = startIndex + index + 1;
             const nguoiNhap = row.nguoi_nhap || row.user_nhap || row.created_by || '';
             const thoiGianNhap = row.created_at || row.ngay_nhap || row.time_stamp || row.updated_at || '';
-
+            console.log('DỮ LIỆU DÒNG:', row);
             bodyHtml += `
                 <tr>
+                    <td class=\"text-center align-middle\"><input type=\"checkbox\" class=\"admin-row-select\" data-id=\"${row.id}\" onchange=\"updateSelectedRowsCount()\" aria-label=\"Chọn dòng\"></td>
                     <td class="text-center align-middle">${absoluteIndex}</td>
                     <td class="align-middle">${row.ten_ctv || row.ctv || ''}</td>
-                    <td class="text-center align-middle">${row.so_ho || row.ho_so || ''}</td>
+                    <td class="text-center align-middle">${renderSoHo(row)}</td>
                     <td class="text-center align-middle">${row.ma_the_bhyt || ''}</td>
                     <td class="align-middle">${row.ho_ten || ''}</td>
                     <td class="align-middle">${row.noi_cu_tru || row.dia_chi || ''}</td>
@@ -206,6 +275,7 @@ async function loadTableDataAdmin(page = 1) {
     } else if (tableName === 'table_2' || tableName.includes('2')) {
         let headerHtml = `
             <tr>
+                <th rowspan="2" class="align-middle text-center"><input type="checkbox" onchange="toggleSelectAllRows(this)" aria-label="Chọn tất cả"></th>
                 <th rowspan="2" class="align-middle text-center">TT</th>
                 <th rowspan="2" class="align-middle text-center">Tên CTV</th>
                 <th rowspan="2" class="align-middle text-center">Số hộ</th>
@@ -254,9 +324,10 @@ async function loadTableDataAdmin(page = 1) {
 
             bodyHtml += `
                 <tr>
+                    <td class=\"text-center align-middle\"><input type=\"checkbox\" class=\"admin-row-select\" data-id=\"${row.id}\" onchange=\"updateSelectedRowsCount()\" aria-label=\"Chọn dòng\"></td>
                     <td class="text-center align-middle">${absoluteIndex}</td>
                     <td class="align-middle">${row.ten_ctv || row.ctv || ''}</td>
-                    <td class="text-center align-middle">${soHo}</td>
+                    <td class="text-center align-middle">${renderSoHo(row)}</td>
                     <td class="text-center align-middle">${maBhytMe}</td>
                     <td class="align-middle">${hoTenMe}</td>
                     <td class="align-middle">${noiCuTru}</td>
@@ -281,9 +352,9 @@ async function loadTableDataAdmin(page = 1) {
         });
         if (bodyRow) bodyRow.innerHTML = bodyHtml;
     } else {
-        const columns = Object.keys(paginatedData[0]).filter(col => col !== 'id');
+        const columns = Object.keys(paginatedData[0]).filter(col => col !== 'id' && col !== 'ghi_chu_ma_ho');
         
-        let headerHtml = '<tr><th class="text-center" style="width: 60px;">STT</th>';
+        let headerHtml = '<tr><th class="text-center" style="width: 42px;"><input type="checkbox" onchange="toggleSelectAllRows(this)" aria-label="Chọn tất cả"></th><th class="text-center" style="width: 60px;">STT</th>';
         columns.forEach(col => {
             let displayName = (typeof columnLabels !== 'undefined' && columnLabels[col]) ? columnLabels[col] : col.replace(/_/g, ' ');
             headerHtml += `<th>${displayName}</th>`;
@@ -294,12 +365,32 @@ async function loadTableDataAdmin(page = 1) {
         let bodyHtml = '';
         paginatedData.forEach((row, index) => {
             const absoluteIndex = startIndex + index + 1;
-            bodyHtml += `<tr><td class="text-center align-middle">${absoluteIndex}</td>`;
+            bodyHtml += `<tr><td class="text-center align-middle"><input type="checkbox" class="admin-row-select" data-id="${row.id}" onchange="updateSelectedRowsCount()" aria-label="Chọn dòng"></td><td class="text-center align-middle">${absoluteIndex}</td>`;
+            
             
             columns.forEach(col => {
-                let cellVal = row[col];
-                bodyHtml += `<td class="align-middle">${cellVal !== null && cellVal !== undefined ? cellVal : ''}</td>`;
+                // Hiển thị mã hộ kèm ghi chú như Bảng 2
+                const isMaHo = [
+                    'ma_ho',
+                    'ho_so',
+                    'so_ho',
+                    'maho'
+                ].includes(col);
+
+                let cellHtml;
+
+                if (isMaHo) {
+                    cellHtml = renderSoHo(row);
+                } else {
+                    const cellVal = row[col];
+                    cellHtml = cellVal !== null && cellVal !== undefined
+                        ? escapeHtml(cellVal)
+                        : '';
+                }
+
+                bodyHtml += `<td class="align-middle">${cellHtml}</td>`;
             });
+
 
             const rowJson = encodeURIComponent(JSON.stringify(row));
             bodyHtml += `
@@ -313,6 +404,7 @@ async function loadTableDataAdmin(page = 1) {
     }
 
     if (paginationContainer) renderPagination(totalPages, currentPage, paginationContainer);
+    updateSelectedRowsCount();
 }
 
 // ==================== HÀM PHÂN TRANG ====================
