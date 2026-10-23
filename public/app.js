@@ -130,6 +130,7 @@ const tableConfigs = {
         { name: "ghi_chu", label: "Ghi chú", type: "text" }
     ]},
     "table_9": { title: "9. Phụ nữ có thông tin thai sản", fields: [
+        { name: "search_phunu_helper", label: "🔍 Dò tìm Phụ nữ từ danh sách 15-49 (Nhập Mã hộ hoặc Họ tên)", type: "search-phunu-master" },
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ghi_chu_ma_ho", label: "Ghi chú mã hộ", type: "text-hidden-dynamic" },
         { name: "ho_ten", label: "Họ tên phụ nữ", type: "text", required: true },

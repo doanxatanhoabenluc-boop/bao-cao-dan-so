@@ -310,7 +310,16 @@ async function initDatabase() {
             ALTER TABLE table_6 ADD COLUMN IF NOT EXISTS so_the_bhyt TEXT;
             ALTER TABLE table_7 ADD COLUMN IF NOT EXISTS so_the_bhyt TEXT;
             ALTER TABLE table_8 ADD COLUMN IF NOT EXISTS so_the_bhyt TEXT;
+            
+            -- Bảng 9: bổ sung các cột còn thiếu để tránh lỗi khi lưu
+            ALTER TABLE table_9 ADD COLUMN IF NOT EXISTS ho_so TEXT;
+            ALTER TABLE table_9 ADD COLUMN IF NOT EXISTS ho_ten TEXT;
+            ALTER TABLE table_9 ADD COLUMN IF NOT EXISTS ngay_sinh TEXT;
             ALTER TABLE table_9 ADD COLUMN IF NOT EXISTS so_the_bhyt TEXT;
+            ALTER TABLE table_9 ADD COLUMN IF NOT EXISTS ngay_su_kien TEXT;
+            ALTER TABLE table_9 ADD COLUMN IF NOT EXISTS su_kien TEXT;
+            ALTER TABLE table_9 ADD COLUMN IF NOT EXISTS mang_thai_lan_thu TEXT;
+            
             ALTER TABLE table_10 ADD COLUMN IF NOT EXISTS ma_the_bhyt TEXT;
 
             -- Đảm bảo bảng có sẵn các cột này

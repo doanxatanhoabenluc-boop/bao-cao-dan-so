@@ -93,16 +93,21 @@ async function searchPhuNuMasterList(keyword) {
 function selectPhuNuFromMasterList(item) {
     let hoSoInput = document.querySelector('[name="ho_so"]');
     
-    let hoTenInput = (typeof currentTable !== 'undefined' && currentTable === 'table_1') 
-        ? document.querySelector('[name="ho_ten_me"]') 
-        : document.querySelector('[name="ho_ten_vo"]');
-        
-    let bhytInput = (typeof currentTable !== 'undefined' && currentTable === 'table_1') 
-        ? document.querySelector('[name="so_the_bhyt_me"]') 
+    const isTable1 = typeof currentTable !== 'undefined' && currentTable === 'table_1';
+    const isTable9 = typeof currentTable !== 'undefined' && currentTable === 'table_9';
+
+    let hoTenInput = isTable1
+        ? document.querySelector('[name="ho_ten_me"]')
+        : isTable9
+            ? document.querySelector('[name="ho_ten"]')
+            : document.querySelector('[name="ho_ten_vo"]');
+
+    let bhytInput = isTable1
+        ? document.querySelector('[name="so_the_bhyt_me"]')
         : document.querySelector('[name="so_the_bhyt"]');
-        
-    let ngaySinhInput = (typeof currentTable !== 'undefined' && currentTable === 'table_1') 
-        ? document.querySelector('[name="ngay_sinh_me"]') 
+
+    let ngaySinhInput = isTable1
+        ? document.querySelector('[name="ngay_sinh_me"]')
         : document.querySelector('[name="ngay_sinh"]');
 
     if (hoSoInput) hoSoInput.value = item.ma_ho || '';
