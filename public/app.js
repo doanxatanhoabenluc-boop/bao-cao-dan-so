@@ -883,8 +883,10 @@ function showSharedHouseholdConfirmModal(hoSo, tenCu, tenMoi) {
         document.getElementById('sharedHouseholdCode').textContent =
             String(hoSo || '');
 
+        const oldNames = Array.isArray(tenCu) ? tenCu : [tenCu];
         document.getElementById('sharedHouseholdOldName').textContent =
-            String(tenCu || '');
+            oldNames.filter(Boolean).map((name, index) => `${index + 1}. ${name}`).join('\n') || '(Chưa có tên)';
+        document.getElementById('sharedHouseholdOldName').style.whiteSpace = 'pre-line';
 
         document.getElementById('sharedHouseholdNewName').textContent =
             String(tenMoi || '');
@@ -1155,6 +1157,10 @@ async function saveData(e) {
         }
     }
 
+    // Ghi nhận việc người dùng đã xác nhận người mới cùng chung hộ.
+    // Cờ này được gửi tới API đồng bộ để máy chủ cũng kiểm tra xác nhận.
+    let sharedHouseholdConfirmed = false;
+
     // =========================================================
     // 2. KIỂM TRA TRÙNG MÃ HỘ NHƯNG KHÁC TÊN
     // BẮT BUỘC QUAY LẠI SỬA, KHÔNG CHO XÁC NHẬN BỎ QUA.
@@ -1206,10 +1212,12 @@ async function saveData(e) {
 if (checkResult.conflict) {
 
     // Chỉ Bảng 3 và Bảng 5 được xác nhận dùng chung hộ.
-    const allowSharedHousehold = [
-        'table_3',
-        'table_5'
-    ].includes(currentTable);
+    //const allowSharedHousehold = [
+       // 'table_3',
+        //'table_5'
+   // ].includes(currentTable);
+   // Tất cả bảng đã gọi check-ma-ho đều được xác nhận dùng chung hộ.
+const allowSharedHousehold = true;
 
     if (allowSharedHousehold) {
 
@@ -1234,7 +1242,9 @@ if (checkResult.conflict) {
             return;
         }
 
-        // Đã xác nhận dùng chung hộ:
+        // Đã xác nhận dùng chung hộ; gửi cờ này cho API đồng bộ.
+        sharedHouseholdConfirmed = true;
+
         // Cho phép đi tiếp đến các bước kiểm tra,
         // xem trước, lưu và đồng bộ hiện có.
         console.log(
@@ -1686,7 +1696,8 @@ if (
             ngay_sinh_con: dataObj.ngay_sinh_con || '',
             noi_de: dataObj.noi_de || '',
             diabanh: noiCuTruVal,
-            con_thu_may: dataObj.con_thu_may || ''
+            con_thu_may: dataObj.con_thu_may || '',
+            shared_household_confirmed: sharedHouseholdConfirmed
         };
 
         await Promise.all([
@@ -1796,7 +1807,8 @@ if (
             bptt_moi: dataObj.bptt_moi || '',
             so_con_hien_co: dataObj.so_con_hien_co || dataObj.so_con || '',
             noi_thuc_hien: dataObj.noi_thuc_hien || '',
-            diabanh: diaBanhUser 
+            diabanh: diaBanhUser,
+            shared_household_confirmed: sharedHouseholdConfirmed
         };
 
         await runSync(

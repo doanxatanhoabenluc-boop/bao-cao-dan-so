@@ -200,6 +200,7 @@ async function onReportApChange() {
 }
 
 async function loadReportData(page = 1) {
+    capNhatTieuDeThangBaoCao();
     reportCurrentPage = page;
     let year = document.getElementById('reportYear').value;
     document.getElementById('lblReportYear').textContent = year;
@@ -226,28 +227,28 @@ async function loadReportData(page = 1) {
             }
 
             res.data.forEach((item) => {
-                tbody.innerHTML += `
+                let html = `
                     <tr>
-                        <td class="fw-bold">${item.ma_ho}</td>
-                        <td class="text-left fw-bold">${item.ho_ten}</td>
+                        <td class="fw-bold">${item.ma_ho || ''}</td>
+                        <td class="text-left fw-bold">${item.ho_ten || ''}</td>
                         <td>${item.ngay_sinh || ''}</td>
-                        <td>${item.so_con || ''}</td>
+                        <td>${item.so_con ?? ''}</td>
                         <td>${item.nam_sinh_con || ''}</td>
-                        <td>${item.t1 || ''}</td>
-                        <td>${item.t2 || ''}</td>
-                        <td>${item.t3 || ''}</td>
-                        <td>${item.t4 || ''}</td>
-                        <td>${item.t5 || ''}</td>
-                        <td>${item.t6 || ''}</td>
-                        <td>${item.t7 || ''}</td>
-                        <td>${item.t8 || ''}</td>
-                        <td>${item.t9 || ''}</td>
-                        <td>${item.t10 || ''}</td>
-                        <td>${item.t11 || ''}</td>
-                        <td>${item.t12 || ''}</td>
-                        <td>${item.ghi_chu || ''}</td>
-                    </tr>
                 `;
+
+                for (let i = 1; i <= 12; i++) {
+                    const value = item[`t${i}`] || '';
+                    const isChanged = item[`t${i}_changed`] === true;
+
+                    html += `
+                        <td class="${isChanged ? 'bptt-thay-doi-thang' : ''}">
+                            ${value}
+                        </td>
+                    `;
+                }
+
+                html += `<td>${item.ghi_chu || ''}</td></tr>`;
+                tbody.insertAdjacentHTML('beforeend', html);
             });
 
             // Đệm đủ 16 dòng cho 1 trang A4
@@ -481,17 +482,111 @@ function exportExcelReport() {
     URL.revokeObjectURL(url);
 }
 let currentMaDinhDanh = '';
+let isAddingPhuNu = false;
+
+async function openAddPhuNuModal() {
+    try {
+        const modalEl = document.getElementById('editModal');
+        const form = document.getElementById('editForm');
+        const btnSave = document.getElementById('btnSavePhuNu');
+
+        if (!modalEl) {
+            throw new Error('Không tìm thấy phần tử #editModal trong HTML.');
+        }
+        if (!form) {
+            throw new Error('Không tìm thấy phần tử #editForm trong HTML.');
+        }
+        if (!btnSave) {
+            throw new Error('HTML thiếu id="btnSavePhuNu" ở nút Lưu hồ sơ.');
+        }
+
+        isAddingPhuNu = true;
+        currentMaDinhDanh = '';
+
+        form.reset();
+
+        const setValue = (id, value) => {
+            const el = document.getElementById(id);
+            if (!el) {
+                throw new Error(`Không tìm thấy phần tử #${id} trong HTML.`);
+            }
+            el.value = value;
+        };
+
+        setValue('editMaDinhDanh', '');
+        setValue('editHoTen', '');
+        setValue('editMaHo', '');
+        setValue('editNgaySinh', '');
+        setValue('editSoCon', '0');
+        setValue('editNamSinhCon', '');
+        setValue('editSoTheBHYT', '');
+
+        const diaBanInput = document.getElementById('editDiaBan');
+        if (!diaBanInput) {
+            throw new Error('Không tìm thấy phần tử #editDiaBan trong HTML.');
+        }
+
+        diaBanInput.value = currentUser?.diabanh || '101, Xã Lương Hòa';
+
+        const role = String(currentUser?.role || '').trim().toLowerCase();
+        const isAdminOrLeader = ['admin', 'lãnh đạo'].includes(role);
+        diaBanInput.disabled = !isAdminOrLeader;
+
+        document.getElementById('editModalTitle').textContent =
+            'Thêm mới hồ sơ phụ nữ 15–49';
+
+        btnSave.textContent = 'Thêm hồ sơ';
+
+        document.getElementById('tblHistoryBody').innerHTML =
+            '<tr><td colspan="4" class="text-center text-muted">Lưu hồ sơ trước, sau đó có thể thêm lịch sử BPTT.</td></tr>';
+
+        setValue('newMaBptt', '');
+        setValue('newNgayApDung', '');
+        setValue('newNoiThucHien', '');
+
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+
+    } catch (err) {
+        console.error('Lỗi mở cửa sổ Thêm mới:', err);
+        alert('Không mở được cửa sổ Thêm mới: ' + err.message);
+    }
+}
+
+
 async function openEditModal(item) {
+    isAddingPhuNu = false;
     currentMaDinhDanh = item.ma_dinh_danh;
+    if (!document.getElementById('btnSavePhuNu')) {
+        alert('HTML thiếu id="btnSavePhuNu" ở nút Lưu hồ sơ.');
+        return;
+    }
     document.getElementById('editMaDinhDanh').value = item.ma_dinh_danh;
-    document.getElementById('editHoTen').value = item.ho_ten;
-    document.getElementById('editMaHo').value = item.ma_ho;
+    document.getElementById('editHoTen').value = item.ho_ten || '';
+    document.getElementById('editMaHo').value = item.ma_ho || '';
     document.getElementById('editNgaySinh').value = item.ngay_sinh || '';
-    document.getElementById('editSoCon').value = item.so_con;
+    document.getElementById('editSoCon').value = item.so_con ?? 0;
     document.getElementById('editNamSinhCon').value = item.nam_sinh_con || '';
+    document.getElementById('editSoTheBHYT').value = item.so_the_bhyt || '';
+    document.getElementById('editDiaBan').value = item.diabanh || '';
+
+    const role = String(currentUser?.role || '').toLowerCase();
+    document.getElementById('editDiaBan').disabled =
+        !['admin', 'lãnh đạo'].includes(role);
+
+    document.getElementById('editModalTitle').textContent =
+        'Cập nhật Hồ sơ & Theo dõi Lịch sử BPTT';
+
+    document.getElementById('btnSavePhuNu').textContent =
+        'Lưu thay đổi nhân khẩu';
 
     await loadHistory(item.ma_dinh_danh);
-    new bootstrap.Modal(document.getElementById('editModal')).show();
+    const modalEl = document.getElementById('editModal');
+
+    if (!modalEl) {
+        throw new Error('Không tìm thấy #editModal trong HTML.');
+    }
+
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
 }
 
 async function loadHistory(maDinhDanh) {
@@ -543,29 +638,244 @@ async function loadHistory(maDinhDanh) {
         tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">${escapeHtmlBienDong(err.message || 'Không tải được lịch sử BPTT.')}</td></tr>`;
     }
 }
+// Tạo kỳ báo cáo từ tháng hiện tại đến 11 tháng tiếp theo.
+function capNhatTieuDeThangBaoCao() {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
-async function savePhuNu() {
-    let data = {
-        ho_ten: document.getElementById('editHoTen').value,
-        ma_ho: document.getElementById('editMaHo').value,
-        diabanh: "101, Xã Lương Hòa",
-        ngay_sinh: document.getElementById('editNgaySinh').value,
-        so_con: document.getElementById('editSoCon').value,
-        nam_sinh_con: document.getElementById('editNamSinhCon').value
-    };
+    const monthNames = [
+        '1', '2', '3', '4', '5', '6',
+        '7', '8', '9', '10', '11', '12'
+    ];
 
-    let res = await fetch(`/api/admin/quan-ly-phu-nu/${currentMaDinhDanh}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    }).then(r => r.json());
+    for (let i = 0; i < 12; i++) {
+        const date = new Date(currentYear, currentMonth + i, 1);
+        const header = document.getElementById(`reportMonth${i + 1}`);
 
-    alert(res.message);
-    if (res.success) {
-        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
-        loadData(currentPage);
+        if (header) {
+            header.textContent = monthNames[date.getMonth()];
+            header.title = `Tháng ${date.getMonth() + 1}/${date.getFullYear()}`;
+        }
+    }
+
+    const periodLabel = document.getElementById('lblReportYear');
+
+    if (periodLabel) {
+        const start = new Date(currentYear, currentMonth, 1);
+        const end = new Date(currentYear, currentMonth + 11, 1);
+
+        periodLabel.textContent =
+            `Tháng ${start.getMonth() + 1}/${start.getFullYear()} – ` +
+            `Tháng ${end.getMonth() + 1}/${end.getFullYear()}`;
     }
 }
+function xacNhanDungChungHo(maHo, tenCu, tenMoi) {
+    return new Promise((resolve) => {
+        const modalEl = document.createElement('div');
+
+        modalEl.className = 'modal fade';
+        modalEl.tabIndex = -1;
+
+        modalEl.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            Xác nhận dùng chung mã hộ
+                        </h5>
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Đóng"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <p>
+                            Mã hộ <strong class="ma-ho"></strong>
+                            đã có thành viên:
+                            <strong class="ten-cu"></strong>.
+                        </p>
+
+                        <p>
+                            Hồ sơ đang thêm:
+                            <strong class="ten-moi"></strong>.
+                        </p>
+
+                        <div class="alert alert-warning">
+                            Một hộ có thể có nhiều thành viên.
+                            Vui lòng xác nhận người này cùng chung hộ
+                            với thành viên đã có.
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="xacNhanCungHo">
+                            <label class="form-check-label"
+                                   for="xacNhanCungHo">
+                                Người này cùng chung hộ với người đã có
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Hủy
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-primary btn-tiep-tuc"
+                                disabled>
+                            Tiếp tục
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Dùng textContent để hiển thị dữ liệu an toàn.
+        modalEl.querySelector('.ma-ho').textContent = maHo;
+        modalEl.querySelector('.ten-cu').textContent =
+            tenCu || 'Thành viên đã có';
+        modalEl.querySelector('.ten-moi').textContent = tenMoi;
+
+        document.body.appendChild(modalEl);
+
+        const checkbox = modalEl.querySelector('#xacNhanCungHo');
+        const btnTiepTuc = modalEl.querySelector('.btn-tiep-tuc');
+        const modal = new bootstrap.Modal(modalEl);
+
+        let ketQua = false;
+
+        checkbox.addEventListener('change', () => {
+            btnTiepTuc.disabled = !checkbox.checked;
+        });
+
+        btnTiepTuc.addEventListener('click', () => {
+            if (!checkbox.checked) return;
+
+            ketQua = true;
+            modal.hide();
+        });
+
+        modalEl.addEventListener('hidden.bs.modal', () => {
+            modal.dispose();
+            modalEl.remove();
+            resolve(ketQua);
+        }, { once: true });
+
+        modal.show();
+    });
+}
+async function savePhuNu() {
+    const data = {
+        ho_ten: document.getElementById('editHoTen').value.trim(),
+        ma_ho: document.getElementById('editMaHo').value.trim(),
+        diabanh: document.getElementById('editDiaBan').value.trim(),
+        ngay_sinh: document.getElementById('editNgaySinh').value,
+        so_con: document.getElementById('editSoCon').value || 0,
+        nam_sinh_con: document.getElementById('editNamSinhCon').value.trim(),
+        so_the_bhyt: document.getElementById('editSoTheBHYT').value.trim()
+    };
+
+    if (!data.ho_ten || !data.ma_ho || !data.diabanh) {
+        alert('Vui lòng nhập đầy đủ họ tên, mã hộ và địa bàn.');
+        return;
+    }
+
+    if (!Number.isInteger(Number(data.so_con)) ||
+        Number(data.so_con) < 0) {
+        alert('Số con phải là số nguyên không âm.');
+        return;
+    }
+
+    const isNew = isAddingPhuNu;
+
+    // Chỉ kiểm tra mã hộ khi thêm mới.
+    // Không thay đổi luồng cập nhật hồ sơ hiện có.
+    if (isNew) {
+        try {
+            const checkResponse = await fetch('/api/admin/check-ma-ho', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    ho_so: data.ma_ho,
+                    ho_ten: data.ho_ten
+                })
+            });
+
+            const check = await checkResponse.json();
+
+            if (!checkResponse.ok) {
+                alert(check.message || 'Không kiểm tra được mã hộ.');
+                return;
+            }
+
+            // Mã hộ đã tồn tại nhưng tên thành viên khác.
+            if (check.exists && check.conflict) {
+                const dongY = await xacNhanDungChungHo(
+                    data.ma_ho,
+                    check.tenCu,
+                    data.ho_ten
+                );
+
+                // Không xác nhận hoặc đóng hộp thoại: dừng lưu.
+                if (!dongY) {
+                    return;
+                }
+            }
+        } catch (err) {
+            console.error('Lỗi kiểm tra mã hộ:', err);
+            alert('Không thể kiểm tra mã hộ. Vui lòng thử lại.');
+            return;
+        }
+    }
+
+    // Giữ nguyên API thêm mới và cập nhật đang sử dụng.
+    const url = isNew
+        ? '/api/admin/quan-ly-phu-nu'
+        : `/api/admin/quan-ly-phu-nu/${encodeURIComponent(currentMaDinhDanh)}`;
+
+    try {
+        const response = await fetch(url, {
+            method: isNew ? 'POST' : 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const res = await response.json();
+
+        if (!response.ok || !res.success) {
+            alert(res.message || 'Không thể lưu hồ sơ.');
+            return;
+        }
+
+        alert(res.message || 'Lưu hồ sơ thành công.');
+
+        bootstrap.Modal
+            .getInstance(document.getElementById('editModal'))
+            ?.hide();
+
+        if (isNew) {
+            isAddingPhuNu = false;
+            currentMaDinhDanh = res.ma_dinh_danh || '';
+            await loadData(1);
+        } else {
+            await loadData(currentPage);
+        }
+    } catch (err) {
+        console.error('Lỗi lưu hồ sơ phụ nữ 15–49:', err);
+        alert('Lỗi kết nối máy chủ khi lưu hồ sơ.');
+    }
+}
+
 
 async function addHistory() {
     const data = {

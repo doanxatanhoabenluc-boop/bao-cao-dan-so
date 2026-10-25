@@ -1484,10 +1484,12 @@ app.get('/api/search-phu-nu-15-49', async (req, res) => {
 
 // ==================== API ĐỒNG BỘ TỰ ĐỘNG PHỤ NỮ 15-49 TỪ BẢNG 1 ====================
 app.post('/api/admin/sync-phu-nu-from-table1', async (req, res) => {
-    if (!req.session.user) return res.status(401).json({ success: false });
-    
+    if (!req.session.user) {
+        return res.status(401).json({ success: false, message: 'Chưa đăng nhập' });
+    }
+
+    const client = await pool.connect();
     try {
-        
         const {
             ho_ten_me,
             ngay_sinh_me,
@@ -1495,67 +1497,131 @@ app.post('/api/admin/sync-phu-nu-from-table1', async (req, res) => {
             ngay_sinh_con,
             noi_de,
             diabanh,
-            con_thu_may
+            con_thu_may,
+            shared_household_confirmed
         } = req.body;
 
-        const ho_so = String(req.body.ho_so || req.body.so_ho || '').trim();
-
-        if (!ho_so || !ho_ten_me) {
+        const hoSoClean = String(req.body.ho_so || req.body.so_ho || '').trim();
+        const hoTenClean = String(ho_ten_me || '').trim().replace(/\s+/g, ' ');
+        if (!hoSoClean || !hoTenClean) {
             return res.status(400).json({
                 success: false,
-                message: "Thiếu mã hộ hoặc họ tên mẹ, không thể đồng bộ phụ nữ 15-49."
+                message: 'Thiếu mã hộ hoặc họ tên mẹ, không thể đồng bộ phụ nữ 15-49.'
             });
         }
 
-        if (!ho_so || !ho_ten_me) return res.json({ success: true });
+        const normalizeName = value => String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[đĐ]/g, 'd')
+            .toLowerCase()
+            .replace(/\s+/g, ' ')
+            .trim();
 
-        const prefix = (diabanh || '101').trim().substring(0, 3);
-        const maHoClean = ho_so.trim();
-        const maDinhDanh = `${prefix}_${maHoClean}`;
-        const namSinhCon = ngay_sinh_con ? ngay_sinh_con.substring(0, 4) : '';
+        await client.query('BEGIN');
 
-        // Kiểm tra xem người mẹ đã tồn tại trong danh sách 15-49 chưa
-        const findMom = await pool.query(`
-            SELECT ma_dinh_danh, so_con FROM phu_nu_15_49 
-            WHERE ma_ho = $1 AND REGEXP_REPLACE(LOWER(TRIM(ho_ten)), '\\s+', ' ', 'g') = REGEXP_REPLACE(LOWER(TRIM($2)), '\\s+', ' ', 'g')
-            LIMIT 1
-        `, [maHoClean, ho_ten_me]);
+        // Lấy TẤT CẢ người trong cùng hộ; mã hộ không phải định danh cá nhân.
+        const householdRes = await client.query(`
+            SELECT ma_dinh_danh, ho_ten, so_con
+            FROM phu_nu_15_49
+            WHERE TRIM(ma_ho) = $1
+            FOR UPDATE
+        `, [hoSoClean]);
 
-        let targetMaDinhDanh = maDinhDanh;
+        const existingWoman = householdRes.rows.find(row =>
+            normalizeName(row.ho_ten) === normalizeName(hoTenClean)
+        );
 
-        // 👇 ĐẶT ĐOẠN CODE CỦA BẠN VÀO NGAY KHÚC NÀY 👇
-        if (findMom.rows.length > 0) {
-            targetMaDinhDanh = findMom.rows[0].ma_dinh_danh;
-            let currentSoCon = (Number(findMom.rows[0].so_con) || 0) + 1;
-
-            await pool.query(`
-                UPDATE phu_nu_15_49 
-                SET so_con = $1, nam_sinh_con = $2, so_the_bhyt = COALESCE(NULLIF($3, ''), so_the_bhyt)
-                WHERE ma_dinh_danh = $4
-            `, [currentSoCon, namSinhCon, so_the_bhyt_me, targetMaDinhDanh]);
-        } else {
-            // 🎯 ĐỐI VỚI HỘ MỚI HOẶC NGƯỜI MỚI CHƯA CÓ TRONG 15-49:
-            // Lấy số con khởi tạo từ form (mặc định là 1 nếu không truyền)
-            let initialSoCon = Number(con_thu_may) || 1;
-
-            await pool.query(`
-                INSERT INTO phu_nu_15_49 (ma_dinh_danh, ma_ho, diabanh, ho_ten, ngay_sinh, so_the_bhyt, so_con, nam_sinh_con)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                ON CONFLICT (ma_dinh_danh) DO UPDATE SET so_con = EXCLUDED.so_con, nam_sinh_con = EXCLUDED.nam_sinh_con
-            `, [targetMaDinhDanh, maHoClean, diabanh || '101, Xã Lương Hòa', ho_ten_me, ngay_sinh_me || null, so_the_bhyt_me || null, initialSoCon, namSinhCon]);
+        // Nếu hộ đã có người khác, chỉ cho thêm sau khi người dùng xác nhận ở giao diện.
+        if (householdRes.rows.length > 0 && !existingWoman && shared_household_confirmed !== true) {
+            await client.query('ROLLBACK');
+            return res.status(409).json({
+                success: false,
+                code: 'SHARED_HOUSEHOLD_CONFIRMATION_REQUIRED',
+                message: `Mã hộ ${hoSoClean} đã có người trong danh sách 15-49. Vui lòng xác nhận đây là người chung hộ trước khi thêm.`,
+                household_members: householdRes.rows.map(row => row.ho_ten)
+            });
         }
 
-        // Tự động ghi nhận mốc lịch sử BPTT là mã 'S' (Sinh đẻ) cho cả hộ mới lẫn hộ cũ
-        await pool.query(`
-            INSERT INTO lich_su_bptt (ma_dinh_danh, ma_bptt, ngay_ap_dung, noi_thuc_hien)
-            VALUES ($1, 'S', $2, $3)
-        `, [targetMaDinhDanh, ngay_sinh_con || new Date().toISOString().split('T')[0], noi_de || 'Trạm Y tế xã Lương Hòa']);
-        // 👆 HẾT KHÚC NÀY 👆
+        const prefix = String(diabanh || req.session.user.diabanh || '101').trim().substring(0, 3) || '101';
+        // ID riêng cho từng phụ nữ, kể cả khi nhiều người cùng mã hộ.
+        const maDinhDanh = existingWoman
+            ? existingWoman.ma_dinh_danh
+            : `${prefix}_${hoSoClean.slice(-7)}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`.slice(0, 30);
+        const namSinhCon = ngay_sinh_con ? String(ngay_sinh_con).substring(0, 4) : '';
+        const soConInput = Number.parseInt(con_thu_may, 10);
+        const soCon = Number.isInteger(soConInput) && soConInput > 0
+            ? soConInput
+            : (existingWoman ? Number(existingWoman.so_con) || 0 : 1);
+        const diaBanValue = diabanh || req.session.user.diabanh || '101, Xã Lương Hòa';
 
-        res.json({ success: true, message: "Đồng bộ phụ nữ 15-49 thành công!" });
+        if (existingWoman) {
+            await client.query(`
+                UPDATE phu_nu_15_49
+                SET so_con = GREATEST(COALESCE(so_con, 0), $1::integer),
+                    nam_sinh_con = CASE
+                        WHEN $2::text <> '' THEN $2::text
+                        ELSE nam_sinh_con
+                    END,
+                    so_the_bhyt = COALESCE(
+                        NULLIF(TRIM($3::text), ''),
+                        so_the_bhyt
+                    ),
+                    ngay_sinh = COALESCE($4::date, ngay_sinh)
+                WHERE ma_dinh_danh = $5::varchar
+            `, [
+                soCon,
+                namSinhCon,
+                so_the_bhyt_me || '',
+                ngay_sinh_me || null,
+                maDinhDanh
+            ]);
+        } else {
+            await client.query(`
+                INSERT INTO phu_nu_15_49
+                    (ma_dinh_danh, ma_ho, diabanh, ho_ten, ngay_sinh, so_the_bhyt, so_con, nam_sinh_con)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            `, [maDinhDanh, hoSoClean, diaBanValue, hoTenClean, ngay_sinh_me || null,
+                so_the_bhyt_me || null, soCon, namSinhCon]);
+        }
+
+        // Bảng 1 là trường hợp sinh: ghi lịch sử BPTT mã S, tránh ghi trùng khi đồng bộ lại.
+        const ngayApDung = ngay_sinh_con || new Date().toISOString().slice(0, 10);
+        const noiThucHien = noi_de || 'Trạm Y tế xã Lương Hòa';
+      
+        await client.query(`
+            INSERT INTO lich_su_bptt (
+                ma_dinh_danh,
+                ma_bptt,
+                ngay_ap_dung,
+                noi_thuc_hien
+            )
+            SELECT $1::varchar(30), 'S', $2::date, $3::varchar(150)
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM lich_su_bptt
+                WHERE ma_dinh_danh = $1::varchar(30)
+                AND ma_bptt = 'S'
+                AND ngay_ap_dung = $2::date
+                AND COALESCE(noi_thuc_hien, '') = COALESCE($3::varchar(150), '')
+            )
+        `, [maDinhDanh, ngayApDung, noiThucHien]);
+
+
+        await client.query('COMMIT');
+        return res.json({
+            success: true,
+            message: 'Đồng bộ phụ nữ 15-49 từ Bảng 1 thành công; lịch sử BPTT mã S đã được kiểm tra.',
+            ma_dinh_danh: maDinhDanh,
+            existing_person: Boolean(existingWoman),
+            household_member_count: householdRes.rows.length + (existingWoman ? 0 : 1)
+        });
     } catch (err) {
+        await client.query('ROLLBACK');
         console.error('Lỗi sync phụ nữ từ Bảng 1:', err);
-        res.status(500).json({ success: false, message: err.message });
+        return res.status(500).json({ success: false, message: err.message });
+    } finally {
+        client.release();
     }
 });
 
@@ -1899,7 +1965,8 @@ app.post('/api/admin/sync-phu-nu-from-table7', async (req, res) => {
             bptt_moi,
             so_con_hien_co,
             noi_thuc_hien,
-            diabanh
+            diabanh,
+            shared_household_confirmed
         } = req.body;
 
         if (!String(ho_so || '').trim() || !String(ho_ten_vo || '').trim() || !bptt_moi || !ngay_su_dung) {
@@ -1943,8 +2010,20 @@ app.post('/api/admin/sync-phu-nu-from-table7', async (req, res) => {
             normalizeName(row.ho_ten) === normalizeName(hoTenClean)
         );
 
-        const prefix = String(diabanh || req.session?.user?.diabanh || '101').trim().substring(0, 3);
-        const maDinhDanh = existingWoman ? existingWoman.ma_dinh_danh : `${prefix}_${hoSoClean}_${Date.now()}`;
+        if (householdRes.rows.length > 0 && !existingWoman && shared_household_confirmed !== true) {
+            await client.query('ROLLBACK');
+            return res.status(409).json({
+                success: false,
+                code: 'SHARED_HOUSEHOLD_CONFIRMATION_REQUIRED',
+                message: `Mã hộ ${hoSoClean} đã có người trong danh sách 15-49. Cần xác nhận người mới là người chung hộ trước khi thêm.`,
+                household_members: householdRes.rows.map(row => row.ho_ten)
+            });
+        }
+
+        const prefix = String(diabanh || req.session?.user?.diabanh || '101').trim().substring(0, 3) || '101';
+        const maDinhDanh = existingWoman
+            ? existingWoman.ma_dinh_danh
+            : `${prefix}_${hoSoClean.slice(-7)}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`.slice(0, 30);
 
         // 1. Cập nhật / Upsert vào danh sách phu_nu_15_49
         await client.query(`
@@ -1965,16 +2044,32 @@ app.post('/api/admin/sync-phu-nu-from-table7', async (req, res) => {
             soConValue
         ]);
 
-        // 2. Ghi nhận mốc lịch sử BPTT mới
-        await client.query(`
-            INSERT INTO lich_su_bptt (ma_dinh_danh, ma_bptt, ngay_ap_dung, noi_thuc_hien)
-            VALUES ($1, $2, $3, $4)
-        `, [
-            maDinhDanh,
-            bptt_moi,
-            ngay_su_dung,
-            noi_thuc_hien || ''
-        ]);
+        
+            await client.query(`
+                INSERT INTO lich_su_bptt (
+                    ma_dinh_danh, ma_bptt, ngay_ap_dung, noi_thuc_hien
+                )
+                SELECT
+                    $1::varchar(30),
+                    $2::varchar(10),
+                    $3::date,
+                    $4::varchar(150)
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM lich_su_bptt
+                    WHERE ma_dinh_danh = $1::varchar(30)
+                    AND ma_bptt = $2::varchar(10)
+                    AND ngay_ap_dung = $3::date
+                    AND COALESCE(noi_thuc_hien, '') =
+                        COALESCE($4::varchar(150), '')
+                )
+            `, [
+                maDinhDanh,
+                bptt_moi,
+                ngay_su_dung,
+                noi_thuc_hien || ''
+            ]);
+
 
         await client.query('COMMIT');
 
@@ -1993,69 +2088,158 @@ app.post('/api/admin/sync-phu-nu-from-table7', async (req, res) => {
     }
 });
 // API kiểm tra mã hộ: Báo xung đột nếu trùng mã nhưng khác tên, hoặc báo hộ mới nếu chưa có
-// API kiểm tra mã hộ dựa tuyệt đối vào địa bàn của tài khoản đang đăng nhập
+
+/**
+ * API kiểm tra mã hộ theo địa bàn của tài khoản đăng nhập.
+ * Một mã hộ có thể có nhiều thành viên.
+ */
 app.post('/api/admin/check-ma-ho', async (req, res) => {
-    if (!req.session.user) return res.status(401).json({ success: false });
+    if (!req.session.user) {
+        return res.status(401).json({ success: false });
+    }
+
     try {
         const { ho_so, ho_ten } = req.body;
-        if (!ho_so || !ho_ten) return res.json({ exists: false, isNew: true });
 
-        const maHoClean = ho_so.trim();
-        
-        // 🎯 Lấy trực tiếp tiền tố địa bàn từ phiên đăng nhập của tài khoản cộng tác viên (VD: '161')
+        if (!ho_so || !ho_ten) {
+            return res.json({
+                exists: false,
+                conflict: false,
+                isNew: true
+            });
+        }
+
+        const maHoClean = String(ho_so).trim();
+        const hoTenClean = String(ho_ten).trim();
+
+        if (!maHoClean || !hoTenClean) {
+            return res.json({
+                exists: false,
+                conflict: false,
+                isNew: true
+            });
+        }
+
+        // Lấy tiền tố địa bàn từ tài khoản đang đăng nhập.
         const userDiabanh = req.session.user.diabanh || '101';
         const prefix = String(userDiabanh).trim().substring(0, 3);
 
-        // Truy vấn kiểm tra trùng mã hộ TRONG ĐÚNG PHẠM VI ĐỊA BÀN CỦA TÀI KHOẢN ĐĂNG NHẬP
+        // Tìm tất cả thành viên có cùng mã hộ
+        // trong phạm vi địa bàn của tài khoản.
         const check = await pool.query(`
-            SELECT ho_ten FROM phu_nu_15_49 
-            WHERE ma_ho = $1 AND diabanh LIKE $2
-            LIMIT 1
+            SELECT ma_dinh_danh, ho_ten
+            FROM phu_nu_15_49
+            WHERE TRIM(ma_ho) = $1
+              AND diabanh LIKE $2
+            ORDER BY ho_ten ASC
         `, [maHoClean, `${prefix}%`]);
 
-        if (check.rows.length > 0) {
-            let tenTrongDb = check.rows[0].ho_ten;
-            let nameNormInput = ho_ten.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-            let nameNormDb = tenTrongDb.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+        // Chuẩn hóa tên để so sánh không phân biệt dấu,
+        // chữ hoa/thường và khoảng trắng.
+        const normalizeName = (value) =>
+            String(value || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[đĐ]/g, 'd')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLowerCase();
 
-            if (nameNormInput !== nameNormDb) {
-                return res.json({ 
-                    exists: true, 
-                    conflict: true, 
-                    tenCu: tenTrongDb,
-                    message: `Số hộ ${maHoClean} tại địa bàn quản lý của bạn đã có tên chủ hộ/thành viên là "${tenTrongDb}". Nếu đây là hộ mới, vui lòng kiểm tra lại mã hộ!` 
+        if (check.rows.length > 0) {
+            // Kiểm tra tất cả thành viên trong cùng mã hộ.
+            const tenDaTonTai = check.rows.some(
+                row =>
+                    normalizeName(row.ho_ten) ===
+                    normalizeName(hoTenClean)
+            );
+
+            // Đã có đúng tên thành viên: không báo xung đột.
+            if (tenDaTonTai) {
+                return res.json({
+                    exists: true,
+                    conflict: false,
+                    isNew: false
                 });
             }
-            return res.json({ exists: true, conflict: false, isNew: false });
+
+            // Mã hộ đã tồn tại nhưng chưa tìm thấy tên này.
+            // Trả về xung đột để giao diện hỏi xác nhận.
+            return res.json({
+                exists: true,
+                conflict: true,
+                tenCu: check.rows.map(row => row.ho_ten),
+                tenDaTonTai: check.rows.map(row => row.ho_ten),
+                soNguoiCungHo: check.rows.length,
+                message:
+                    `Mã hộ ${maHoClean} đã tồn tại trong danh sách ` +
+                    `phụ nữ 15-49 tại địa bàn quản lý của bạn. ` +
+                    `Vui lòng xác nhận nếu đây là thành viên cùng hộ.`
+            });
         }
 
-        res.json({ exists: false, conflict: false, isNew: true });
+        // Mã hộ chưa tồn tại trong phạm vi địa bàn.
+        return res.json({
+            exists: false,
+            conflict: false,
+            isNew: true
+        });
+
     } catch (err) {
-        console.error('Lỗi kiểm tra mã hộ theo phiên đăng nhập:', err);
-        res.status(500).json({ success: false, message: err.message });
+        console.error(
+            'Lỗi kiểm tra mã hộ theo phiên đăng nhập:',
+            err
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        });
     }
 });
 
+
 // API Xuất Báo Cáo Sổ 12 Tháng Theo Năm (Theo dõi BPTT & Thai sản)
 // ==================== API XUẤT BÁO CÁO SỔ 12 THÁNG (PHÂN TRANG 16 NGƯỜI/A4) ====================
-app.get('/api/bao-cao-bptt-12-thang', async (req, res) => {
-    if (!req.session.user) return res.status(401).json({ success: false, message: "Chưa đăng nhập" });
 
-    const year = parseInt(req.query.year) || new Date().getFullYear();
+app.get('/api/bao-cao-bptt-12-thang', async (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json({
+            success: false,
+            message: 'Chưa đăng nhập'
+        });
+    }
+
     const ap = req.query.ap || '';
     const diabanh = req.query.diabanh || '';
-    const page = parseInt(req.query.page) || 1;
-    const limit = 16; // Cố định đúng 16 người cho 1 trang A4
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = 16;
     const offset = (page - 1) * limit;
     const user = req.session.user;
 
+    // 12 tháng: từ tháng hiện tại đến 11 tháng tiếp theo.
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const monthLabels = Array.from({ length: 12 }, (_, i) => {
+        const date = new Date(currentYear, currentMonth + i, 1);
+        return `${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+    });
+
     try {
-        let whereClauses = [];
-        let params = [];
+        const whereClauses = [];
+        const params = [];
         let paramIdx = 1;
 
-        let activeAp = (user.role !== 'admin' && user.role !== 'lãnh đạo') ? user.ap : ap;
-        let activeDiabanh = (user.role !== 'admin' && user.role !== 'lãnh đạo' && user.diabanh && user.diabanh !== '00') ? user.diabanh : diabanh;
+        const isAdminOrLeader = ['admin', 'lãnh đạo'].includes(
+            String(user.role || '').trim().toLowerCase()
+        );
+
+        const activeAp = isAdminOrLeader ? ap : user.ap;
+        const activeDiabanh =
+            (!isAdminOrLeader && user.diabanh && user.diabanh !== '00')
+                ? user.diabanh
+                : diabanh;
 
         if (activeDiabanh) {
             whereClauses.push(`pn.diabanh LIKE $${paramIdx}`);
@@ -2063,15 +2247,23 @@ app.get('/api/bao-cao-bptt-12-thang', async (req, res) => {
             paramIdx++;
         } else if (activeAp && activeAp !== 'Tất cả') {
             const dbRes = await pool.query(
-                `SELECT DISTINCT diabanh FROM users WHERE ap ILIKE $1 AND diabanh IS NOT NULL AND diabanh != '' AND diabanh != '00'`,
+                `SELECT DISTINCT diabanh
+                 FROM users
+                 WHERE ap ILIKE $1
+                   AND diabanh IS NOT NULL
+                   AND diabanh != ''
+                   AND diabanh != '00'`,
                 [`%${activeAp}%`]
             );
+
             const dbList = dbRes.rows.map(r => r.diabanh).filter(Boolean);
+
             if (dbList.length > 0) {
-                let dbConds = dbList.map(db => {
+                const dbConds = dbList.map(db => {
                     params.push(`${db}%`);
                     return `pn.diabanh LIKE $${paramIdx++}`;
                 });
+
                 whereClauses.push(`(${dbConds.join(' OR ')})`);
             } else {
                 whereClauses.push(`pn.diabanh ILIKE $${paramIdx}`);
@@ -2080,18 +2272,24 @@ app.get('/api/bao-cao-bptt-12-thang', async (req, res) => {
             }
         }
 
-        let whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+        const whereSql = whereClauses.length
+            ? `WHERE ${whereClauses.join(' AND ')}`
+            : '';
 
-        // Query đếm tổng số dòng
-        const countQuery = `SELECT COUNT(*)::int FROM phu_nu_15_49 pn ${whereSql}`;
+        const countQuery = `
+            SELECT COUNT(*)::int AS total
+            FROM phu_nu_15_49 pn
+            ${whereSql}
+        `;
+
         const countRes = await pool.query(countQuery, params);
-        const totalRows = countRes.rows[0].count;
+        const totalRows = countRes.rows[0].total;
         const totalPages = Math.ceil(totalRows / limit) || 1;
 
-        // Query lấy 16 phụ nữ kèm mảng BPTT 12 tháng bằng CROSS JOIN LATERAL (Tốc độ siêu nhanh)
         const dataParams = [...params, limit, offset];
+
         const dataQuery = `
-            SELECT 
+            SELECT
                 pn.ma_dinh_danh,
                 pn.ma_ho,
                 pn.ho_ten,
@@ -2099,52 +2297,92 @@ app.get('/api/bao-cao-bptt-12-thang', async (req, res) => {
                 pn.so_con,
                 pn.nam_sinh_con,
                 pn.ghi_chu,
-                bptt.t1, bptt.t2, bptt.t3, bptt.t4, bptt.t5, bptt.t6,
-                bptt.t7, bptt.t8, bptt.t9, bptt.t10, bptt.t11, bptt.t12
+
+                bptt.t1,
+                NULL::text AS t2,
+                NULL::text AS t3,
+                NULL::text AS t4,
+                NULL::text AS t5,
+                NULL::text AS t6,
+                NULL::text AS t7,
+                NULL::text AS t8,
+                NULL::text AS t9,
+                NULL::text AS t10,
+                NULL::text AS t11,
+                NULL::text AS t12,
+
+                bptt.t1_changed,
+                FALSE AS t2_changed,
+                FALSE AS t3_changed,
+                FALSE AS t4_changed,
+                FALSE AS t5_changed,
+                FALSE AS t6_changed,
+                FALSE AS t7_changed,
+                FALSE AS t8_changed,
+                FALSE AS t9_changed,
+                FALSE AS t10_changed,
+                FALSE AS t11_changed,
+                FALSE AS t12_changed
+
             FROM phu_nu_15_49 pn
+
             LEFT JOIN LATERAL (
-                SELECT 
-                    MAX(CASE WHEN m = 1 THEN ma_bptt END) as t1,
-                    MAX(CASE WHEN m = 2 THEN ma_bptt END) as t2,
-                    MAX(CASE WHEN m = 3 THEN ma_bptt END) as t3,
-                    MAX(CASE WHEN m = 4 THEN ma_bptt END) as t4,
-                    MAX(CASE WHEN m = 5 THEN ma_bptt END) as t5,
-                    MAX(CASE WHEN m = 6 THEN ma_bptt END) as t6,
-                    MAX(CASE WHEN m = 7 THEN ma_bptt END) as t7,
-                    MAX(CASE WHEN m = 8 THEN ma_bptt END) as t8,
-                    MAX(CASE WHEN m = 9 THEN ma_bptt END) as t9,
-                    MAX(CASE WHEN m = 10 THEN ma_bptt END) as t10,
-                    MAX(CASE WHEN m = 11 THEN ma_bptt END) as t11,
-                    MAX(CASE WHEN m = 12 THEN ma_bptt END) as t12
-                FROM generate_series(1, 12) m
-                LEFT JOIN LATERAL (
-                    SELECT ma_bptt 
-                    FROM lich_su_bptt 
-                    WHERE ma_dinh_danh = pn.ma_dinh_danh 
-                      AND ngay_ap_dung <= (MAKE_DATE(${year}, m, 1) + INTERVAL '1 month - 1 day')::date
-                    ORDER BY ngay_ap_dung DESC, id DESC 
+                SELECT
+                    latest.ma_bptt AS t1,
+
+                    EXISTS (
+                        SELECT 1
+                        FROM lich_su_bptt ls_thang
+                        WHERE ls_thang.ma_dinh_danh = pn.ma_dinh_danh
+                          AND ls_thang.ngay_ap_dung >=
+                              date_trunc('month', CURRENT_DATE)::date
+                          AND ls_thang.ngay_ap_dung < (
+                              date_trunc('month', CURRENT_DATE)
+                              + INTERVAL '1 month'
+                          )::date
+                          AND ls_thang.ngay_ap_dung <= CURRENT_DATE
+                    ) AS t1_changed
+
+                FROM (
+                    SELECT
+                        ls.id,
+                        ls.ma_bptt,
+                        ls.ngay_ap_dung
+                    FROM lich_su_bptt ls
+                    WHERE ls.ma_dinh_danh = pn.ma_dinh_danh
+                      AND ls.ngay_ap_dung <= CURRENT_DATE
+                    ORDER BY ls.ngay_ap_dung DESC, ls.id DESC
                     LIMIT 1
-                ) l ON true
-            ) bptt ON true
+                ) latest
+            ) bptt ON TRUE
+
             ${whereSql}
-            ORDER BY pn.ma_ho ASC
-            LIMIT $${paramIdx++} OFFSET $${paramIdx++};
+
+            ORDER BY pn.ma_ho ASC, pn.ho_ten ASC
+            LIMIT $${paramIdx++}
+            OFFSET $${paramIdx++}
         `;
 
         const result = await pool.query(dataQuery, dataParams);
+
         res.json({
             success: true,
             data: result.rows,
+            monthLabels,
             currentPage: page,
-            totalPages: totalPages,
-            totalRows: totalRows
+            totalPages,
+            totalRows
         });
+
     } catch (err) {
         console.error('Lỗi xuất báo cáo 12 tháng:', err);
-        res.status(500).json({ success: false, error: err.message });
+        res.status(500).json({
+            success: false,
+            message: 'Không thể tải báo cáo 12 tháng.',
+            error: err.message
+        });
     }
 });
-
 
 
 
@@ -2544,6 +2782,139 @@ app.get('/api/admin/phu-nu-15-49-list', async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 });
+
+
+
+app.post('/api/admin/quan-ly-phu-nu', async (req, res) => {
+    const user = req.session.user;
+
+    if (!user) {
+        return res.status(401).json({
+            success: false,
+            message: 'Vui lòng đăng nhập lại.'
+        });
+    }
+
+    if (!coQuyenQuanLyPhuNu(user)) {
+        return res.status(403).json({
+            success: false,
+            message: 'Bạn không có quyền thêm hồ sơ.'
+        });
+    }
+
+    try {
+        const {
+            ho_ten,
+            ma_ho,
+            diabanh,
+            ngay_sinh,
+            so_the_bhyt,
+            so_con,
+            nam_sinh_con
+        } = req.body;
+
+        const ten = String(ho_ten || '').trim();
+        const maHo = String(ma_ho || '').trim();
+        const soCon = Number(so_con ?? 0);
+
+        if (!ten || !maHo) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vui lòng nhập họ tên và mã hộ.'
+            });
+        }
+
+        if (!Number.isInteger(soCon) || soCon < 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Số con phải là số nguyên không âm.'
+            });
+        }
+
+        // Không cho cộng tác viên tự chọn địa bàn khác.
+        const diaBanMoi = laQuanLyToanXa(user)
+            ? String(diabanh || '').trim()
+            : String(user.diabanh || '').trim();
+
+        if (!diaBanMoi) {
+            return res.status(400).json({
+                success: false,
+                message: 'Không xác định được địa bàn hồ sơ.'
+            });
+        }
+
+        // Tránh tạo hai hồ sơ trùng cả mã hộ và họ tên
+        // trong cùng địa bàn. Cùng mã hộ nhưng khác người vẫn được phép.
+        const duplicate = await pool.query(`
+            SELECT ma_dinh_danh
+            FROM phu_nu_15_49
+            WHERE TRIM(ma_ho) = $1
+              AND LOWER(TRIM(ho_ten)) = LOWER(TRIM($2))
+              AND diabanh = $3
+            LIMIT 1
+        `, [maHo, ten, diaBanMoi]);
+
+        if (duplicate.rowCount > 0) {
+            return res.status(409).json({
+                success: false,
+                message: 'Người này đã có trong danh sách 15–49 tại địa bàn đã chọn.'
+            });
+        }
+
+        // Tạo mã định danh riêng cho hồ sơ mới.
+        const prefix = String(user.diabanh || '101')
+            .trim()
+            .substring(0, 3) || '101';
+
+        const maDinhDanh = `${prefix}_${Date.now()}`;
+
+        const result = await pool.query(`
+            INSERT INTO phu_nu_15_49 (
+                ma_dinh_danh,
+                ma_ho,
+                diabanh,
+                ho_ten,
+                ngay_sinh,
+                so_the_bhyt,
+                so_con,
+                nam_sinh_con
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING ma_dinh_danh
+        `, [
+            maDinhDanh,
+            maHo,
+            diaBanMoi,
+            ten,
+            ngay_sinh || null,
+            String(so_the_bhyt || '').trim(),
+            soCon,
+            String(nam_sinh_con || '').trim()
+        ]);
+
+        await logAction(
+            user,
+            'Thêm mới hồ sơ phụ nữ 15-49',
+            null,
+            `Mã ĐD: ${result.rows[0].ma_dinh_danh} - ${ten}`
+        );
+
+        return res.json({
+            success: true,
+            message: 'Thêm mới hồ sơ phụ nữ 15–49 thành công!',
+            ma_dinh_danh: result.rows[0].ma_dinh_danh
+        });
+
+    } catch (err) {
+        console.error('Lỗi thêm hồ sơ phụ nữ 15–49:', err);
+
+        return res.status(500).json({
+            success: false,
+            message: 'Không thể thêm hồ sơ mới.'
+        });
+    }
+});
+
 // Cập nhật thông tin 1 phụ nữ 15-49 (Mở rộng cho Admin và Lãnh đạo)
 app.put("/api/admin/quan-ly-phu-nu/:ma_dinh_danh",
     async (req, res) => {

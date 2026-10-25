@@ -56,6 +56,10 @@
         color: #000;
         line-height: 1.5;
     }
+    .bptt-thay-doi-thang {
+    color: #ff0000 !important;
+    font-weight: bold !important;
+}
 </style>
 </head>
 <body class="bg-light">
@@ -106,6 +110,11 @@
                             <button class="btn btn-primary flex-grow-1" onclick="doSearch()">Lọc</button>
                             <button class="btn btn-outline-secondary" onclick="resetSearch()">Xóa</button>
                             <button class="btn btn-success" onclick="openPreviewSyncModal()">🔄 Đồng bộ con</button>
+                            <button type="button"
+                                    class="btn btn-primary"
+                                    onclick="openAddPhuNuModal()">
+                                <i class="fas fa-plus"></i> Thêm mới
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -183,10 +192,15 @@
             <!-- Trang A4 chuẩn kích thước & font Times New Roman -->
             <div class="card shadow bg-white p-4 mx-auto" style="width: 297mm; min-height: 210mm;">
                 <!-- Tiêu đề & Năm nằm bên phải -->
+                <!-- Tiêu đề và kỳ báo cáo 12 tháng -->
                 <div class="position-relative text-center mb-3">
-                    <h4 class="fw-bold text-uppercase mb-1" style="font-size: 16pt;">THEO DÕI PHỤ NỮ ĐỘ TUỔI 15-49 CÓ CHỒNG</h4>
+                    <h4 class="fw-bold text-uppercase mb-1" style="font-size: 16pt;">
+                        THEO DÕI PHỤ NỮ ĐỘ TUỔI 15-49 CÓ CHỒNG
+                    </h4>
+
                     <div class="text-end fw-bold" style="font-size: 13pt; margin-top: 5px;">
-                        Năm: <span id="lblReportYear">2026</span>
+                        Kỳ báo cáo:
+                        <span id="lblReportYear">Đang cập nhật</span>
                     </div>
                 </div>
 
@@ -203,10 +217,18 @@
                                 <th rowspan="2" style="width: 70px;">Ghi chú</th>
                             </tr>
                             <tr>
-                                <th style="width: 28px;">1</th><th style="width: 28px;">2</th><th style="width: 28px;">3</th>
-                                <th style="width: 28px;">4</th><th style="width: 28px;">5</th><th style="width: 28px;">6</th>
-                                <th style="width: 28px;">7</th><th style="width: 28px;">8</th><th style="width: 28px;">9</th>
-                                <th style="width: 28px;">10</th><th style="width: 28px;">11</th><th style="width: 28px;">12</th>
+                                <th id="reportMonth1" style="width: 28px;"></th>
+                                <th id="reportMonth2" style="width: 28px;"></th>
+                                <th id="reportMonth3" style="width: 28px;"></th>
+                                <th id="reportMonth4" style="width: 28px;"></th>
+                                <th id="reportMonth5" style="width: 28px;"></th>
+                                <th id="reportMonth6" style="width: 28px;"></th>
+                                <th id="reportMonth7" style="width: 28px;"></th>
+                                <th id="reportMonth8" style="width: 28px;"></th>
+                                <th id="reportMonth9" style="width: 28px;"></th>
+                                <th id="reportMonth10" style="width: 28px;"></th>
+                                <th id="reportMonth11" style="width: 28px;"></th>
+                                <th id="reportMonth12" style="width: 28px;"></th>
                             </tr>
                         </thead>
                         <tbody id="tblReportBody">
@@ -366,10 +388,17 @@
     <div class="modal fade" id="previewSyncModal" tabindex="-1">
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">Xem trước thay đổi đồng bộ năm sinh con & BPTT</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editModalTitle">
+                        Cập nhật Hồ sơ & Theo dõi Lịch sử BPTT
+                    </h5>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Đóng"></button>
                 </div>
+
                 <div class="modal-body">
                     <p class="text-muted">Danh sách đối chiếu chính xác theo Mã hộ và Địa bàn. Kiểm tra kỹ trước khi bấm xác nhận ghi đè.</p>
                     <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
@@ -419,6 +448,15 @@
                                 <input type="text" id="editMaHo" class="form-control" required>
                             </div>
                             <div class="col-md-6">
+                                <label class="form-label fw-bold">Số thẻ BHYT</label>
+                                <input type="text" id="editSoTheBHYT" class="form-control">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Địa bàn</label>
+                                <input type="text" id="editDiaBan" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
                                 <label class="form-label fw-bold">Ngày sinh</label>
                                 <input type="date" id="editNgaySinh" class="form-control">
                             </div>
@@ -431,7 +469,12 @@
                                 <input type="text" id="editNamSinhCon" class="form-control" placeholder="VD: 1996">
                             </div>
                             <div class="col-12 text-end mt-3">
-                                <button type="button" class="btn btn-success" onclick="savePhuNu()">Lưu thay đổi nhân khẩu</button>
+                               <button type="button"
+                                        id="btnSavePhuNu"
+                                        class="btn btn-success"
+                                        onclick="savePhuNu()">
+                                    Lưu hồ sơ
+                                </button>
                             </div>
                         </div>
                     </form>
