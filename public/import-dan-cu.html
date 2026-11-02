@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nhập danh sách dân cư gốc</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1f2937;background:#f3f6fa}
+    body{margin:0;padding:24px}.wrap{max-width:720px;margin:32px auto;background:#fff;padding:28px;border-radius:16px;box-shadow:0 8px 28px #17255412}
+    h1{font-size:24px;margin:0 0 10px}p{line-height:1.6}.note{background:#fef3c7;padding:12px 14px;border-radius:10px}
+    input,button{font:inherit}input[type=file]{display:block;width:100%;padding:14px;border:1px solid #cbd5e1;border-radius:10px;margin:18px 0}
+    button{border:0;border-radius:10px;background:#1459c7;color:white;padding:12px 18px;cursor:pointer}button:disabled{opacity:.6;cursor:wait}
+    #progressWrap{display:none;margin-top:18px}#progressTrack{height:14px;background:#e5e7eb;border-radius:99px;overflow:hidden}#progressBar{height:100%;width:0;background:#2563eb;transition:width .25s}#progressText{font-size:14px;margin:8px 0;color:#334155}#result{white-space:pre-wrap;margin-top:18px;padding:12px;border-radius:10px;display:none}.ok{background:#dcfce7}.err{background:#fee2e2}.back{display:inline-block;margin-top:18px;color:#1459c7}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>Nhập danh sách dân cư gốc</h1>
+    <p>Chọn file Excel danh sách dân cư toàn xã. Hệ thống nhận diện các cột theo tên, sau đó thêm mới hoặc cập nhật theo tổ hợp <strong>Số hộ + Họ tên + Ngày sinh</strong>.</p>
+    <p class="note"><strong>Lưu ý:</strong> Hãy sao lưu cơ sở dữ liệu trước lần nhập đầu tiên. Chức năng này không xóa dữ liệu cũ. Chỉ các dòng có đủ Họ tên và Số hộ mới được xử lý.</p>
+    <form id="importForm">
+      <label for="excel"><strong>File Excel (.xlsx / .xls)</strong></label>
+      <input id="excel" name="excel" type="file" accept=".xlsx,.xls" required>
+      <button id="submitBtn" type="submit">Nhập danh sách dân cư</button>
+    </form>
+    <div id="progressWrap"><div id="progressTrack"><div id="progressBar"></div></div><div id="progressText">Sẵn sàng</div></div>
+    <div id="result" role="status"></div>
+    <a class="back" href="/">← Quay lại trang chính</a>
+  </main>
+  <script>
+    const form=document.getElementById('importForm'),btn=document.getElementById('submitBtn'),result=document.getElementById('result');
+    const progressWrap=document.getElementById('progressWrap'),progressBar=document.getElementById('progressBar'),progressText=document.getElementById('progressText');
+    let polling=false;
+    async function pollProgress(){if(polling)return;polling=true;try{while(btn.disabled){const r=await fetch('/api/admin/import-dan-cu/progress',{credentials:'same-origin',cache:'no-store'});if(r.ok){const p=await r.json();if(p.running||p.percent){progressWrap.style.display='block';progressBar.style.width=(p.percent||0)+'%';progressText.textContent=`${p.percent||0}% — ${p.stage||'Đang xử lý…'}`;}if(!p.running&&p.success){progressBar.style.width='100%';progressText.textContent='100% — Hoàn tất!';}}await new Promise(resolve=>setTimeout(resolve,700));}}catch(_){}finally{polling=false;}}
+    form.addEventListener('submit',async e=>{e.preventDefault();const file=document.getElementById('excel').files[0];if(!file)return;
+      const data=new FormData();data.append('excel',file);btn.disabled=true;btn.textContent='Đang nhập dữ liệu…';result.style.display='block';result.className='';result.textContent='Đang xử lý file. Vui lòng không đóng trang.';progressWrap.style.display='block';progressBar.style.width='0%';progressText.textContent='0% — Đang tải file…';
+      pollProgress();
+      try{const response=await fetch('/api/admin/import-dan-cu',{method:'POST',body:data,credentials:'same-origin'});const json=await response.json();result.className=json.success?'ok':'err';result.textContent=json.message||'Không có thông báo từ máy chủ.';if(json.success)result.textContent+=`\n\nThêm mới: ${json.inserted??0}\nCập nhật: ${json.updated??0}\nBỏ qua: ${json.skipped??0}`;if(!json.success){progressText.textContent='Nhập thất bại';}}
+      catch(err){result.className='err';result.textContent='Không kết nối được máy chủ: '+err.message;progressText.textContent='Không nhận được kết quả từ máy chủ.';}
+      finally{btn.disabled=false;btn.textContent='Nhập danh sách dân cư';polling=false;}
+    });
+  </script>
+</body>
+</html>

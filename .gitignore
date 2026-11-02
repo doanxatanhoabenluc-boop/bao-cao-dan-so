@@ -1,2 +1,11 @@
 node_modules
 .env
+
+# File tải lên và sao lưu
+uploads/*
+*.jsonl.gz
+*.backup.gz
+
+# File tạm và nhật ký
+*.log
+.DS_Store

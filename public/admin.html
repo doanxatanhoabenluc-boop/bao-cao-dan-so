@@ -63,8 +63,8 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link fw-bold py-2 px-3 shadow-sm" id="ap-tab" data-bs-toggle="tab" data-bs-target="#apContent" type="button" role="tab" onclick="loadApList()">
-                        <i class="fa-solid fa-map-location-dot me-1"></i> Quản lý Ấp
+                    <button class="nav-link fw-bold py-2 px-3 shadow-sm" id="ap-tab" data-bs-toggle="tab" data-bs-target="#apContent" type="button" role="tab" onclick="loadXaList(); loadApList();">
+                        <i class="fa-solid fa-map-location-dot me-1"></i> Quản lý Xã &amp; Ấp
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -98,8 +98,14 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link fw-bold py-2 px-3 shadow-sm text-success" id="phunu1549-tab" data-bs-toggle="tab" data-bs-target="#phunu1549Content" type="button" role="tab" onclick="loadPhuNu1549List()">
-                        <i class="fa-solid fa-file-excel me-1"></i> Danh sách 15-49 (Excel)
+                    <a class="nav-link fw-bold py-2 px-3 shadow-sm text-success d-inline-flex align-items-center" id="importDanCu-tab" href="import-dan-cu.html" title="Mở trang nhập danh sách dân cư gốc">
+                        <i class="fa-solid fa-file-import me-1"></i> Nhập dân cư (Excel)
+                        <i class="fa-solid fa-arrow-up-right-from-square ms-2 small"></i>
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold py-2 px-3 shadow-sm text-primary" id="introBackup-tab" data-bs-toggle="tab" data-bs-target="#introBackupContent" type="button" role="tab">
+                        <i class="fa-solid fa-circle-info me-1"></i> Giới thiệu &amp; Sao lưu
                     </button>
                 </li>
             </ul>
@@ -141,11 +147,46 @@
                 </div>
             </div>
 
-            <!-- TAB 2: QUẢN LÝ ẤP -->
+            <!-- TAB 2: QUẢN LÝ XÃ VÀ ẤP -->
             <div class="tab-pane fade" id="apContent" role="tabpanel">
                 <div class="card shadow-sm mb-4 border-0">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center flex-wrap gap-2 py-3">
+                        <div>
+                            <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-city me-1"></i> Danh mục xã / phường</h5>
+                            <small>Cấu hình tên xã, tỉnh/thành phố và trạm y tế lấy trực tiếp từ CSDL.</small>
+                        </div>
+                        <button class="btn btn-light btn-sm text-primary fw-bold" data-bs-toggle="modal" data-bs-target="#xaModal" onclick="resetXaForm()">
+                            <i class="fa-solid fa-plus me-1"></i> Thêm xã
+                        </button>
+                    </div>
+                    <div class="card-body p-2 p-md-3">
+                        <div class="alert alert-info small py-2 mb-3">
+                            <b>Lưu ý:</b> Mỗi lần triển khai chọn một xã đang sử dụng. Có thể lưu nhiều xã trong danh mục và đổi xã mặc định khi chuyển địa bàn; các trang nhập liệu và báo cáo sẽ tự đọc thông tin xã đang chọn.
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle">
+                                <thead class="table-secondary text-center">
+                                    <tr>
+                                        <th style="width:60px">STT</th>
+                                        <th>Xã / Phường</th>
+                                        <th>Tỉnh / Thành phố</th>
+                                        <th>Mã xã/phường</th>
+                                        <th>Trạm y tế / Nơi nhận</th>
+                                        <th style="width:130px">Trạng thái</th>
+                                        <th style="width:210px">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="xaTableBody">
+                                    <tr><td colspan="7" class="text-center">Đang tải dữ liệu...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mb-4 border-0">
                     <div class="card-header bg-info text-white d-flex justify-content-between align-items-center py-3">
-                        <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-map me-1"></i> Danh sách các ấp trong xã</h5>
+                        <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-map me-1"></i> Danh sách các ấp trong xã đang sử dụng</h5>
                         <button class="btn btn-light btn-sm text-info fw-bold" data-bs-toggle="modal" data-bs-target="#apModal">
                             <i class="fa-solid fa-plus me-1"></i> Thêm ấp mới
                         </button>
@@ -352,7 +393,91 @@
                 </div>
             </div>
 
+<!-- TAB: GIỚI THIỆU HỆ THỐNG VÀ SAO LƯU DỮ LIỆU -->
+<div class="tab-pane fade" id="introBackupContent" role="tabpanel">
+    <div class="row g-3">
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0"><i class="fa-solid fa-building me-2"></i>Giới thiệu địa phương</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="text-muted small">Đơn vị đang sử dụng</div>
+                        <div class="fw-bold fs-5" id="introTenXa">Đang tải thông tin...</div>
+                        <div id="introTenTinh" class="text-muted"></div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="text-muted small">Mã xã / phường</div>
+                        <div class="fw-semibold" id="introMaXa">—</div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="text-muted small">Trung tâm y tế / Trạm y tế</div>
+                        <div class="fw-semibold" id="introTramYTe">—</div>
+                    </div>
+                    <div>
+                        <div class="text-muted small mb-1">Cơ sở y tế trong danh mục</div>
+                        <ul class="mb-0 ps-3" id="introCoSoYTe"><li class="text-muted">Đang tải...</li></ul>
+                    </div>
+                    <div class="alert alert-light border small mt-3 mb-0">
+                        Thông tin xã và trạm y tế được lấy từ cấu hình tại tab <b>Quản lý Xã &amp; Ấp</b>; danh mục cơ sở y tế được lấy từ tab <b>Bệnh viện</b>.
+                    </div>
+                </div>
+            </div>
         </div>
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0"><i class="fa-solid fa-code me-2"></i>Thông tin tác giả</h5>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <div class="mb-2 text-muted small">Tác giả phát triển hệ thống</div>
+                    <div class="fs-4 fw-bold">Nguyễn Huy Thuận</div>
+                    <div class="mt-3 text-muted small">Liên hệ hỗ trợ</div>
+                    <a class="fs-5 fw-semibold text-decoration-none" href="tel:0817171815"><i class="fa-solid fa-phone me-2"></i>0817 171 815</a>
+                    <div class="mt-auto pt-4 small text-muted">Phần mềm hỗ trợ quản lý dân cư và các biểu mẫu nghiệp vụ tại địa phương.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mt-3">
+        <div class="card-header bg-success text-white py-3">
+            <h5 class="mb-0"><i class="fa-solid fa-database me-2"></i>Sao lưu &amp; khôi phục dữ liệu</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info small">
+                <b>Sao lưu nhẹ cho tài khoản Free:</b> hệ thống chỉ tạo file nén khi bạn bấm tải xuống, không chạy sao lưu nền và không lưu bản sao trên Render/Supabase. File gồm dữ liệu PostgreSQL của hệ thống (tài khoản, dân cư, 11 biểu mẫu, lịch sử, danh mục, nhật ký) và file tra cứu BHYT SQLite.
+            </div>
+            <div class="row g-3">
+                <div class="col-12 col-lg-6">
+                    <div class="border rounded p-3 h-100">
+                        <h6 class="fw-bold"><i class="fa-solid fa-download text-success me-2"></i>1. Tải bản sao lưu về máy</h6>
+                        <p class="small text-muted">Tạo một file <code>.jsonl.gz</code> để bạn lưu trên máy tính hoặc ổ cứng riêng. Nên sao lưu định kỳ sau các đợt nhập liệu quan trọng.</p>
+                        <button type="button" class="btn btn-success fw-bold" id="downloadBackupBtn" onclick="downloadSystemBackup()">
+                            <i class="fa-solid fa-cloud-arrow-down me-1"></i> Tải toàn bộ dữ liệu
+                        </button>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-6">
+                    <div class="border rounded p-3 h-100">
+                        <h6 class="fw-bold"><i class="fa-solid fa-upload text-primary me-2"></i>2. Khôi phục từ file đã sao lưu</h6>
+                        <p class="small text-danger">Cảnh báo: khôi phục sẽ thay thế dữ liệu hiện tại bằng dữ liệu trong file. Hãy tải bản sao lưu hiện tại trước khi thực hiện.</p>
+                        <input type="file" class="form-control mb-2" id="restoreBackupFile" accept=".gz,.jsonl.gz">
+                        <button type="button" class="btn btn-outline-danger fw-bold" id="restoreBackupBtn" onclick="restoreSystemBackup()">
+                            <i class="fa-solid fa-rotate-left me-1"></i> Khôi phục dữ liệu
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="backupStatus" class="small mt-3" role="status" aria-live="polite"></div>
+            <div class="alert alert-warning small mt-3 mb-0">
+                <b>Bảo mật:</b> file sao lưu có chứa thông tin dân cư và tài khoản đăng nhập. Chỉ lưu ở nơi an toàn, không gửi công khai. File tạo từ phiên bản CSDL khác có thể không khôi phục được nếu thiếu cấu trúc tương thích.
+            </div>
+        </div>
+    </div>
+</div>
+    </div>
     </div>
 
     <!-- KHU VỰC TẤT CẢ CÁC MODAL DÙNG CHO CÁC CHỨC NĂNG TRÊN -->
@@ -390,7 +515,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Địa bàn</label>
-                            <input type="text" class="form-control" id="diabanh" placeholder="Ví dụ: Ấp Mỹ Nhơn hoặc Toàn xã">
+                            <input type="text" class="form-control" id="diabanh" placeholder="Mã địa bàn hoặc Toàn xã">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Ấp</label>
@@ -400,7 +525,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Xã</label>
-                            <input type="text" class="form-control" id="xa" value="Lương Hòa">
+                            <input type="text" class="form-control" id="xa" readonly placeholder="Cấu hình tại mục Quản lý Xã & Ấp">
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -452,6 +577,44 @@
     </div>
 
     <!-- Modal Thêm Ấp Mới (Đã đồng bộ id thành ten_ap) -->
+    <!-- Modal Thêm / Sửa Xã -->
+    <div class="modal fade" id="xaModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="xaForm" onsubmit="saveXa(event)">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="xaModalTitle">Thêm xã / phường</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="xaId">
+                        <div class="mb-3">
+                            <label class="form-label">Tên xã / phường *</label>
+                            <input type="text" class="form-control" id="tenXa" required maxlength="150" placeholder="Nhập tên xã hoặc phường">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tỉnh / Thành phố *</label>
+                            <input type="text" class="form-control" id="tenTinh" required maxlength="150" placeholder="Nhập tỉnh hoặc thành phố">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mã xã / phường</label>
+                            <input type="text" class="form-control" id="maXaPhuong" maxlength="30" placeholder="Mã hành chính nếu có">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tên trạm y tế / nơi nhận báo cáo</label>
+                            <input type="text" class="form-control" id="tenTramYTe" maxlength="200" placeholder="Nhập tên trạm y tế hoặc nơi nhận báo cáo">
+                            <div class="form-text">Trường này được dùng làm nơi nhận báo cáo và nơi thực hiện mặc định khi phù hợp.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary">Lưu thông tin xã</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="apModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -632,107 +795,7 @@
             </div>
         </div>
     </div>
-<!-- TAB: QUẢN LÝ DANH SÁCH PHỤ NỮ 15-49 (IMPORT EXCEL & XEM TRÙNG) -->
-<div class="tab-pane fade" id="phunu1549Content" role="tabpanel">
-    <div class="card shadow-sm mb-4 border-0">
-        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center flex-wrap gap-2 py-3">
-            <div>
-                <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-file-excel me-1"></i> Quản lý Danh sách Phụ nữ 15-49 tuổi</h5>
-                <small>Import file Excel, rà soát danh sách và kiểm tra dữ liệu trùng lặp</small>
-            </div>
-            <div class="d-flex gap-2">
-                <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" class="d-none" onchange="handleExcelImport(event)">
-                <button class="btn btn-light btn-sm text-success fw-bold" onclick="document.getElementById('excelFileInput').click()">
-                    <i class="fa-solid fa-file-import me-1"></i> Chọn file Excel nạp CSDL
-                </button>
-            </div>
-        </div>
-        <div class="card-body p-2 p-md-3">
-            
-            <!-- THANH TAB CON: TẤT CẢ VÀ TRÙNG LẶP -->
-            <ul class="nav nav-tabs mb-3" id="subPhuNuTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active fw-bold" id="sub-all-tab" data-bs-toggle="tab" data-bs-target="#subAllContent" type="button" role="tab" onclick="loadPhuNu1549List()">
-                        <i class="fa-solid fa-list me-1"></i> Tất cả danh sách
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link fw-bold text-danger" id="sub-duplicate-tab" data-bs-toggle="tab" data-bs-target="#subDuplicateContent" type="button" role="tab" onclick="loadDuplicatePhuNuList()">
-                        <i class="fa-solid fa-triangle-exclamation me-1"></i> Danh sách trùng lặp (<span id="dupCount" class="badge bg-danger">0</span>)
-                    </button>
-                </li>
-            </ul>
-
-            <!-- NỘI DUNG CỦA CÁC TAB CON -->
-            <div class="tab-content" id="subPhuNuTabsContent">
-                
-                <!-- Tab con 1: Tất cả danh sách -->
-                <div class="tab-pane fade show active" id="subAllContent" role="tabpanel">
-                    <div class="alert alert-info small mb-3 py-2">
-                        💡 <b>Mẫu file Excel chuẩn:</b> File cần có các cột tên: <code>mã hộ</code> (hoặc <code>hộ số</code>), <code>địa bàn</code>, <code>họ tên</code>, <code>ngày sinh</code>, <code>số thẻ bhyt</code>, <code>số con</code>.
-                    </div>
-                    
-                    <div id="importProgress" class="d-none mb-3">
-                        <div class="progress" style="height: 20px;">
-                            <div id="importProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 0%">0%</div>
-                        </div>
-                        <small id="importProgressStatus" class="text-muted mt-1 d-block">Đang xử lý dữ liệu...</small>
-                    </div>
-
-                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                        <table class="table table-bordered table-hover align-middle">
-                            <thead class="table-dark text-center sticky-top">
-                                <tr>
-                                    <th style="width: 60px;">STT</th>
-                                    <th>Mã định danh</th>
-                                    <th>Mã hộ</th>
-                                    <th>Địa bàn</th>
-                                    <th>Họ và tên</th>
-                                    <th>Ngày sinh</th>
-                                    <th>Số thẻ BHYT</th>
-                                    <th>Số con</th>
-                                </tr>
-                            </thead>
-                            <tbody id="phuNu1549TableBody">
-                                <tr><td colspan="8" class="text-center">Đang tải dữ liệu...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Tab con 2: Danh sách trùng lặp -->
-                <div class="tab-pane fade" id="subDuplicateContent" role="tabpanel">
-                    <div class="alert alert-warning small mb-3 py-2">
-                        ⚠️ <b>Ghi chú:</b> Dưới đây là các trường hợp bị trùng lặp Mã hộ/Địa bàn hoặc trùng số thẻ BHYT trong hệ thống để cán bộ xã dễ dàng kiểm tra, rà soát.
-                    </div>
-                    
-                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                        <table class="table table-bordered table-hover align-middle">
-                            <thead class="table-danger text-center sticky-top">
-                                <tr>
-                                    <th style="width: 60px;">STT</th>
-                                    <th>Mã định danh</th>
-                                    <th>Mã hộ</th>
-                                    <th>Địa bàn</th>
-                                    <th>Họ và tên</th>
-                                    <th>Ngày sinh</th>
-                                    <th>Số thẻ BHYT</th>
-                                </tr>
-                            </thead>
-                            <tbody id="duplicateTableBody">
-                                <tr><td colspan="7" class="text-center">Chưa tải dữ liệu trùng...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-            </div>
-
-        </div>
-    </div>
-</div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="admin.js"></script>
+    <script src="admin.js?v=20261102-import-dancu"></script>
 </body>
 </html>

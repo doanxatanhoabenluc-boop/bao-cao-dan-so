@@ -2,6 +2,8 @@
 document.addEventListener("DOMContentLoaded", () => {
     loadUsers();
     loadApDropdown();
+    loadXaList();
+    loadActiveCommuneForUserForm();
 
     // Tải dữ liệu mặc định ban đầu cho các bảng đang xuất hiện trên màn hình
     if (document.getElementById('apTableBody')) loadApList();
@@ -18,14 +20,15 @@ document.addEventListener("DOMContentLoaded", () => {
         tab.addEventListener('shown.bs.tab', (event) => {
             const targetId = event.target.getAttribute('data-bs-target') || event.target.getAttribute('href') || '';
             
-            if (targetId.includes('ap')) loadApList();
-            else if (targetId.includes('benh-vien') || targetId.includes('bv')) loadBenhVienList();
-            else if (targetId.includes('bptt')) loadBpttList();
-            else if (targetId.includes('noi-thuc-hien')) loadNoiThucHienList();
-            else if (targetId.includes('logs')) loadLogs();
-            else if (targetId.includes('quan-he')) loadMoiQuanHeList();
-            else if (targetId.includes('nameMap')) loadVietnameseNameMapList();
-            else if (targetId.includes('user') || targetId.includes('tai-khoan')) loadUsers();
+            if (targetId === '#apContent') { loadXaList(); loadApList(); }
+            else if (targetId === '#bvContent') loadBenhVienList();
+            else if (targetId === '#bpttContent') loadBpttList();
+            else if (targetId === '#noiThucHienContent') loadNoiThucHienList();
+            else if (targetId === '#logsContent') loadLogs();
+            else if (targetId === '#moiQuanHeContent') loadMoiQuanHeList();
+            else if (targetId === '#nameMapContent') loadVietnameseNameMapList();
+            else if (targetId === '#usersContent') loadUsers();
+            else if (targetId === '#introBackupContent') loadIntroBackupInfo();
         });
     });
 });
@@ -97,6 +100,7 @@ function resetUserForm() {
     document.getElementById("userForm").reset();
     document.getElementById("passNote").innerText = "*";
     document.getElementById("password").setAttribute("required", "true");
+    loadActiveCommuneForUserForm();
 }
 
 function openEditUser(id, fullname, username, role, diabanh, ap, xa) {
@@ -201,7 +205,103 @@ function createCrudManager(config) {
     };
 }
 
-// ==================== TAB 2: QUẢN LÝ ẤP ====================
+// ==================== TAB 2: QUẢN LÝ XÃ ====================
+let xaRecords = [];
+const escapeAdminHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+
+async function loadActiveCommuneForUserForm() {
+    const input = document.getElementById('xa');
+    if (!input) return;
+    const settings = await apiCall('/api/public/thong-tin-xa');
+    input.value = settings && !settings.success ? '' : (settings?.ten_xa || '');
+    input.placeholder = input.value ? 'Xã đang được cấu hình trong hệ thống' : 'Vui lòng cấu hình xã tại mục Quản lý Xã & Ấp';
+}
+
+async function loadXaList() {
+    const tbody = document.getElementById('xaTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center">Đang tải dữ liệu...</td></tr>';
+    const list = await apiCall('/api/admin/xa');
+    if (!Array.isArray(list)) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger">${escapeAdminHtml(list?.message || 'Không tải được danh mục xã.')}</td></tr>`;
+        return;
+    }
+    xaRecords = list;
+    if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Chưa có xã. Hãy thêm xã để cấu hình địa phương đang sử dụng.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = list.map((item, index) => {
+        const active = item.la_mac_dinh === true;
+        return `<tr>
+            <td class="text-center">${index + 1}</td>
+            <td><b>${escapeAdminHtml(item.ten_xa)}</b></td>
+            <td>${escapeAdminHtml(item.ten_tinh)}</td>
+            <td>${escapeAdminHtml(item.ma_xa_phuong || '')}</td>
+            <td>${escapeAdminHtml(item.ten_tram_y_te || '')}</td>
+            <td class="text-center">${active ? '<span class="badge bg-success">Đang sử dụng</span>' : '<span class="badge bg-secondary">Chưa chọn</span>'}</td>
+            <td class="text-center text-nowrap">
+                <button class="btn btn-sm btn-warning me-1" onclick="editXa(${Number(item.id)})" title="Sửa"><i class="fa-solid fa-pen"></i></button>
+                ${active ? '' : `<button class="btn btn-sm btn-success me-1" onclick="setDefaultXa(${Number(item.id)})" title="Đặt làm xã đang sử dụng"><i class="fa-solid fa-check"></i></button>`}
+                <button class="btn btn-sm btn-danger" onclick="deleteXa(${Number(item.id)})" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function resetXaForm() {
+    document.getElementById('xaForm')?.reset();
+    document.getElementById('xaId').value = '';
+    document.getElementById('xaModalTitle').textContent = 'Thêm xã / phường';
+}
+
+function editXa(id) {
+    const item = xaRecords.find(row => Number(row.id) === Number(id));
+    if (!item) return alert('Không tìm thấy thông tin xã. Vui lòng tải lại danh sách.');
+    document.getElementById('xaId').value = item.id;
+    document.getElementById('tenXa').value = item.ten_xa || '';
+    document.getElementById('tenTinh').value = item.ten_tinh || '';
+    document.getElementById('maXaPhuong').value = item.ma_xa_phuong || '';
+    document.getElementById('tenTramYTe').value = item.ten_tram_y_te || '';
+    document.getElementById('xaModalTitle').textContent = 'Cập nhật xã / phường';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('xaModal')).show();
+}
+
+async function saveXa(event) {
+    event.preventDefault();
+    const id = document.getElementById('xaId').value;
+    const data = {
+        ten_xa: document.getElementById('tenXa').value.trim(),
+        ten_tinh: document.getElementById('tenTinh').value.trim(),
+        ma_xa_phuong: document.getElementById('maXaPhuong').value.trim(),
+        ten_tram_y_te: document.getElementById('tenTramYTe').value.trim()
+    };
+    const result = await apiCall(id ? `/api/admin/xa/${id}` : '/api/admin/xa', id ? 'PUT' : 'POST', data);
+    if (!result.success) return alert(result.message || 'Không thể lưu thông tin xã.');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('xaModal')).hide();
+    await Promise.all([loadXaList(), loadActiveCommuneForUserForm(), loadUsers()]);
+    alert(result.message || 'Đã lưu thông tin xã.');
+}
+
+async function setDefaultXa(id) {
+    const item = xaRecords.find(row => Number(row.id) === Number(id));
+    if (!item || !confirm(`Chuyển toàn hệ thống sang ${item.ten_xa}, ${item.ten_tinh}? Các trang sẽ dùng địa chỉ và thông tin báo cáo của xã này.`)) return;
+    const result = await apiCall(`/api/admin/xa/${id}/mac-dinh`, 'POST', {});
+    if (!result.success) return alert(result.message || 'Không thể đổi xã đang sử dụng.');
+    await Promise.all([loadXaList(), loadActiveCommuneForUserForm(), loadUsers()]);
+    alert(result.message || 'Đã đổi xã đang sử dụng.');
+}
+
+async function deleteXa(id) {
+    const item = xaRecords.find(row => Number(row.id) === Number(id));
+    if (!item || !confirm(`Bạn có chắc muốn xóa xã ${item.ten_xa}?`)) return;
+    const result = await apiCall(`/api/admin/xa/${id}`, 'DELETE');
+    if (!result.success) return alert(result.message || 'Không thể xóa xã.');
+    await loadXaList();
+    alert(result.message || 'Đã xóa xã.');
+}
+
+// ==================== TAB 3: QUẢN LÝ ẤP ====================
 const apManager = createCrudManager({
     tableId: 'apTableBody', cols: 4, api: '/api/admin/ap', onSuccess: loadApDropdown,
     renderRow: (item, idx) => `<tr>
@@ -542,167 +642,83 @@ async function deleteVietnameseNameMap(id) {
         alert(result.message || 'Không thể xóa ánh xạ.');
     }
 }
-// ==================== QUẢN LÝ IMPORT DANH SÁCH PHỤ NỮ 15-49 ====================
-
-// ==================== QUẢN LÝ IMPORT DANH SÁCH PHỤ NỮ 15-49 ====================
-
-// 1. Tải danh sách phụ nữ hiện có trong CSDL lên bảng Admin
-async function loadPhuNu1549List() {
-    const tbody = document.getElementById('phuNu1549TableBody');
-    if (!tbody) return;
-
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center">Đang tải dữ liệu từ CSDL...</td></tr>';
-    
-    try {
-        const res = await apiCall('/api/admin/phu-nu-15-49-list?limit=1000');
-        
-        // Hỗ trợ cả 2 dạng phản hồi (Mảng thuần OR Object phân trang { success, data: [...] })
-        let list = [];
-        if (Array.isArray(res)) {
-            list = res;
-        } else if (res && Array.isArray(res.data)) {
-            list = res.data;
-        }
-
-        if (!list || list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center">Chưa có dữ liệu. Vui lòng bấm nút "Chọn file Excel" để import.</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = list.map((item, idx) => `
-            <tr>
-                <td class="text-center">${idx + 1}</td>
-                <td><code>${item.ma_dinh_danh}</code></td>
-                <td><b>${item.ma_ho}</b></td>
-                <td>${item.diabanh}</td>
-                <td>${item.ho_ten}</td>
-                <td class="text-center">${item.ngay_sinh || ''}</td>
-                <td>${item.so_the_bhyt || ''}</td>
-                <td class="text-center">${item.so_con || 0}</td>
-            </tr>
-        `).join('');
-    } catch (e) {
-        console.error("Lỗi tải danh sách 15-49 admin:", e);
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Lỗi tải dữ liệu từ máy chủ.</td></tr>';
-    }
-}
-
-// 2. Đọc file Excel từ máy tính và gửi lên Server Import
-async function handleExcelImport(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    // Chặn file lớn hơn 5MB để bảo vệ server tài khoản Free
-    if (file.size > 5 * 1024 * 1024) {
-        alert("⚠️ File quá lớn! Vui lòng chọn file Excel dưới 5MB để đảm bảo hệ thống không bị tràn bộ nhớ.");
-        event.target.value = '';
-        return;
-    }
-
-    const progressContainer = document.getElementById('importProgress');
-    const progressBar = document.getElementById('importProgressBar');
-    const progressStatus = document.getElementById('importProgressStatus');
-
-    if (progressContainer) progressContainer.classList.remove('d-none');
-    if (progressBar) { progressBar.style.width = '30%'; progressBar.textContent = '30%'; }
-    if (progressStatus) progressStatus.textContent = 'Đang tải file lên hệ thống...';
-
-    try {
-        const formData = new FormData();
-        formData.append("excel", file); // Phải khớp với upload.single("excel") ở backend
-
-        if (progressBar) { progressBar.style.width = '60%'; progressBar.textContent = '60%'; }
-        if (progressStatus) progressStatus.textContent = 'Server đang xử lý và nạp dữ liệu...';
-
-        const response = await fetch('/api/admin/import-phu-nu-15-49', {
-            method: 'POST',
-            body: formData
-        });
-
-        const result = await response.json();
-
-        if (progressBar) { progressBar.style.width = '100%'; progressBar.textContent = '100%'; }
-
-        if (result.success) {
-            let alertMsg = "✅ " + result.message;
-            
-            // Nếu có danh sách trùng, ghi log console hoặc xử lý hiển thị thêm nếu cần
-            if (result.duplicates && result.duplicates.length > 0) {
-                console.warn("Các trường hợp trùng mã hộ/khu vực:", result.duplicates);
-            }
-            
-            alert(alertMsg);
-
-            // Gọi lại hàm load danh sách hiển thị
-            if (typeof loadPhuNu1549List === 'function') {
-                loadPhuNu1549List();
-            }
-        } else {
-            alert("❌ Lỗi: " + result.message);
-        }
-    } catch (err) {
-        console.error("Lỗi khi import file Excel:", err);
-        alert("Lỗi xử lý file Excel: " + err.message);
-    } finally {
-        setTimeout(() => {
-            if (progressContainer) progressContainer.classList.add('d-none');
-        }, 1000);
-        event.target.value = ''; // Reset input file
-    }
-}
-// Hàm tải danh sách các trường hợp bị trùng
-async function loadDuplicatePhuNuList() {
-    try {
-        const response = await fetch('/api/admin/phu-nu-15-49-trung');
-        const result = await response.json();
-        
-        const tbody = document.getElementById('duplicateTableBody'); // ID tbody của bảng trùng
-        if (!tbody) return;
-
-        if (!result.success || result.data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Không có trường hợp dữ liệu nào bị trùng lặp.</td></tr>`;
-            document.getElementById('dupCount').textContent = '0';
-            return;
-        }
-
-        document.getElementById('dupCount').textContent = result.data.length;
-
-        let html = '';
-        result.data.forEach((item, index) => {
-            html += `
-                <tr class="table-warning">
-                    <td>${index + 1}</td>
-                    <td><strong>${item.ma_dinh_danh}</strong></td>
-                    <td>${item.ma_ho}</td>
-                    <td>${item.diabanh}</td>
-                    <td class="fw-bold text-primary">${item.ho_ten}</td>
-                    <td>${item.ngay_sinh || ''}</td>
-                    <td>${item.so_the_bhyt || '<span class="text-muted">Chưa có</span>'}</td>
-                </tr>
-            `;
-        });
-        tbody.innerHTML = html;
-    } catch (err) {
-        console.error("Lỗi tải danh sách trùng:", err);
-    }
-}
-
-// Tự động đếm số lượng trùng khi vừa mở trang để hiển thị badge trên tab
-async function updateDuplicateBadge() {
-    try {
-        const response = await fetch('/api/admin/phu-nu-15-49-trung');
-        const result = await response.json();
-        if (result.success && document.getElementById('dupCount')) {
-            document.getElementById('dupCount').textContent = result.data.length;
-        }
-    } catch (e) {}
-}
-
-// Gọi hàm này khi trang được tải xong
-document.addEventListener("DOMContentLoaded", () => {
-    updateDuplicateBadge();
-});
 // ==================== ĐĂNG XUẤT ====================
 function logout() {
     apiCall('/api/logout', 'POST').then(() => window.location.href = 'index.html');
+}
+
+// ==================== TAB: GIỚI THIỆU & SAO LƯU ====================
+async function loadIntroBackupInfo() {
+    const xaEl = document.getElementById('introTenXa');
+    if (!xaEl) return;
+    xaEl.textContent = 'Đang tải thông tin...';
+    const result = await apiCall('/api/admin/gioi-thieu');
+    if (!result || result.success !== true) {
+        xaEl.textContent = result?.message || 'Không tải được thông tin địa phương.';
+        return;
+    }
+    const xa = result.xa || {};
+    xaEl.textContent = xa.ten_xa || 'Chưa cấu hình xã mặc định';
+    document.getElementById('introTenTinh').textContent = xa.ten_tinh || '';
+    document.getElementById('introMaXa').textContent = xa.ma_xa_phuong || 'Chưa khai báo';
+    document.getElementById('introTramYTe').textContent = xa.ten_tram_y_te || 'Chưa khai báo trong cấu hình xã';
+    const list = document.getElementById('introCoSoYTe');
+    const facilities = Array.isArray(result.coSoYTe) ? result.coSoYTe : [];
+    list.innerHTML = facilities.length
+        ? facilities.map(item => `<li><b>${escapeHtml(item.ten_benh_vien || '')}</b>${item.dia_chi ? ` – ${escapeHtml(item.dia_chi)}` : ''}</li>`).join('')
+        : '<li class="text-muted">Chưa có cơ sở y tế trong danh mục.</li>';
+}
+
+function downloadSystemBackup() {
+    const button = document.getElementById('downloadBackupBtn');
+    const status = document.getElementById('backupStatus');
+    if (button) button.disabled = true;
+    if (status) status.innerHTML = '<span class="text-primary"><i class="fa-solid fa-spinner fa-spin me-1"></i>Đang tạo file sao lưu và tải về...</span>';
+    // Điều hướng trực tiếp cho trình duyệt tải file dạng luồng, không đưa dữ liệu lớn qua JavaScript/RAM trang.
+    const link = document.createElement('a');
+    link.href = '/api/admin/backup/download';
+    link.download = '';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => {
+        if (button) button.disabled = false;
+        if (status) status.textContent = 'Đã gửi yêu cầu tải file. Kiểm tra mục Tải xuống của trình duyệt; nếu không có file, hãy đăng nhập lại và thử lần nữa.';
+    }, 2500);
+}
+
+async function restoreSystemBackup() {
+    const input = document.getElementById('restoreBackupFile');
+    const button = document.getElementById('restoreBackupBtn');
+    const status = document.getElementById('backupStatus');
+    const file = input?.files?.[0];
+    if (!file) {
+        alert('Bạn hãy chọn file sao lưu .jsonl.gz trước.');
+        return;
+    }
+    if (!file.name.toLowerCase().endsWith('.gz')) {
+        alert('File không đúng định dạng .gz.');
+        return;
+    }
+    const confirmText = 'Khôi phục sẽ XÓA dữ liệu hiện tại trong các bảng nghiệp vụ rồi nạp dữ liệu từ file sao lưu. Bạn đã tải bản sao lưu mới nhất của hệ thống hiện tại chưa?';
+    if (!confirm(confirmText)) return;
+    if (!confirm('Xác nhận lần cuối: bạn đồng ý thay thế toàn bộ dữ liệu hiện tại bằng file ' + file.name + ' ?')) return;
+
+    const form = new FormData();
+    form.append('backup', file, file.name);
+    if (button) button.disabled = true;
+    if (status) status.innerHTML = '<span class="text-primary"><i class="fa-solid fa-spinner fa-spin me-1"></i>Đang kiểm tra file và khôi phục dữ liệu. Không đóng trang trong lúc này...</span>';
+    try {
+        const response = await fetch('/api/admin/backup/restore', { method: 'POST', body: form, credentials: 'same-origin' });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) throw new Error(result.message || 'Khôi phục không thành công.');
+        if (status) status.innerHTML = `<span class="text-success fw-semibold"><i class="fa-solid fa-circle-check me-1"></i>${escapeHtml(result.message || 'Khôi phục thành công.')}</span>`;
+        alert(result.message || 'Khôi phục thành công. Hệ thống sẽ tải lại.');
+        window.location.reload();
+    } catch (error) {
+        if (status) status.innerHTML = `<span class="text-danger"><i class="fa-solid fa-circle-exclamation me-1"></i>${escapeHtml(error.message || 'Có lỗi khi khôi phục.')}</span>`;
+        alert(error.message || 'Có lỗi khi khôi phục dữ liệu.');
+    } finally {
+        if (button) button.disabled = false;
+    }
 }

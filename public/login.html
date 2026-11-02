@@ -3,90 +3,605 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng Nhập - Hệ Thống Dân Số</title>
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome để dùng icon mắt -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="theme-color" content="#f3f7f5">
+    <title>Đăng nhập</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --green-900: #104d40;
+            --green-800: #146b56;
+            --green-700: #188268;
+            --green-100: #e9f5ef;
+            --ink: #1d302b;
+            --muted: #778780;
+            --line: #dce7e1;
+            --danger: #b42318;
+        }
+
+        * { box-sizing: border-box; }
+        html { min-width: 320px; min-height: 100%; }
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: 24px;
+            display: grid;
+            place-items: center;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 12% 12%, rgba(190, 225, 207, .55), transparent 30%),
+                radial-gradient(circle at 88% 86%, rgba(193, 220, 225, .48), transparent 30%),
+                #f3f7f5;
+            font-family: Inter, "Be Vietnam Pro", "Segoe UI", Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        button, input, select { font: inherit; }
+
+        .login-card {
+            width: min(420px, 100%);
+            padding: 38px 36px 34px;
+            background: #fff;
+            border: 1px solid rgba(220, 231, 225, .95);
+            border-radius: 22px;
+            box-shadow: 0 22px 65px rgba(22, 65, 49, .12);
+        }
+
+        .system-brand {
+            margin: 0 0 24px;
+            text-align: center;
+        }
+        .system-brand-title {
+            margin: 0;
+            color: #145b49;
+            font-size: 19px;
+            font-weight: 850;
+            letter-spacing: .015em;
+            line-height: 1.35;
+        }
+        .system-brand-unit {
+            margin: 7px 0 0;
+            color: #49675b;
+            font-size: 15px;
+            font-weight: 750;
+            line-height: 1.45;
+        }
+        .system-brand-divider {
+            width: 48px;
+            height: 3px;
+            margin: 14px auto 0;
+            background: linear-gradient(90deg, #146b56, #79b99b);
+            border-radius: 999px;
+        }
+        .login-heading { margin: 0 0 25px; text-align: center; }
+        .login-heading h1 {
+            margin: 0;
+            color: #173c31;
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -.025em;
+            line-height: 1.3;
+        }
+
+        .form-field { margin-bottom: 20px; }
+        .form-field label {
+            display: block;
+            margin: 0 0 9px;
+            color: #29443a;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .field-wrap { position: relative; }
+        .field-icon {
+            position: absolute;
+            top: 50%;
+            left: 15px;
+            width: 18px;
+            height: 18px;
+            color: #87978f;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+        .form-control {
+            width: 100%;
+            min-height: 53px;
+            padding: 0 46px 0 44px;
+            color: #203a30;
+            background: #fbfdfc;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            outline: none;
+            font-size: 14px;
+            transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+        }
+        select.form-control {
+            padding-right: 42px;
+            appearance: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 650;
+            letter-spacing: .01em;
+        }
+        /* Dropdown tài khoản tự dựng để số thứ tự luôn hiển thị rõ trên mọi trình duyệt. */
+        .account-native-select { display: none !important; }
+        .account-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            padding-right: 44px;
+            text-align: left;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 650;
+        }
+        .account-trigger:disabled { cursor: not-allowed; opacity: .72; }
+        .account-trigger-text {
+            display: block;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .account-options {
+            position: absolute;
+            z-index: 30;
+            top: calc(100% + 7px);
+            left: 0;
+            right: 0;
+            max-height: 290px;
+            overflow-y: auto;
+            padding: 6px;
+            background: #fff;
+            border: 1px solid #d5e3db;
+            border-radius: 13px;
+            box-shadow: 0 16px 36px rgba(24, 61, 46, .16);
+        }
+        .account-options[hidden] { display: none !important; }
+        .account-option {
+            width: 100%;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 9px 10px;
+            color: #203a30;
+            background: #fff;
+            border: 0;
+            border-bottom: 1px solid #edf2ee;
+            border-radius: 8px;
+            text-align: left;
+            cursor: pointer;
+            font: inherit;
+        }
+        .account-option:last-child { border-bottom: 0; }
+        .account-option:hover, .account-option:focus-visible { background: #edf7f1; outline: none; }
+        .account-option[aria-selected="true"] { background: #e5f3eb; }
+        .account-number {
+            flex: 0 0 34px;
+            min-width: 34px;
+            height: 30px;
+            display: grid;
+            place-items: center;
+            color: #146b56;
+            background: #e7f4ed;
+            border: 1px solid #cfe6d8;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+        }
+        .account-option-name {
+            min-width: 0;
+            overflow-wrap: anywhere;
+            font-size: 15px;
+            font-weight: 650;
+            line-height: 1.4;
+        }
+        .account-option-username {
+            display: block;
+            margin-top: 2px;
+            color: #718078;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .select-arrow {
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            width: 16px;
+            height: 16px;
+            color: #7a8b83;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+        .form-control::placeholder { color: #a4b0aa; }
+        .form-control:focus {
+            background: #fff;
+            border-color: #48a487;
+            box-shadow: 0 0 0 4px rgba(35, 145, 112, .11);
+        }
+        .password-control { padding-right: 52px; }
+        .password-toggle {
+            position: absolute;
+            top: 50%;
+            right: 7px;
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            color: #71817a;
+            background: transparent;
+            border: 0;
+            border-radius: 9px;
+            cursor: pointer;
+            transform: translateY(-50%);
+        }
+        .password-toggle:hover { color: var(--green-800); background: var(--green-100); }
+        .password-toggle:focus-visible { outline: 3px solid rgba(35,145,112,.25); }
+        .password-toggle svg { width: 18px; height: 18px; }
+        .password-toggle .eye-off { display: none; }
+        .password-toggle[aria-pressed="true"] .eye-on { display: none; }
+        .password-toggle[aria-pressed="true"] .eye-off { display: block; }
+
+        .field-hint {
+            min-height: 16px;
+            margin: 7px 2px 0;
+            color: #84928b;
+            font-size: 11px;
+            line-height: 1.45;
+        }
+        .form-alert {
+            display: none;
+            margin: 0 0 17px;
+            padding: 11px 13px;
+            color: var(--danger);
+            background: #fff4f2;
+            border: 1px solid #ffd6d1;
+            border-radius: 10px;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .form-alert.show { display: block; }
+        .form-alert.info { color: #285c4e; background: #effaf5; border-color: #ccebdc; }
+
+        .login-button {
+            width: 100%;
+            min-height: 53px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            margin-top: 7px;
+            color: #fff;
+            background: linear-gradient(110deg, #126b55, #18866b);
+            border: 0;
+            border-radius: 12px;
+            box-shadow: 0 8px 18px rgba(18, 107, 85, .18);
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+        }
+        .login-button:hover:not(:disabled) {
+            filter: brightness(1.04);
+            box-shadow: 0 11px 22px rgba(18, 107, 85, .23);
+            transform: translateY(-1px);
+        }
+        .login-button:focus-visible { outline: 4px solid rgba(35,145,112,.22); outline-offset: 3px; }
+        .login-button:disabled { opacity: .7; cursor: wait; }
+        .login-button svg { width: 17px; height: 17px; }
+        .spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,.45);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+        }
+        .login-button.loading .spinner { display: block; }
+        .login-button.loading .login-arrow { display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 480px) {
+            body { padding: 16px; }
+            .login-card { padding: 30px 22px 26px; border-radius: 18px; }
+            .system-brand { margin-bottom: 21px; }
+            .system-brand-title { font-size: 17px; }
+            .system-brand-unit { font-size: 14px; }
+            .login-heading { margin-bottom: 23px; }
+            .login-heading h1 { font-size: 21px; }
+            .form-control { min-height: 51px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+        }
+    </style>
 </head>
-<body class="bg-light d-flex align-items-center justify-content-center vh-100">
-    <div class="card p-4 shadow-sm" style="width: 400px;">
-        <h3 class="text-center text-success mb-4 fw-bold">ĐĂNG NHẬP HỆ THỐNG</h3>
-        <form id="loginForm" onsubmit="handleLogin(event)">
-            <div class="mb-3">
-                <label class="form-label fw-bold">Chọn Họ và Tên:</label>
-                <select id="username" class="form-select form-select-lg" required>
-                    <option value="">-- Đang tải danh sách tài khoản... --</option>
-                </select>
+<body>
+    <main class="login-card" aria-label="Đăng nhập">
+        <header class="system-brand" aria-label="Thông tin đơn vị">
+            <h2 class="system-brand-title">HỆ THỐNG QUẢN LÝ DÂN SỐ</h2>
+            <p id="systemUnitName" class="system-brand-unit">Đang tải thông tin đơn vị...</p>
+            <div class="system-brand-divider" aria-hidden="true"></div>
+        </header>
+
+        <header class="login-heading">
+            <h1>ĐĂNG NHẬP</h1>
+        </header>
+
+        <div id="loginAlert" class="form-alert" role="alert" aria-live="polite"></div>
+
+        <form id="loginForm" autocomplete="on">
+            <div class="form-field">
+                <label for="username">Tài khoản</label>
+                <div class="field-wrap">
+                    <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+                    <select id="username" name="username" class="account-native-select" autocomplete="username" disabled aria-hidden="true" tabindex="-1">
+                        <option value="">Đang tải danh sách tài khoản...</option>
+                    </select>
+                    <button type="button" id="accountTrigger" class="form-control account-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="accountOptions" disabled>
+                        <span id="accountTriggerText" class="account-trigger-text">Đang tải danh sách tài khoản...</span>
+                    </button>
+                    <svg class="select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                    <div id="accountOptions" class="account-options" role="listbox" aria-label="Danh sách tài khoản" hidden></div>
+                </div>
+                <p id="userHint" class="field-hint" role="status">Vui lòng chọn tài khoản.</p>
             </div>
-            <div class="mb-4">
-                <label class="form-label fw-bold">Mật khẩu:</label>
-                <!-- Dùng input-group để ghép nút ẩn/hiện mật khẩu vào cạnh ô input -->
-                <div class="input-group">
-                    <input type="password" id="password" class="form-control form-control-lg" placeholder="Nhập mật khẩu của bạn" required>
-                    <button class="btn btn-outline-secondary" type="button" id="togglePassword" onclick="togglePasswordVisibility()">
-                        <i class="fa-solid fa-eye" id="toggleIcon"></i>
+
+            <div class="form-field">
+                <label for="password">Mật khẩu</label>
+                <div class="field-wrap">
+                    <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/></svg>
+                    <input type="password" id="password" name="password" class="form-control password-control" placeholder="Nhập mật khẩu" autocomplete="current-password" required>
+                    <button class="password-toggle" type="button" id="togglePassword" aria-label="Hiện mật khẩu" aria-pressed="false">
+                        <svg class="eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 5.2A11 11 0 0 1 12 5c6.5 0 10 7 10 7a14 14 0 0 1-3.1 3.9M6.2 6.2C3.5 8 2 12 2 12s3.5 7 10 7a10.8 10.8 0 0 0 4.1-.8"/></svg>
                     </button>
                 </div>
             </div>
-            <button type="submit" class="btn btn-success btn-lg w-100 shadow-sm">Đăng Nhập</button>
+
+            <button type="submit" id="loginButton" class="login-button" disabled>
+                <span class="spinner" aria-hidden="true"></span>
+                <span class="button-label">Đăng nhập</span>
+                <svg class="login-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
         </form>
-    </div>
+    </main>
 
-<script>
-    // Tự động tải danh sách tài khoản khi trang vừa mở
-    document.addEventListener("DOMContentLoaded", async () => {
-        try {
-            let res = await fetch('/api/public/users-list');
-            let users = await res.json();
-            let select = document.getElementById('username');
-            
-            if (users && users.length > 0) {
-                select.innerHTML = '<option value="">-- Bấm vào đây để chọn tên của bạn --</option>' + 
-                    users.map(u => `<option value="${u.username}">${u.fullname} (${u.username})</option>`).join('');
-            } else {
-                select.innerHTML = '<option value="">Không có tài khoản nào</option>';
-            }
-        } catch (err) {
-            console.error("Lỗi tải danh sách người dùng:", err);
-            document.getElementById('username').innerHTML = '<option value="">Lỗi tải danh sách</option>';
-        }
-    });
-
-    // Hàm xử lý ẩn/hiện mật khẩu
-    function togglePasswordVisibility() {
+    <script>
+const systemUnitName = document.getElementById('systemUnitName');
+        const usernameSelect = document.getElementById('username');
+        const accountTrigger = document.getElementById('accountTrigger');
+        const accountTriggerText = document.getElementById('accountTriggerText');
+        const accountOptions = document.getElementById('accountOptions');
         const passwordInput = document.getElementById('password');
-        const toggleIcon = document.getElementById('toggleIcon');
-        
-        if (passwordInput.type === 'password') {
-            passwordInput.type = 'text';
-            toggleIcon.classList.remove('fa-eye');
-            toggleIcon.classList.add('fa-eye-slash'); // Đổi sang icon mắt gạch chéo
-        } else {
-            passwordInput.type = 'password';
-            toggleIcon.classList.remove('fa-eye-slash');
-            toggleIcon.classList.add('fa-eye'); // Quay lại icon mắt thường
+        const loginButton = document.getElementById('loginButton');
+        const loginAlert = document.getElementById('loginAlert');
+        const userHint = document.getElementById('userHint');
+
+        function showMessage(message, type = 'error') {
+            loginAlert.textContent = message;
+            loginAlert.className = `form-alert show${type === 'info' ? ' info' : ''}`;
         }
-    }
 
-    async function handleLogin(e) {
-        e.preventDefault();
-        let username = document.getElementById('username').value;
-        let password = document.getElementById('password').value;
+        function clearMessage() {
+            loginAlert.textContent = '';
+            loginAlert.className = 'form-alert';
+        }
 
-        let res = await fetch('/api/login', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ username, password })
+        function closeAccountOptions() {
+            accountOptions.hidden = true;
+            accountTrigger.setAttribute('aria-expanded', 'false');
+        }
+
+        function addAccountOption(user, displayIndex) {
+            const displayName = String(user.fullname || user.username).trim();
+            const username = String(user.username);
+            const ordinal = String(displayIndex).padStart(2, '0');
+
+            // Select ẩn vẫn giữ nguyên username làm value gửi tới API đăng nhập.
+            usernameSelect.add(new Option(`${displayName} (${username})`, username));
+
+            const option = document.createElement('button');
+            option.type = 'button';
+            option.className = 'account-option';
+            option.setAttribute('role', 'option');
+            option.setAttribute('aria-selected', 'false');
+            option.dataset.username = username;
+
+            const number = document.createElement('span');
+            number.className = 'account-number';
+            number.textContent = ordinal;
+
+            const nameWrap = document.createElement('span');
+            nameWrap.className = 'account-option-name';
+            nameWrap.append(document.createTextNode(displayName));
+
+            const usernameLabel = document.createElement('span');
+            usernameLabel.className = 'account-option-username';
+            usernameLabel.textContent = username;
+            nameWrap.append(usernameLabel);
+
+            option.append(number, nameWrap);
+            option.addEventListener('click', () => {
+                usernameSelect.value = username;
+                accountTriggerText.textContent = `${ordinal}  •  ${displayName} (${username})`;
+                accountOptions.querySelectorAll('.account-option').forEach((item) => {
+                    item.setAttribute('aria-selected', String(item === option));
+                });
+                closeAccountOptions();
+                userHint.textContent = `Đã chọn tài khoản số ${ordinal}.`;
+                accountTrigger.focus();
+            });
+            accountOptions.append(option);
+        }
+
+        accountTrigger.addEventListener('click', () => {
+            if (accountTrigger.disabled) return;
+            const willOpen = accountOptions.hidden;
+            accountOptions.hidden = !willOpen;
+            accountTrigger.setAttribute('aria-expanded', String(willOpen));
+            if (willOpen) {
+                const selected = accountOptions.querySelector('[aria-selected="true"]');
+                if (selected) selected.scrollIntoView({ block: 'nearest' });
+            }
         });
-        
-        let data = await res.json();
-        if(data.success) {
-            window.location.href = 'index.html';
-        } else {
-            alert("❌ " + data.message);
+
+        accountTrigger.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeAccountOptions();
+            if (event.key === 'ArrowDown' && accountOptions.hidden && !accountTrigger.disabled) {
+                event.preventDefault();
+                accountTrigger.click();
+                accountOptions.querySelector('.account-option')?.focus();
+            }
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!event.target.closest('.field-wrap')) closeAccountOptions();
+        });
+
+        function formatUnitName(commune) {
+            const clinicName = String(commune?.ten_tram_y_te || '').trim();
+            if (clinicName) return clinicName;
+
+            const communeName = String(commune?.ten_xa || '').trim();
+            if (!communeName) return 'Đơn vị chưa được cấu hình';
+
+            const normalizedCommune = communeName.replace(/^(xã|phường|thị trấn)\s*/i, '').trim();
+            const originalPrefix = /^(xã|phường|thị trấn)\s*/i.exec(communeName)?.[1];
+            const areaLabel = originalPrefix
+                ? `${originalPrefix} ${normalizedCommune}`
+                : `xã ${normalizedCommune}`;
+            return `Trạm Y tế ${areaLabel}`;
         }
-    }
-</script>
+
+        async function loadUnitName() {
+            try {
+                const response = await fetch('/api/public/thong-tin-xa', {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    cache: 'no-store'
+                });
+                if (!response.ok) throw new Error('Không thể tải thông tin đơn vị.');
+                const commune = await response.json();
+                systemUnitName.textContent = formatUnitName(commune);
+            } catch (error) {
+                systemUnitName.textContent = 'Thông tin đơn vị chưa tải được';
+            }
+        }
+
+        async function loadUsers() {
+            usernameSelect.disabled = true;
+            loginButton.disabled = true;
+            accountTrigger.disabled = true;
+            accountTriggerText.textContent = 'Đang tải danh sách tài khoản...';
+            usernameSelect.replaceChildren(new Option('Đang tải danh sách tài khoản...', ''));
+            accountOptions.replaceChildren();
+            closeAccountOptions();
+            userHint.textContent = 'Vui lòng chờ trong giây lát.';
+            clearMessage();
+
+            try {
+                const response = await fetch('/api/public/users-list', {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    cache: 'no-store'
+                });
+                if (!response.ok) throw new Error('Máy chủ chưa thể tải danh sách tài khoản.');
+
+                const users = await response.json();
+                if (!Array.isArray(users) || users.length === 0) {
+                    usernameSelect.replaceChildren(new Option('Chưa có tài khoản hoạt động', ''));
+                    accountTriggerText.textContent = 'Chưa có tài khoản hoạt động';
+                    userHint.textContent = 'Vui lòng liên hệ quản trị viên để được cấp tài khoản.';
+                    showMessage('Hiện chưa có tài khoản hoạt động để đăng nhập.');
+                    return;
+                }
+
+                usernameSelect.replaceChildren(new Option('-- Chọn tài khoản --', ''));
+                let displayIndex = 0;
+                users.forEach((user) => {
+                    if (!user || !user.username) return;
+                    displayIndex += 1;
+                    addAccountOption(user, displayIndex);
+                });
+
+                if (displayIndex === 0) {
+                    accountTriggerText.textContent = 'Chưa có tài khoản hoạt động';
+                    userHint.textContent = 'Vui lòng liên hệ quản trị viên để được cấp tài khoản.';
+                    return;
+                }
+
+                usernameSelect.disabled = false;
+                accountTrigger.disabled = false;
+                loginButton.disabled = false;
+                accountTriggerText.textContent = '-- Chọn tài khoản --';
+                userHint.textContent = `${displayIndex} tài khoản đang hoạt động. Chọn theo số thứ tự ở danh sách.`;
+            } catch (error) {
+                usernameSelect.replaceChildren(new Option('Không tải được danh sách tài khoản', ''));
+                accountTriggerText.textContent = 'Không tải được danh sách tài khoản';
+                userHint.textContent = 'Kiểm tra kết nối rồi thử tải lại trang.';
+                showMessage(error.message || 'Không thể tải danh sách tài khoản.');
+            }
+        }
+
+        document.getElementById('togglePassword').addEventListener('click', function () {
+            const showing = passwordInput.type === 'password';
+            passwordInput.type = showing ? 'text' : 'password';
+            this.setAttribute('aria-pressed', String(showing));
+            this.setAttribute('aria-label', showing ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            clearMessage();
+
+            const username = usernameSelect.value;
+            const password = passwordInput.value;
+            if (!username) {
+                showMessage('Vui lòng chọn tài khoản của bạn.');
+                accountTrigger.focus();
+                return;
+            }
+            if (!password) {
+                showMessage('Vui lòng nhập mật khẩu.');
+                passwordInput.focus();
+                return;
+            }
+
+            loginButton.disabled = true;
+            loginButton.classList.add('loading');
+            loginButton.querySelector('.button-label').textContent = 'Đang xác thực...';
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok || !data.success) {
+                    showMessage(data.message || 'Đăng nhập chưa thành công. Vui lòng kiểm tra lại tài khoản và mật khẩu.');
+                    return;
+                }
+
+                window.location.assign('/index.html');
+            } catch (error) {
+                showMessage('Không thể kết nối máy chủ. Vui lòng kiểm tra mạng và thử lại.');
+            } finally {
+                loginButton.disabled = false;
+                loginButton.classList.remove('loading');
+                loginButton.querySelector('.button-label').textContent = 'Đăng nhập';
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUsers();
+            loadUnitName();
+        });
+    </script>
 </body>
 </html>

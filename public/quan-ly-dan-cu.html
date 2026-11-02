@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quản lý dân cư</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+  <style>
+    body{background:#f4f7fb;color:#1f2937}.topbar{background:#173b67;color:#fff}.page-wrap{max-width:1600px}.card{border:0;border-radius:14px;box-shadow:0 5px 22px #0f172a0c}.table thead th{white-space:nowrap;font-size:.84rem}.table tbody td{font-size:.9rem;vertical-align:middle}.searchbox{max-width:440px}.pagination .page-link{cursor:pointer}.required:after{content:' *';color:#dc3545}.form-label{font-weight:600;font-size:.9rem}.muted-small{font-size:.82rem;color:#64748b}.table-responsive{min-height:250px}.action-btn{width:34px;height:32px;padding:0}.loading{padding:48px!important;color:#64748b}.household-start td{border-top:3px solid #2563eb!important}.filters .form-label{margin-bottom:4px}
+  </style>
+</head>
+<body>
+<nav class="navbar topbar px-3 py-3 shadow-sm">
+  <div class="container-fluid page-wrap">
+    <span class="navbar-brand text-white fw-bold"><i class="fa-solid fa-users me-2"></i>QUẢN LÝ DÂN CƯ</span>
+    <div class="d-flex gap-2">
+      <a href="admin.html" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-arrow-left me-1"></i>Quản trị</a>
+      <a href="index.html" class="btn btn-light btn-sm"><i class="fa-solid fa-house me-1"></i>Trang chính</a>
+    </div>
+  </div>
+</nav>
+<main class="container-fluid page-wrap py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+    <div><h4 class="fw-bold mb-1">Danh sách dân cư</h4><div class="muted-small">Thêm mới, chỉnh sửa và xóa hồ sơ trong danh sách dân cư gốc.</div></div>
+    <button class="btn btn-primary fw-semibold" id="btnAdd"><i class="fa-solid fa-user-plus me-2"></i>Thêm dân cư</button>
+  </div>
+  <ul class="nav nav-tabs mb-3" id="populationTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active fw-semibold" id="tabDanhSachBtn" data-bs-toggle="tab" data-bs-target="#tabDanhSach" type="button" role="tab">
+        <i class="fa-solid fa-users me-1"></i> Danh sách dân cư
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link fw-semibold" id="tabThongBaoBtn" data-bs-toggle="tab" data-bs-target="#tabThongBao" type="button" role="tab">
+        <i class="fa-solid fa-bell me-1"></i> Thông báo & cảnh báo <span class="badge text-bg-warning ms-1" id="warningBadge">...</span>
+      </button>
+    </li>
+  </ul>
+  <div class="tab-content">
+   <div class="tab-pane fade show active" id="tabDanhSach" role="tabpanel" aria-labelledby="tabDanhSachBtn">
+    <section class="card">
+    <div class="card-body">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          <div class="input-group searchbox">
+            <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input id="searchInput" class="form-control" placeholder="Tìm họ tên, mã hộ, CCCD, BHYT, địa chỉ..." autocomplete="off">
+            <button class="btn btn-outline-secondary" id="btnClear" title="Xóa tìm kiếm"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <select id="filterAp" class="form-select" style="width:auto;min-width:170px"><option value="">Tất cả Ấp</option></select>
+          <select id="filterDiaBan" class="form-select" style="width:auto;min-width:190px"><option value="">Tất cả địa bàn</option></select>
+        </div>
+        <div class="row g-2 filters mb-3">
+          <div class="col-6 col-md-3 col-xl-2"><label class="form-label">Tình trạng hôn nhân</label><select id="filterHonNhan" class="form-select"><option value="">Tất cả</option><option>Chưa có vợ hoặc chồng</option><option>Có vợ/Có chồng</option><option>Ly thân</option><option>Ly hôn</option><option>Goá</option></select></div>
+          <div class="col-6 col-md-2 col-xl-1"><label class="form-label">Giới tính</label><select id="filterGioiTinh" class="form-select"><option value="">Tất cả</option><option>Nam</option><option>Nữ</option><option>Khác</option></select></div>
+          <div class="col-6 col-md-2 col-xl-1"><label class="form-label">Tuổi từ</label><input id="filterTuTuoi" type="number" min="0" max="120" class="form-control" placeholder="Từ"></div>
+          <div class="col-6 col-md-2 col-xl-1"><label class="form-label">Đến tuổi</label><input id="filterDenTuoi" type="number" min="0" max="120" class="form-control" placeholder="Đến"></div>
+          <div class="col-6 col-md-2 col-xl-1"><label class="form-label">Năm sinh</label><input id="filterNamSinh" type="number" min="1900" max="2100" class="form-control" placeholder="YYYY"></div>
+          <div class="col-6 col-md-3 col-xl-2"><label class="form-label">Trạng thái cư trú</label><select id="filterTrangThai" class="form-select"><option value="">Tất cả</option><option value="DANG_CU_TRU">Đang cư trú</option><option value="TAM_TRU">Tạm trú</option><option value="TAM_VANG">Tạm vắng</option><option value="DA_CHUYEN_DI">Đã chuyển đi</option><option value="DA_CHET">Đã chết</option><option value="DA_KHAI_TU">Đã khai tử</option><option value="MOI_CHUYEN_DEN">Mới chuyển đến</option></select></div>
+          <div class="col-6 col-md-3 col-xl-2"><label class="form-label">Biến động dân cư</label><select id="filterBienDong" class="form-select"><option value="">Tất cả biến động</option><option value="MOI_CHUYEN_DEN">Mới chuyển đến</option><option value="CHUYEN_DI">Chuyển đi</option><option value="DA_CHET">Đã chết / khai tử</option></select></div>
+          <div class="col-12 d-flex justify-content-end"><button class="btn btn-outline-secondary btn-sm" id="btnResetFilters"><i class="fa-solid fa-filter-circle-xmark me-1"></i>Xóa bộ lọc</button></div>
+        </div>
+        <div class="muted-small" id="summary">Đang tải dữ liệu...</div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover table-bordered align-middle mb-0">
+          <thead class="table-light"><tr>
+            <th class="text-center">STT</th><th>Họ và tên</th><th>Mã hộ</th><th>Ngày sinh</th><th>Giới tính</th><th>Quan hệ</th><th>CCCD</th><th>BHYT</th><th>Địa chỉ</th><th class="text-center">Thao tác</th>
+          </tr></thead>
+          <tbody id="residentBody"><tr><td colspan="10" class="text-center loading">Đang tải...</td></tr></tbody>
+        </table>
+      </div>
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
+        <div class="muted-small" id="pageInfo"></div>
+        <nav aria-label="Phân trang"><ul class="pagination pagination-sm mb-0" id="pagination"></ul></nav>
+      </div>
+    </div>
+    </section>
+   </div>
+   <div class="tab-pane fade" id="tabThongBao" role="tabpanel" aria-labelledby="tabThongBaoBtn">
+    <section class="card mb-3">
+     <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+       <div><h5 class="fw-bold mb-1"><i class="fa-solid fa-bell text-warning me-2"></i>Thông báo dữ liệu dân cư</h5><div class="muted-small">Thống kê trẻ còn tên tạm và phát hiện mã hộ trùng trong cùng địa bàn.</div></div>
+       <button class="btn btn-outline-primary btn-sm" id="btnRefreshNotifications"><i class="fa-solid fa-rotate me-1"></i>Cập nhật thống kê</button>
+      </div>
+      <div class="row g-3 mb-4">
+       <div class="col-6 col-xl-3"><div class="card border h-100"><div class="card-body"><div class="muted-small">Bé gái (tên tạm)</div><div class="fs-2 fw-bold text-danger" id="countBeGai">—</div></div></div></div>
+       <div class="col-6 col-xl-3"><div class="card border h-100"><div class="card-body"><div class="muted-small">Bé trai (tên tạm)</div><div class="fs-2 fw-bold text-primary" id="countBeTrai">—</div></div></div></div>
+       <div class="col-6 col-xl-3"><div class="card border h-100"><div class="card-body"><div class="muted-small">Chưa đặt tên</div><div class="fs-2 fw-bold text-warning" id="countChuaDatTen">—</div></div></div></div>
+       <div class="col-6 col-xl-3"><div class="card border h-100"><div class="card-body"><div class="muted-small">Nhóm hộ trùng mã</div><div class="fs-2 fw-bold text-danger" id="countTrungMaHo">—</div></div></div></div>
+      </div>
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+       <h6 class="fw-bold mb-0">Trẻ đang dùng tên tạm</h6><span class="muted-small" id="childCountNote">Đang tải...</span>
+      </div>
+      <div class="table-responsive mb-4">
+       <table class="table table-sm table-bordered table-hover align-middle mb-0">
+        <thead class="table-light"><tr><th>STT</th><th>Phân loại</th><th>Họ tên đang ghi</th><th>Mã hộ</th><th>Ngày sinh</th><th>Địa bàn</th></tr></thead>
+        <tbody id="temporaryChildrenBody"><tr><td colspan="6" class="text-center text-muted py-4">Đang tải...</td></tr></tbody>
+       </table>
+      </div>
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+       <h6 class="fw-bold mb-0">Hộ trùng mã trong cùng địa bàn</h6><span class="muted-small">Chỉ xét nhân khẩu đang cư trú; địa bàn lấy 3 số đầu của địa chỉ.</span>
+      </div>
+      <div class="table-responsive">
+       <table class="table table-sm table-bordered table-hover align-middle mb-0">
+        <thead class="table-light"><tr><th>STT</th><th>Địa bàn</th><th>Mã hộ bị trùng</th><th>Số hộ định danh</th><th>Số chủ hộ</th><th>Chủ hộ</th><th>Số nhân khẩu</th><th>Thành viên</th></tr></thead>
+        <tbody id="duplicateHouseholdsBody"><tr><td colspan="8" class="text-center text-muted py-4">Đang tải...</td></tr></tbody>
+       </table>
+      </div>
+      <div class="muted-small mt-2" id="notificationFootnote">Các nhóm trùng mã được xác định khi một mã hộ trong cùng địa bàn gắn với nhiều mã định danh hộ hoặc có nhiều chủ hộ.</div>
+     </div>
+    </section>
+   </div>
+  </div>
+</main>
+
+<div class="modal fade" id="residentModal" tabindex="-1" aria-hidden="true">
+ <div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content border-0 rounded-4">
+  <form id="residentForm">
+   <div class="modal-header bg-primary text-white"><h5 class="modal-title" id="modalTitle">Thêm hồ sơ dân cư</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+   <div class="modal-body"><input type="hidden" id="residentId">
+    <div class="row g-3" id="formFields">
+      <div class="col-md-6"><label class="form-label required" for="ho_ten">Họ và tên</label><input class="form-control" id="ho_ten" required maxlength="255"></div>
+      <div class="col-md-3"><label class="form-label" for="ma_ho">Mã hộ</label><input class="form-control" id="ma_ho"></div>
+      <div class="col-md-3"><label class="form-label" for="household_id">Mã định danh hộ</label><input class="form-control" id="household_id"></div>
+      <div class="col-md-3"><label class="form-label" for="quan_he">Quan hệ với chủ hộ</label><select class="form-select" id="quan_he"><option value="">-- Chọn quan hệ --</option></select></div>
+      <div class="col-md-3"><label class="form-label" for="gioi_tinh">Giới tính</label><select class="form-select" id="gioi_tinh"><option value="">-- Chọn --</option><option>Nữ</option><option>Nam</option><option>Khác</option></select></div>
+      <div class="col-md-3"><label class="form-label" for="ngay_sinh">Ngày sinh</label><input class="form-control" id="ngay_sinh" placeholder="DD/MM/YYYY hoặc YYYY-MM-DD"></div>
+      <div class="col-md-3"><label class="form-label" for="dan_toc">Dân tộc</label><select class="form-select" id="dan_toc"><option value="">-- Chọn dân tộc --</option></select></div>
+      <div class="col-md-3"><label class="form-label" for="hoc_van">Học vấn</label><select class="form-select" id="hoc_van"><option value="">-- Chọn học vấn --</option></select></div>
+      <div class="col-md-4"><label class="form-label" for="hon_nhan">Tình trạng hôn nhân</label><select class="form-select" id="hon_nhan"><option value="">-- Chọn tình trạng --</option><option>Chưa có vợ hoặc chồng</option><option>Có vợ/Có chồng</option><option>Ly hôn</option><option>Ly thân</option><option>Goá</option></select></div>
+      <div class="col-md-4"><label class="form-label" for="tinh_trang_cu_tru">Tình trạng cư trú</label><select class="form-select" id="tinh_trang_cu_tru"><option value="">-- Chọn tình trạng cư trú --</option><option>Thực tế thường trú có mặt</option><option>Thực tế thường trú vắng mặt</option></select></div>
+      <div class="col-md-4"><label class="form-label" for="trang_thai_cu_tru">Trạng thái cư trú</label><select class="form-select" id="trang_thai_cu_tru"><option value="DANG_CU_TRU">Đang cư trú</option><option value="TAM_TRU">Tạm trú</option><option value="TAM_VANG">Tạm vắng</option><option value="DA_CHUYEN_DI">Đã chuyển đi</option><option value="DA_CHET">Đã chết</option><option value="DA_KHAI_TU">Đã khai tử</option><option value="MOI_CHUYEN_DEN">Mới chuyển đến</option></select></div>
+      <div class="col-md-4"><label class="form-label" for="cccd">Số CCCD</label><input class="form-control" id="cccd" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="Nhập đúng 12 chữ số"><div class="form-text">Nếu nhập mới, CCCD phải đủ 12 chữ số.</div></div>
+      <div class="col-md-4"><label class="form-label" for="ngay_cap_cccd">Ngày cấp CCCD</label><input class="form-control" id="ngay_cap_cccd" placeholder="DD/MM/YYYY"></div>
+      <div class="col-md-4"><label class="form-label" for="ma_bhyt">Mã thẻ BHYT</label><div class="input-group"><input class="form-control" id="ma_bhyt" autocomplete="off"><button type="button" class="btn btn-outline-primary" id="btnSearchBhyt"><i class="fa-solid fa-magnifying-glass me-1"></i>Tra cứu</button></div><div class="form-text">Tra cứu từ file dữ liệu bảo hiểm y tế của hệ thống.</div></div>
+      <div class="col-md-8"><label class="form-label" for="dia_chi">Địa chỉ (có mã địa bàn 3 số ở đầu nếu có)</label><input class="form-control" id="dia_chi"></div>
+      <div class="col-md-4"><label class="form-label" for="diabanh">Địa bàn</label><input class="form-control" id="diabanh" placeholder="Ví dụ: mã địa bàn, tên xã, tỉnh/thành phố"></div>
+      <div class="col-md-4"><label class="form-label" for="ma_xa_phuong">Mã xã/phường</label><input class="form-control" id="ma_xa_phuong"></div>
+      <div class="col-md-2"><label class="form-label" for="so_con">Số con</label><input class="form-control" id="so_con" type="number" min="0" step="1"></div>
+      <div class="col-md-3"><label class="form-label" for="nam_sinh_con">Năm sinh con</label><input class="form-control" id="nam_sinh_con" placeholder="Ví dụ: 2018, 2021"></div>
+      <div class="col-md-3 d-flex align-items-end"><div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="theo_doi_15_49" checked><label class="form-check-label" for="theo_doi_15_49">Theo dõi phụ nữ 15–49</label></div></div>
+    </div>
+   </div>
+   <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button><button type="submit" class="btn btn-primary" id="btnSave"><i class="fa-solid fa-floppy-disk me-1"></i>Lưu hồ sơ</button></div>
+  </form>
+ </div></div>
+</div>
+<div class="modal fade" id="bhytLookupModal" tabindex="-1" aria-hidden="true">
+ <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content border-0 rounded-4">
+  <div class="modal-header bg-primary text-white"><h5 class="modal-title"><i class="fa-solid fa-id-card me-2"></i>Tra cứu thẻ BHYT</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body"><div class="small text-muted mb-2" id="bhytLookupHint">Tìm theo họ tên và năm sinh đang có trên hồ sơ.</div><div id="bhytLookupResults" class="py-2"></div></div>
+  <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button></div>
+ </div></div>
+</div>
+<div class="toast-container position-fixed bottom-0 end-0 p-3"><div id="noticeToast" class="toast"><div class="toast-body" id="noticeText"></div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(() => {
+ const $=id=>document.getElementById(id), modal=new bootstrap.Modal($('residentModal'));
+ const bhytModal=new bootstrap.Modal($('bhytLookupModal'));
+ const fields=['ho_ten','ma_ho','household_id','quan_he','gioi_tinh','ngay_sinh','dan_toc','hoc_van','hon_nhan','tinh_trang_cu_tru','ma_bhyt','dia_chi','diabanh','ma_xa_phuong','trang_thai_cu_tru','cccd','ngay_cap_cccd','so_con','nam_sinh_con'];
+ const filterIds=['filterAp','filterDiaBan','filterHonNhan','filterGioiTinh','filterTuTuoi','filterDenTuoi','filterNamSinh','filterTrangThai','filterBienDong'];
+ let page=1,totalPages=1,searchTimer=null,filterTimer=null,filterOptions=[],formOptions={quan_he:[],dan_toc:[],hoc_van:[]},originalCccd='';
+ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function notify(msg,isError=false){$('noticeText').textContent=msg;$('noticeToast').classList.toggle('text-danger',isError);bootstrap.Toast.getOrCreateInstance($('noticeToast'),{delay:4200}).show();}
+ async function api(url,options={}){const r=await fetch(url,{credentials:'same-origin',...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});const j=await r.json().catch(()=>({success:false,message:'Phản hồi máy chủ không hợp lệ.'}));if(!r.ok||j.success===false)throw new Error(j.message||`Lỗi HTTP ${r.status}`);return j;}
+ function setSelectOptions(id,values,placeholder,selected=''){
+  const select=$(id),items=[...new Set((values||[]).map(v=>String(v??'').trim()).filter(Boolean))];
+  if(selected&&!items.includes(String(selected)))items.unshift(String(selected));
+  select.innerHTML=`<option value="">${esc(placeholder)}</option>`+items.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+  select.value=selected||'';
+ }
+ async function loadFormOptions(){
+  const data=await api('/api/admin/dan-cu/options');formOptions={quan_he:data.quan_he||[],dan_toc:data.dan_toc||[],hoc_van:data.hoc_van||[]};
+  setSelectOptions('quan_he',formOptions.quan_he,'-- Chọn quan hệ --');
+  setSelectOptions('dan_toc',formOptions.dan_toc,'-- Chọn dân tộc --');
+  setSelectOptions('hoc_van',formOptions.hoc_van,'-- Chọn học vấn --');
+ }
+ async function load(){const body=$('residentBody');body.innerHTML='<tr><td colspan="10" class="text-center loading">Đang tải dữ liệu...</td></tr>';
+  try{const q=$('searchInput').value.trim();const params=new URLSearchParams({q,page,limit:20});const map={ap:'filterAp',diabanh:'filterDiaBan',hon_nhan:'filterHonNhan',gioi_tinh:'filterGioiTinh',tu_tuoi:'filterTuTuoi',den_tuoi:'filterDenTuoi',nam_sinh:'filterNamSinh',trang_thai:'filterTrangThai',bien_dong:'filterBienDong'};Object.entries(map).forEach(([k,id])=>{if($(id).value.trim())params.set(k,$(id).value.trim());});const data=await api(`/api/admin/dan-cu?${params}`);totalPages=data.totalPages||1;
+   $('summary').innerHTML = `<div><strong>Tổng cộng ${Number(data.totalHouseholds||0).toLocaleString('vi-VN')} hộ</strong> · Tổng số dân ${Number(data.totalPopulation||0).toLocaleString('vi-VN')} người · Đang hiển thị ${Number(data.totalRows||0).toLocaleString('vi-VN')} thành viên</div><div class="small text-muted mt-1">Đã chết/khai tử: ${Number(data.deadHouseholds||0).toLocaleString('vi-VN')} hộ · ${Number(data.deadPopulation||0).toLocaleString('vi-VN')} người &nbsp;|&nbsp; Đã chuyển đi: ${Number(data.movedHouseholds||0).toLocaleString('vi-VN')} hộ · ${Number(data.movedPopulation||0).toLocaleString('vi-VN')} người</div>`;
+   $('pageInfo').textContent=`Trang ${data.page}/${totalPages} · ${data.data.length} thành viên (tối đa 20 hộ/trang)`;
+   if(!data.data.length){body.innerHTML='<tr><td colspan="10" class="text-center text-muted py-5">Không tìm thấy hồ sơ dân cư.</td></tr>';}
+   else body.innerHTML=data.data.map((r,i)=>{const prev=data.data[i-1];const newHouse=!prev||String(prev._ma_dia_ban||'')!==String(r._ma_dia_ban||'')||String(prev.ma_ho||'')!==String(r.ma_ho||'');const status=String(r.trang_thai_cu_tru||'').toUpperCase();const inactive=['DA_CHUYEN_DI','DA_KHAI_TU','DA_CHET'].includes(status);const rowClasses=[newHouse?'household-start':'',inactive?'table-secondary':''].filter(Boolean).join(' ');return `<tr${rowClasses?` class="${rowClasses}"`: ''}><td class="text-center">${i+1}</td><td class="fw-semibold">${esc(r.ho_ten)}</td><td>${esc(r.ma_ho)}</td><td>${esc(r.ngay_sinh)}</td><td>${esc(r.gioi_tinh)}</td><td>${esc(r.quan_he)}</td><td>${esc(r.cccd)}</td><td>${esc(r.ma_bhyt)}</td><td>${esc(r.dia_chi)}</td><td class="text-center text-nowrap"><button class="btn btn-sm btn-outline-primary action-btn me-1" title="Sửa" data-edit="${r.id}"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-outline-danger action-btn" title="Xóa" data-delete="${r.id}" data-name="${esc(r.ho_ten)}"><i class="fa-solid fa-trash"></i></button></td></tr>`;}).join('');
+   renderPages();
+  }catch(e){body.innerHTML=`<tr><td colspan="10" class="text-center text-danger py-5">${esc(e.message)}</td></tr>`;$('summary').textContent='Không tải được dữ liệu';$('pageInfo').textContent='';$('pagination').innerHTML='';if(e.message.includes('quyền')||e.message.includes('đăng nhập'))$('btnAdd').disabled=true;}
+ }
+ async function loadFilterOptions(){
+  const result=await api('/api/admin/dan-cu/filters');filterOptions=result.options||[];
+  const aps=[...new Set(filterOptions.map(x=>x.ap).filter(Boolean))];
+  $('filterAp').innerHTML='<option value="">Tất cả Ấp</option>'+aps.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');updateAreaOptions();
+ }
+ function updateAreaOptions(){const ap=$('filterAp').value,selected=$('filterDiaBan').value;const rows=filterOptions.filter(x=>(!ap||x.ap===ap)&&x.ma_dia_ban);const unique=[...new Map(rows.map(x=>[x.ma_dia_ban,x])).values()];$('filterDiaBan').innerHTML='<option value="">Tất cả địa bàn</option>'+unique.map(x=>`<option value="${esc(x.ma_dia_ban)}">${esc(x.diabanh)}</option>`).join('');if(unique.some(x=>x.ma_dia_ban===selected))$('filterDiaBan').value=selected;}
+ function renderPages(){const ul=$('pagination');ul.innerHTML='';const add=(label,p,disabled=false,active=false)=>{const li=document.createElement('li');li.className=`page-item${disabled?' disabled':''}${active?' active':''}`;li.innerHTML=`<button class="page-link">${label}</button>`;li.querySelector('button').disabled=disabled;li.addEventListener('click',()=>{if(!disabled&&p!==page){page=p;load();}});ul.appendChild(li);};add('«',1,page===1);add('‹',Math.max(1,page-1),page===1);let start=Math.max(1,page-2),end=Math.min(totalPages,start+4);start=Math.max(1,end-4);for(let p=start;p<=end;p++)add(p,p,false,p===page);add('›',Math.min(totalPages,page+1),page===totalPages);add('»',totalPages,page===totalPages);}
+ function resetForm(row=null){
+  $('residentForm').reset();$('residentId').value=row?.id||'';originalCccd=String(row?.cccd||'');
+  fields.forEach(k=>$(k).value=row?.[k]??(k==='trang_thai_cu_tru'?'DANG_CU_TRU':''));
+  setSelectOptions('quan_he',formOptions.quan_he,'-- Chọn quan hệ --',row?.quan_he||'');
+  setSelectOptions('dan_toc',formOptions.dan_toc,'-- Chọn dân tộc --',row?.dan_toc||'');
+  setSelectOptions('hoc_van',formOptions.hoc_van,'-- Chọn học vấn --',row?.hoc_van||'');
+  setSelectOptions('hon_nhan',['Chưa có vợ hoặc chồng','Có vợ/Có chồng','Ly hôn','Ly thân','Goá'],'-- Chọn tình trạng --',row?.hon_nhan||'');
+  setSelectOptions('tinh_trang_cu_tru',['Thực tế thường trú có mặt','Thực tế thường trú vắng mặt'],'-- Chọn tình trạng cư trú --',row?.tinh_trang_cu_tru||'');
+  $('theo_doi_15_49').checked=row?.theo_doi_15_49!==false;$('modalTitle').textContent=row?'Chỉnh sửa hồ sơ dân cư':'Thêm hồ sơ dân cư';
+ }
+ $('btnAdd').addEventListener('click',()=>{resetForm();modal.show();});
+ $('residentBody').addEventListener('click',async e=>{const edit=e.target.closest('[data-edit]'),del=e.target.closest('[data-delete]');if(edit){try{const id=edit.dataset.edit;const result=await api(`/api/admin/dan-cu?q=${encodeURIComponent(id)}&page=1&limit=100`);const row=result.data.find(x=>String(x.id)===String(id));if(!row)throw new Error('Không tìm thấy hồ sơ.');resetForm(row);modal.show();}catch(err){notify(err.message,true);}}
+  if(del){const id=del.dataset.delete,name=del.dataset.name;if(!confirm(`Bạn có chắc muốn xóa hồ sơ “${name}” không?\nThao tác này không thể hoàn tác.`))return;try{const result=await api(`/api/admin/dan-cu/${id}`,{method:'DELETE'});notify(result.message);if(page>1&&$('residentBody').querySelectorAll('tr').length<=1)page--;load();}catch(err){notify(err.message,true);}}
+ });
+ $('residentForm').addEventListener('submit',async e=>{e.preventDefault();const id=$('residentId').value;const cccd=String($('cccd').value||'').trim();if(cccd&&cccd!==originalCccd&&!/^\d{12}$/.test(cccd)){notify('Số CCCD mới phải gồm đúng 12 chữ số.',true);$('cccd').focus();return;}const payload={};fields.forEach(k=>payload[k]=$(k).value);payload.theo_doi_15_49=$('theo_doi_15_49').checked;
+  $('btnSave').disabled=true;try{const result=await api(id?`/api/admin/dan-cu/${id}`:'/api/admin/dan-cu',{method:id?'PUT':'POST',body:JSON.stringify(payload)});modal.hide();notify(result.message);page=1;load();}catch(err){notify(err.message,true);}finally{$('btnSave').disabled=false;}
+ });
+ $('cccd').addEventListener('input',()=>{$('cccd').value=$('cccd').value.replace(/\D/g,'').slice(0,12);});
+ $('btnSearchBhyt').addEventListener('click',searchBHYT);
+ async function searchBHYT(){
+  const name=String($('ho_ten').value||'').trim(),dob=String($('ngay_sinh').value||'');const match=dob.match(/(?:19|20)\d{2}/),year=match?match[0]:'';
+  if(!name&&!year){notify('Vui lòng nhập họ tên hoặc năm sinh trước khi tra cứu BHYT.',true);return;}
+  $('bhytLookupResults').innerHTML='<div class="text-center py-4"><div class="spinner-border text-primary"></div><div class="mt-2">Đang tra cứu dữ liệu BHYT...</div></div>';
+  $('bhytLookupHint').textContent=`Từ khóa: ${name||'Không nhập họ tên'} · Năm sinh: ${year||'Không nhập'}`;bhytModal.show();
+  try{const params=new URLSearchParams();if(name)params.set('name',name);if(year)params.set('year',year);const result=await api(`/api/bhyt/search?${params.toString()}`);const rows=result.results||[];
+   if(!rows.length){$('bhytLookupResults').innerHTML='<div class="alert alert-warning mb-0">Không tìm thấy thông tin phù hợp trong file dữ liệu BHYT.</div>';return;}
+   $('bhytLookupResults').innerHTML=`<div class="alert alert-success py-2">Tìm thấy ${rows.length} kết quả. Chọn đúng người để điền mã thẻ.</div><div class="list-group">${rows.map((r,i)=>`<button type="button" class="list-group-item list-group-item-action text-start" data-bhyt-index="${i}"><div class="d-flex flex-wrap justify-content-between gap-2"><div><strong>${esc(r.ho_ten)}</strong><div class="small text-muted">Ngày sinh: ${esc(r.ngay_sinh||r.nam_sinh||'')} · Giới tính: ${esc(r.gioi_tinh||'')}</div><div class="small text-muted">CCCD: ${esc(r.so_cccd||'Không có')} · ${esc(r.dia_chi||'')}</div></div><div class="text-success fw-bold">${esc(r.so_the_bhyt||'Không có mã thẻ')}</div></div></button>`).join('')}</div>`;
+   $('bhytLookupResults').querySelectorAll('[data-bhyt-index]').forEach(btn=>btn.addEventListener('click',()=>{const person=rows[Number(btn.dataset.bhytIndex)];if(!person?.so_the_bhyt){notify('Người này chưa có mã thẻ BHYT trong dữ liệu.',true);return;}$('ma_bhyt').value=person.so_the_bhyt;bhytModal.hide();notify('Đã điền mã thẻ BHYT. Hãy kiểm tra rồi lưu hồ sơ.');}));
+  }catch(err){$('bhytLookupResults').innerHTML=`<div class="alert alert-danger mb-0">${esc(err.message)}</div>`;}
+ }
+ async function loadNotifications(){
+  $('temporaryChildrenBody').innerHTML='<tr><td colspan="6" class="text-center text-muted py-4">Đang tải...</td></tr>';$('duplicateHouseholdsBody').innerHTML='<tr><td colspan="8" class="text-center text-muted py-4">Đang tải...</td></tr>';
+  try{const data=await api('/api/admin/dan-cu/thong-bao');const t=data.tre||{};const fmt=v=>Number(v||0).toLocaleString('vi-VN');$('countBeGai').textContent=fmt(t.be_gai);$('countBeTrai').textContent=fmt(t.be_trai);$('countChuaDatTen').textContent=fmt(t.chua_dat_ten);$('countTrungMaHo').textContent=fmt(data.tong_nhom_trung_ma_ho);$('warningBadge').textContent=fmt(Number(t.tong_tre||0)+Number(data.tong_nhom_trung_ma_ho||0));$('childCountNote').textContent=`Tổng ${fmt(t.tong_tre)} trẻ thuộc các nhóm tên tạm; hiển thị tối đa 500 hồ sơ.`;
+   const children=data.danh_sach_tre||[];$('temporaryChildrenBody').innerHTML=children.length?children.map((r,i)=>{const label=r.loai==='BE_GAI'?'Bé gái':r.loai==='BE_TRAI'?'Bé trai':'Chưa đặt tên';return `<tr><td>${i+1}</td><td>${label}</td><td class="fw-semibold">${esc(r.ho_ten)}</td><td>${esc(r.ma_ho)}</td><td>${esc(r.ngay_sinh)}</td><td>${esc(r.dia_ban)}</td></tr>`;}).join(''):'<tr><td colspan="6" class="text-center text-success py-4">Không có trẻ đang dùng tên tạm.</td></tr>';
+   const duplicates=data.trung_ma_ho||[];$('duplicateHouseholdsBody').innerHTML=duplicates.length?duplicates.map((r,i)=>`<tr class="table-warning"><td>${i+1}</td><td>${esc(r.dia_ban||`${r.ma_dia_ban}`)}</td><td class="fw-bold">${esc(r.ma_ho)}</td><td>${fmt(r.so_ma_dinh_danh_ho)}</td><td>${fmt(r.so_chu_ho)}</td><td>${esc(r.ten_chu_ho||'Chưa xác định')}</td><td>${fmt(r.so_nhan_khau)}</td><td class="small">${esc(r.danh_sach_thanh_vien||'')}</td></tr>`).join(''):'<tr><td colspan="8" class="text-center text-success py-4">Không phát hiện mã hộ trùng theo tiêu chí kiểm tra.</td></tr>';
+  }catch(err){$('temporaryChildrenBody').innerHTML=`<tr><td colspan="6" class="text-center text-danger py-4">${esc(err.message)}</td></tr>`;$('duplicateHouseholdsBody').innerHTML=`<tr><td colspan="8" class="text-center text-danger py-4">${esc(err.message)}</td></tr>`;notify(err.message,true);}
+ }
+ $('tabThongBaoBtn').addEventListener('shown.bs.tab',loadNotifications);$('btnRefreshNotifications').addEventListener('click',loadNotifications);
+ $('searchInput').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{page=1;load();},300);});$('btnClear').addEventListener('click',()=>{$('searchInput').value='';page=1;load();});
+ $('filterAp').addEventListener('change',()=>{updateAreaOptions();page=1;load();});$('filterDiaBan').addEventListener('change',()=>{page=1;load();});
+ filterIds.filter(id=>!['filterAp','filterDiaBan'].includes(id)).forEach(id=>$(id).addEventListener('change',()=>{page=1;load();}));
+ ['filterTuTuoi','filterDenTuoi','filterNamSinh'].forEach(id=>$(id).addEventListener('input',()=>{clearTimeout(filterTimer);filterTimer=setTimeout(()=>{page=1;load();},400);}));
+ $('btnResetFilters').addEventListener('click',()=>{filterIds.forEach(id=>$(id).value='');updateAreaOptions();page=1;load();});
+ (async()=>{try{await loadFormOptions();await loadFilterOptions();await load();}catch(e){notify(e.message,true);load();}})();
+})();
+</script>
+</body>
+</html>

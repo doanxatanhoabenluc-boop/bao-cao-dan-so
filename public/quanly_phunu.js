@@ -9,9 +9,14 @@ let bpttDictionary = {
     "0": "Không sử dụng", "1": "Đặt vòng", "1/1": "Thay vòng", "2": "Triệt sản nam",
     "3": "Triệt sản nữ", "4": "Bao cao su", "5": "Thuốc viên", "6": "Thuốc tiêm",
     "7": "Thuốc cấy", "7/7": "Thay que cấy", "8": "Biện pháp khác", "19": "Mã BPTT 19",
-    "79": "Mã BPTT 79", "S": "Vừa sinh con / Mang thai", "T": "Biện pháp T"
+    "79": "Mã BPTT 79", "S": "Sinh con", "T": "Mang thai", "ST": "Sảy thai", "PT": "Phá thai"
 };
 const pageSize = 50;
+
+function getBpttDisplayName(code) {
+    const key = String(code ?? '').trim();
+    return bpttDictionary[key] || (key ? `Mã ${key}` : '');
+}
 
 document.addEventListener("DOMContentLoaded", async () => {
     await checkUserInfo();
@@ -185,8 +190,8 @@ async function loadReportDiabanhCatalog(apName) {
             res.data.forEach(db => {
                 select.innerHTML += `<option value="${db}">Địa bàn ${db}</option>`;
             });
-            // TỰ ĐỘNG CHỌN NGAY ĐỊA BÀN ĐẦU TIÊN TRONG DANH SÁCH (VD: 101) ĐỂ LOAD NHANH
-            select.value = res.data[0];
+            // Để mặc định 'Tất cả Địa bàn'; chỉ lọc khi người dùng chủ động chọn.
+            select.value = '';
         }
     } catch (e) {
         console.error("Lỗi tải địa bàn báo cáo:", e);
@@ -335,7 +340,7 @@ function renderTable(data) {
     data.forEach(item => {
         let bpttBadge = `<span class="badge bg-secondary">Không dùng / Trống</span>`;
         if (item.current_bptt && item.current_bptt !== '0') {
-            let tenBptt = bpttDictionary[item.current_bptt] || `Mã ${item.current_bptt}`;
+            let tenBptt = getBpttDisplayName(item.current_bptt);
             bpttBadge = `<span class="badge bg-success" title="${tenBptt}">Mã: ${item.current_bptt}</span> <small class="text-muted">${tenBptt}</small>`;
         }
 
@@ -344,14 +349,14 @@ function renderTable(data) {
                 <td class="text-center">${item.ma_ho}</td>
                 <td class="fw-bold">${item.ho_ten}</td>
                 <td class="text-center">${item.ngay_sinh || ''}</td>
-                <td>${item.diabanh}</td>
+                <td>${item.diabanh || item.dia_chi || ''}</td>
                 <td class="text-center">${item.so_con}</td>
                 <td class="text-center">${item.nam_sinh_con || ''}</td>
                 <td class="text-center">${item.so_the_bhyt || ''}</td>
                 <td class="text-center">${bpttBadge}</td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-warning mb-1" onclick='openEditModal(${JSON.stringify(item)})'>Sửa & Lịch sử</button>
-                    <button class="btn btn-sm btn-danger mb-1" onclick='deletePhuNu("${item.ma_dinh_danh}")'>Xóa</button>
+                    <button class="btn btn-sm btn-danger mb-1" onclick='deletePhuNu("${item.ma_dinh_danh}")'>Ngừng theo dõi</button>
                 </td>
             </tr>
         `;
@@ -526,7 +531,7 @@ async function openAddPhuNuModal() {
             throw new Error('Không tìm thấy phần tử #editDiaBan trong HTML.');
         }
 
-        diaBanInput.value = currentUser?.diabanh || '101, Xã Lương Hòa';
+        diaBanInput.value = currentUser?.diabanh || '';
 
         const role = String(currentUser?.role || '').trim().toLowerCase();
         const isAdminOrLeader = ['admin', 'lãnh đạo'].includes(role);
@@ -612,7 +617,7 @@ async function loadHistory(maDinhDanh) {
         tbody.innerHTML = '';
         rows.forEach(h => {
             const tr = document.createElement('tr');
-            [h.ma_bptt, h.ngay_ap_dung, h.noi_thuc_hien || ''].forEach(value => {
+            [getBpttDisplayName(h.ma_bptt), h.ngay_ap_dung, h.noi_thuc_hien || ''].forEach(value => {
                 const td = document.createElement('td');
                 td.textContent = value == null ? '' : String(value);
                 tr.appendChild(td);
@@ -962,10 +967,87 @@ async function deleteHistory(id) {
 }
 
 async function deletePhuNu(maDinhDanh) {
-    if (!confirm("Cảnh báo: Xóa hồ sơ này sẽ đồng thời xóa toàn bộ lịch sử BPTT liên quan. Bạn có chắc chắn?")) return;
+    if (!confirm("Ngừng theo dõi người này trong danh sách 15–49? Hồ sơ dân cư gốc và lịch sử BPTT sẽ được giữ nguyên.")) return;
     let res = await fetch(`/api/admin/quan-ly-phu-nu/${maDinhDanh}`, { method: 'DELETE' }).then(r => r.json());
     alert(res.message);
     if (res.success) loadData(currentPage);
+}
+
+async function exportExcelNamSinhCon() {
+    try {
+        const params = new URLSearchParams();
+        if (currentAp) params.set('ap', currentAp);
+        if (currentDiabanh) params.set('diabanh', currentDiabanh);
+        const query = params.toString();
+        const response = await fetch('/api/admin/export-nam-sinh-con-15-49' + (query ? `?${query}` : ''));
+        if (!response.ok) {
+            let message = 'Không thể tải danh sách Excel.';
+            try { const data = await response.json(); message = data.message || message; } catch (_) {}
+            throw new Error(message);
+        }
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'Danh_sach_phu_nu_15-49_so_con_nam_sinh_con.xlsx';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+        console.error('Lỗi tải Excel năm sinh con:', err);
+        alert(err.message || 'Không thể tải file Excel.');
+    }
+}
+
+async function importExcelNamSinhCon(input) {
+    const file = input?.files?.[0];
+    if (!file) return;
+    const x = file.name.toLowerCase();
+    if (!x.endsWith('.xlsx') && !x.endsWith('.xls')) {
+        alert('Vui lòng chọn file Excel .xlsx hoặc .xls.');
+        input.value = '';
+        return;
+    }
+    const confirmed = confirm(
+        'Bạn chuẩn bị cập nhật Số con và Năm sinh con nhỏ nhất từ file Excel. Hệ thống chỉ cập nhật hai cột này theo ID dân cư đã có; không thêm nhân khẩu, không sửa họ tên, mã hộ, địa chỉ, BHYT hoặc lịch sử BPTT. Ô nào để trống sẽ giữ nguyên dữ liệu cũ. Số con phải là số nguyên không âm. Bạn có tiếp tục không?'
+    );
+    if (!confirmed) {
+        input.value = '';
+        return;
+    }
+
+    const uploadButton = document.querySelector('button[onclick*="excelNamSinhConFile"]');
+    if (uploadButton) {
+        uploadButton.disabled = true;
+        uploadButton.textContent = 'Đang cập nhật...';
+    }
+    try {
+        const formData = new FormData();
+        formData.append('excel', file);
+        const response = await fetch('/api/admin/import-nam-sinh-con-15-49', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Không thể cập nhật file Excel.');
+        }
+        alert(result.message);
+        await loadData(currentPage);
+        if (typeof loadReportData === 'function' && document.getElementById('reportSection')?.style.display !== 'none') {
+            await loadReportData(reportCurrentPage || 1);
+        }
+    } catch (err) {
+        console.error('Lỗi cập nhật Excel năm sinh con:', err);
+        alert(err.message || 'Đã xảy ra lỗi khi cập nhật file Excel.');
+    } finally {
+        input.value = '';
+        if (uploadButton) {
+            uploadButton.disabled = false;
+            uploadButton.textContent = '📤 Tải Excel đã bổ sung số con và năm sinh lên';
+        }
+    }
 }
 
 async function openPreviewSyncModal() {

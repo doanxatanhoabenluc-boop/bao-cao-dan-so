@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 let currentUserGlobal = null;
 let allDiaBanData = [];
+let currentCommuneSettings = { ten_xa: '', ten_tinh: '', ten_tram_y_te: '' };
 
 // Hàm hỗ trợ định dạng ngày từ YYYY-MM-DD sang DD/MM/YYYY
 function formatDateVN(dateString) {
@@ -33,6 +34,16 @@ async function fetchUserDataAndInit() {
         }
 
         currentUserGlobal = user;
+        try {
+            const communeRes = await fetch('/api/public/thong-tin-xa', { cache: 'no-store' });
+            if (communeRes.ok) currentCommuneSettings = await communeRes.json();
+        } catch (communeError) {
+            console.error('Lỗi tải thông tin xã:', communeError);
+        }
+        document.getElementById("txtNoiNhanBaoCao").innerText = currentCommuneSettings.ten_tram_y_te || '';
+        document.getElementById("txtXa").innerText = currentCommuneSettings.ten_xa || user.xa || '';
+        document.getElementById("txtTinh").innerText = currentCommuneSettings.ten_tinh || user.tinh || '';
+        document.getElementById("signCommune").innerText = currentCommuneSettings.ten_xa || user.xa || '';
 
         document.getElementById("lblReporterName").innerText = user.fullname || user.username;
         document.getElementById("signCtvName").innerText = user.fullname || user.username;
@@ -57,7 +68,8 @@ async function fetchUserDataAndInit() {
             document.getElementById("txtAp").innerText = "Toàn xã";
         }
 
-        document.getElementById("txtXa").innerText = user.xa || "Lương Hòa";
+        document.getElementById("txtXa").innerText = currentCommuneSettings.ten_xa || user.xa || '';
+        document.getElementById("txtTinh").innerText = currentCommuneSettings.ten_tinh || user.tinh || '';
 
         loadReportData();
 
@@ -396,7 +408,9 @@ function exportToWord() {
     const year = document.getElementById("filterYear").value;
     const diaBan = document.getElementById("txtDiaBan").innerText || "Toàn xã";
     const ap = document.getElementById("txtAp").innerText || "Toàn xã";
-    const xa = document.getElementById("txtXa").innerText || "Lương Hòa";
+    const xa = document.getElementById("txtXa").innerText || "";
+    const tinh = document.getElementById("txtTinh")?.innerText || "";
+    const noiNhanBaoCao = currentCommuneSettings.ten_tram_y_te || document.getElementById("txtNoiNhanBaoCao")?.innerText || "";
     const adminSignName = document.getElementById("signAdminName").innerText || "..............................................";
     const ctvSignName = document.getElementById("signCtvName").innerText || reporterName;
 
@@ -584,7 +598,7 @@ function exportToWord() {
                 </td>
                 <td style="width: 45%; text-align: right; vertical-align: top; border: none !important; padding: 0; font-size: 12pt;">
                     <p style="margin: 0;">Người báo cáo: ${reporterName}</p>
-                    <p style="margin: 0;">Nơi nhận báo cáo: Trạm Y Tế Xã Lương Hòa</p>
+                    <p style="margin: 0;">Nơi nhận báo cáo: ${noiNhanBaoCao}</p>
                 </td>
             </tr>
         </table>
@@ -593,7 +607,7 @@ function exportToWord() {
             <p style="margin: 3px 0 0 0; font-size: 13pt;">
                 Địa bàn: ${diaBan} &nbsp;&nbsp;&nbsp; 
                 Thôn: ${ap} &nbsp;&nbsp;&nbsp; 
-                Xã: ${xa}
+                Xã: ${xa} &nbsp;&nbsp;&nbsp; Tỉnh: ${tinh}
             </p>
         </div>
     `;
@@ -614,7 +628,7 @@ function exportToWord() {
                     <p style="margin: 0; font-weight: bold;">${adminSignName}</p>
                 </td>
                 <td style="width: 50%; text-align: center; vertical-align: top; border: none !important; padding: 0;">
-                    <p style="margin: 0; font-size: 12pt; font-style: italic;">Lương Hòa, ngày ${curDay} tháng ${curMonth} năm ${curYear}</p>
+                    <p style="margin: 0; font-size: 12pt; font-style: italic;">${xa}, ngày ${curDay} tháng ${curMonth} năm ${curYear}</p>
                     <p style="margin: 2px 0 0 0; font-weight: bold;">Cộng tác viên dân số lập phiếu</p>
                     <p style="margin: 0; font-style: italic; font-size: 12pt;">(Ký, ghi rõ họ và tên)</p>
                     <div style="height: 50px;"></div>

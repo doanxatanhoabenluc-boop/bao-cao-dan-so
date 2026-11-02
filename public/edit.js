@@ -3,6 +3,13 @@
 let currentTableDataCache = []; // Lưu trữ cache dữ liệu
 let pendingEditData = {};       // Lưu tạm dữ liệu chờ xác nhận
 
+// Form SỬA Bảng 1 không yêu cầu chọn lại quan hệ của trẻ với chủ hộ.
+// Trường này chỉ được dùng ở bước tạo hồ sơ dân cư khi nhập mới.
+function getCurrentEditFields() {
+    const fields = tableConfigs[currentTable]?.fields || [];
+    return currentTable === 'table_1' ? fields.filter(field => field.name !== 'quan_he_con') : fields;
+}
+
 // Tự động chèn HTML Modal Sửa dữ liệu vào cuối trang khi load file
 document.addEventListener("DOMContentLoaded", function() {
     injectEditModalHTML();
@@ -101,10 +108,11 @@ function openEditModal(recordId) {
 
     document.getElementById('edit_record_id').value = item.id;
     let config = tableConfigs[currentTable];
+    const editFields = getCurrentEditFields();
     let container = document.getElementById('edit-dynamic-fields');
     container.innerHTML = '';
 
-    config.fields.forEach(field => {
+    editFields.forEach(field => {
         let col = document.createElement('div');
         col.className = "col-md-6 mb-3";
         let val = item[field.name] !== undefined && item[field.name] !== null ? item[field.name] : '';
@@ -207,7 +215,7 @@ function switchToReviewMode() {
 
     let config = tableConfigs[currentTable];
 
-    for (let field of config.fields) {
+    for (let field of getCurrentEditFields()) {
         if (isMandatoryField(field.name, field.label)) {
             let val = pendingEditData[field.name];
             if (!val || String(val).trim() === '') {
@@ -233,7 +241,7 @@ function switchToReviewMode() {
     }
 
     let reviewHtml = '<div class="row g-2">';
-    config.fields.forEach(field => {
+    getCurrentEditFields().forEach(field => {
         let val = pendingEditData[field.name] || '<span class="text-muted fst-italic">(Trống)</span>';
         reviewHtml += `
             <div class="col-md-6 border-bottom pb-2 mb-2">
@@ -269,7 +277,15 @@ async function submitEditData() {
     let result = await res.json();
 
     if (result.success) {
-        alert("✅ Cập nhật dữ liệu thành công!");
+        const sync = result.dan_cu_sync || {};
+        let message = result.message || 'Cập nhật dữ liệu thành công!';
+        if (Number(sync.updated || 0) > 0) {
+            message += `\nĐã đồng bộ ${sync.updated} hồ sơ dân cư (${(sync.columns || []).join(', ')}).`;
+        }
+        if (Number(sync.skipped || 0) > 0) {
+            message += `\nCó ${sync.skipped} hồ sơ chưa đồng bộ được vì không tìm thấy người tương ứng duy nhất trong danh sách dân cư.`;
+        }
+        alert("✅ " + message);
         let modalEl = document.getElementById('editModal');
         let modalInstance = bootstrap.Modal.getInstance(modalEl);
         if (modalInstance) modalInstance.hide();

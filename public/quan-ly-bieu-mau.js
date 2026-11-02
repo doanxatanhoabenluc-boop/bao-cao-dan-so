@@ -448,7 +448,7 @@ async function openEditRecordModal(tableName, encodedRowJson) {
     let danTocList = ["Kinh", "Tày", "Thái", "Hoa", "Khmer", "Mường", "Nùng", "Dao", "Gia Rai", "Ê Đê", "Ba Na", "Sán Chay", "H'Mông", "Chăm"];
     let gioiTinhList = ["Nam", "Nữ"];
     let hocVanList = ["Tiểu học", "THCS", "THPT", "Trung cấp", "Cao đẳng", "Đại học", "Sau đại học", "Khác"];
-    let honNhanList = ["Chưa kết hôn", "Đang kết hôn", "Ly hôn", "Góa"];
+    let honNhanList = ["Chưa có vợ hoặc chồng", "Có vợ/Có chồng", "Ly hôn", "Ly thân", "Goá"];
 
     try {
         let [resAp, resBv, resBptt, resNth, resQuanHe] = await Promise.all([
@@ -479,6 +479,8 @@ async function openEditRecordModal(tableName, encodedRowJson) {
     }
 
     let keys = Object.keys(row).filter(key => key !== 'id');
+    // Bảng 1 không chỉnh quan hệ chủ hộ của trẻ tại form sửa; trường này chỉ phục vụ lúc tạo hồ sơ dân cư.
+    if (tableName === 'table_1') keys = keys.filter(key => key !== 'quan_he_con');
     
     if (tableName === 'table_10' || tableName.includes('10')) {
         const allowedTable10Keys = [
@@ -495,6 +497,13 @@ async function openEditRecordModal(tableName, encodedRowJson) {
 
     keys.forEach(key => {
         let val = row[key] !== null && row[key] !== undefined ? row[key] : '';
+        if (['hon_nhan', 'tinh_trang_hon_nhan'].includes(key.toLowerCase())) {
+            const oldStatus = String(val).trim().toLowerCase();
+            if (['chưa kết hôn', 'chua ket hon', 'độc thân', 'doc than'].includes(oldStatus)) val = 'Chưa có vợ hoặc chồng';
+            else if (['đang kết hôn', 'dang ket hon', 'đã kết hôn', 'da ket hon', 'kết hôn', 'ket hon'].includes(oldStatus)) val = 'Có vợ/Có chồng';
+            else if (oldStatus === 'góa' || oldStatus === 'goa') val = 'Goá';
+            else if (oldStatus === 'ly thân' || oldStatus === 'ly than') val = 'Ly thân';
+        }
         let labelText = columnLabels[key] || key.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
         const lowerKey = key.toLowerCase();
         let inputHtml = '';
@@ -635,12 +644,21 @@ async function saveRecordData(event) {
             body: JSON.stringify(updatedData)
         });
 
-        if (response.ok) {
+        const result = await response.json().catch(() => ({}));
+        if (response.ok && result.success !== false) {
             const modalEl = document.getElementById('editDataModal');
             const modal = bootstrap.Modal.getInstance(modalEl);
-            modal.hide();
+            if (modal) modal.hide();
 
-            alert('Cập nhật thông tin thành công!');
+            const sync = result.dan_cu_sync || {};
+            let message = result.message || 'Cập nhật thông tin thành công!';
+            if (Number(sync.updated || 0) > 0) {
+                message += `\nĐã đồng bộ ${sync.updated} hồ sơ dân cư (${(sync.columns || []).join(', ')}).`;
+            }
+            if (Number(sync.skipped || 0) > 0) {
+                message += `\nCó ${sync.skipped} hồ sơ chưa đồng bộ được vì không tìm thấy người tương ứng duy nhất trong danh sách dân cư.`;
+            }
+            alert(message);
 
             window.currentTableLoaded = false; 
             window.currentLoadedTableName = null; 
@@ -651,7 +669,7 @@ async function saveRecordData(event) {
                 location.reload();
             }
         } else {
-            alert('Lỗi khi cập nhật dữ liệu từ máy chủ.');
+            alert('Lỗi khi cập nhật dữ liệu từ máy chủ: ' + (result.message || 'Không rõ nguyên nhân'));
         }
     } catch (err) {
         console.error(err);
