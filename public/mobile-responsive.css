@@ -1,0 +1,1033 @@
+/* ================================================================
+   MOBILE UI V2 - presentation only
+   Desktop styles are untouched. Data, API calls and business rules stay intact.
+   ================================================================ */
+@media (max-width: 767.98px) {
+  body.mobile-v2:not(.mobile-index) {
+    max-width: 100%;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+  body.mobile-v2:not(.mobile-index) .form-control,
+  body.mobile-v2:not(.mobile-index) .form-select,
+  body.mobile-v2:not(.mobile-index) .btn,
+  body.mobile-v2:not(.mobile-index) .page-link {
+    font-size: 16px;
+  }
+  body.mobile-v2:not(.mobile-index) .form-control,
+  body.mobile-v2:not(.mobile-index) .form-select {
+    min-height: 44px;
+  }
+  body.mobile-v2:not(.mobile-index) .btn {
+    min-height: 40px;
+    white-space: normal;
+  }
+  body.mobile-v2:not(.mobile-index) .card {
+    border-radius: 14px;
+  }
+  body.mobile-v2:not(.mobile-index) .card-header {
+    line-height: 1.35;
+  }
+
+  /* Real mobile record cards: labels come from the existing table header. */
+  body.mobile-v2 .table-responsive.has-mobile-cards {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  body.mobile-v2 table.mobile-card-table {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    background: transparent !important;
+    table-layout: auto !important;
+  }
+  body.mobile-v2 table.mobile-card-table > thead {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+  body.mobile-v2 table.mobile-card-table > tbody {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 11px !important;
+    width: 100% !important;
+  }
+  body.mobile-v2 table.mobile-card-table > tbody > tr {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 6px 11px !important;
+    overflow: hidden !important;
+    background: #fff !important;
+    border: 1px solid #e4eaf1 !important;
+    border-radius: 13px !important;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, .055) !important;
+  }
+  body.mobile-v2 table.mobile-card-table > tbody > tr > td {
+    display: grid !important;
+    grid-template-columns: minmax(92px, 36%) minmax(0, 1fr) !important;
+    align-items: start !important;
+    column-gap: 9px !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    padding: 8px 1px !important;
+    margin: 0 !important;
+    color: #263445 !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-bottom: 1px solid #edf1f5 !important;
+    text-align: left !important;
+    white-space: normal !important;
+    vertical-align: top !important;
+    font-size: .87rem !important;
+    line-height: 1.4 !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+  body.mobile-v2 table.mobile-card-table > tbody > tr > td::before {
+    content: attr(data-label);
+    display: block;
+    color: #66758a;
+    font-size: .72rem;
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: .01em;
+    overflow-wrap: anywhere;
+  }
+  body.mobile-v2 table.mobile-card-table > tbody > tr > td:last-child {
+    border-bottom: 0 !important;
+  }
+  body.mobile-v2 table.mobile-card-table > tbody > tr > td[data-mobile-full-row="true"] {
+    display: block !important;
+    padding: 10px 2px !important;
+    border: 0 !important;
+    text-align: center !important;
+  }
+  body.mobile-v2 table.mobile-card-table > tbody > tr > td[data-mobile-full-row="true"]::before {
+    content: none !important;
+  }
+  body.mobile-v2 table.mobile-card-table > tbody > tr > td[data-mobile-actions="true"] {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+  body.mobile-v2 table.mobile-card-table > tbody > tr > td[data-mobile-actions="true"]::before {
+    flex: 0 0 100%;
+  }
+  body.mobile-v2 table.mobile-card-table td .btn {
+    min-height: 36px !important;
+    min-width: 36px !important;
+    padding: 6px 10px !important;
+    margin: 0 !important;
+    font-size: .82rem !important;
+    white-space: nowrap !important;
+  }
+  body.mobile-v2 table.mobile-card-table input[type="checkbox"] {
+    width: 19px;
+    height: 19px;
+    margin: 1px 0 0;
+  }
+  body.mobile-v2:not(.mobile-index) .table-responsive:not(.has-mobile-cards) {
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #aebdce #edf2f7;
+  }
+  body.mobile-v2:not(.mobile-index) .table-responsive:not(.has-mobile-cards)::before,
+  body.mobile-index .online-data-panel .table-responsive:not(.has-mobile-cards)::before {
+    content: "↔ Vuốt ngang để xem các cột còn lại";
+    display: block;
+    padding: 5px 8px 7px;
+    color: #64748b;
+    font-size: .72rem;
+    line-height: 1.3;
+    text-align: right;
+  }
+  body.mobile-v2:not(.mobile-index) .table-responsive:not(.has-mobile-cards) table,
+  body.mobile-index .online-data-panel .table-responsive:not(.has-mobile-cards) table {
+    margin-bottom: 0 !important;
+  }
+
+  /* Modals: fit the phone viewport and keep the action area reachable. */
+  body.mobile-v2:not(.mobile-index) .modal-dialog {
+    width: calc(100% - 16px) !important;
+    max-width: none !important;
+    margin: 8px auto !important;
+  }
+  body.mobile-v2:not(.mobile-index) .modal-content {
+    border-radius: 14px !important;
+    overflow: hidden;
+  }
+  body.mobile-v2:not(.mobile-index) .modal-header,
+  body.mobile-v2:not(.mobile-index) .modal-footer {
+    padding: 12px !important;
+  }
+  body.mobile-v2:not(.mobile-index) .modal-title {
+    font-size: 1rem !important;
+    line-height: 1.35;
+  }
+  body.mobile-v2:not(.mobile-index) .modal-body {
+    padding: 12px !important;
+    max-height: calc(100dvh - 150px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  body.mobile-v2:not(.mobile-index) .modal-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  body.mobile-v2:not(.mobile-index) .modal-footer .btn {
+    flex: 1 1 120px;
+    min-height: 42px;
+    margin: 0 !important;
+  }
+}
+
+/* INDEX: only the "Dữ liệu trực tuyến" card is affected. */
+@media (max-width: 767.98px) {
+  body.mobile-index .online-data-panel {
+    padding: 12px !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    border-radius: 15px !important;
+    min-width: 0;
+  }
+  body.mobile-index .online-data-panel > .d-flex:first-child {
+    align-items: center !important;
+    gap: 8px !important;
+  }
+  body.mobile-index .online-data-panel h4 {
+    font-size: 1.05rem;
+    line-height: 1.35;
+  }
+  body.mobile-index .online-data-panel #dataTotalInfo {
+    flex: 0 0 auto;
+    max-width: 42%;
+    white-space: normal;
+    font-size: .76rem !important;
+    line-height: 1.25;
+    padding: .45rem .6rem;
+  }
+  body.mobile-index .online-data-panel .online-data-filter {
+    padding: 10px;
+    border: 1px solid #e5eaf0;
+    border-radius: 12px;
+    background: #f8fafc;
+  }
+  body.mobile-index .online-data-panel .online-data-filter .row {
+    margin-left: 0;
+    margin-right: 0;
+    row-gap: 9px;
+  }
+  body.mobile-index .online-data-panel .online-data-filter .row > [class*="col-"] {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  body.mobile-index .online-data-panel .online-data-filter .row > [class*="col-"]:nth-child(1),
+  body.mobile-index .online-data-panel .online-data-filter .row > [class*="col-"]:nth-child(2) {
+    flex: 0 0 50%;
+    width: 50%;
+  }
+  body.mobile-index .online-data-panel .online-data-filter .row > [class*="col-"]:nth-child(3) {
+    flex: 0 0 100%;
+    width: 100%;
+  }
+  body.mobile-index .online-data-panel .online-data-filter label {
+    font-size: .82rem !important;
+    margin-bottom: 5px !important;
+  }
+  body.mobile-index .online-data-panel .online-data-filter .form-select,
+  body.mobile-index .online-data-panel .online-data-filter .btn {
+    min-height: 44px;
+    font-size: 15px !important;
+  }
+  body.mobile-index .online-data-panel .table-responsive:not(.has-mobile-cards) {
+    border: 1px solid #e5eaf0;
+    border-radius: 11px;
+  }
+  body.mobile-index .online-data-panel .online-data-pagination {
+    padding-top: 10px;
+    font-size: .82rem;
+  }
+  body.mobile-index .online-data-panel .online-data-pagination > div {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 9px !important;
+  }
+  body.mobile-index .online-data-panel .online-data-pagination nav {
+    width: 100%;
+  }
+  body.mobile-index .online-data-panel .online-data-pagination .pagination {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+  body.mobile-index .online-data-panel .online-data-pagination .page-link {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 6px 8px;
+    font-size: .8rem;
+  }
+}
+
+/* QUẢN LÝ 11 BIỂU MẪU */
+@media (max-width: 767.98px) {
+  body.mobile-form-admin .container-fluid.my-4 {
+    margin-top: 12px !important;
+    padding-left: 9px !important;
+    padding-right: 9px !important;
+  }
+  body.mobile-form-admin .navbar {
+    padding: 10px 12px !important;
+  }
+  body.mobile-form-admin .navbar-brand {
+    max-width: calc(100% - 52px);
+    white-space: normal;
+    font-size: .98rem !important;
+    line-height: 1.3;
+  }
+  body.mobile-form-admin .card-header {
+    padding: 12px !important;
+  }
+  body.mobile-form-admin .card-header > .d-flex {
+    width: 100% !important;
+    align-items: stretch !important;
+    flex-direction: column;
+    gap: 8px !important;
+  }
+  body.mobile-form-admin .card-header h5 {
+    font-size: .98rem !important;
+  }
+  body.mobile-form-admin .card-body {
+    padding: 11px !important;
+  }
+  body.mobile-form-admin #selectManagedTable {
+    width: 100%;
+    min-height: 44px;
+    font-size: 16px;
+  }
+  body.mobile-form-admin #adminSearchInput {
+    min-width: 0;
+    font-size: 16px;
+    min-height: 44px;
+  }
+  body.mobile-form-admin .card-body > .row.mb-3 {
+    margin-left: 0;
+    margin-right: 0;
+    row-gap: 8px;
+  }
+  body.mobile-form-admin .card-body > .row.mb-3 > [class*="col-"] {
+    padding-left: 0;
+    padding-right: 0;
+    width: 100%;
+  }
+  body.mobile-form-admin #selectedRowsCount {
+    align-self: center;
+  }
+  body.mobile-form-admin #adminPaginationContainer {
+    justify-content: center !important;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}
+
+/* ADMIN */
+@media (max-width: 767.98px) {
+  body.mobile-admin .container-fluid.my-4 {
+    margin-top: 12px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  body.mobile-admin .navbar {
+    padding: 10px 12px !important;
+  }
+  body.mobile-admin .navbar-brand {
+    max-width: calc(100% - 54px);
+    white-space: normal;
+    font-size: .98rem !important;
+    line-height: 1.3;
+  }
+  body.mobile-admin .admin-tabs-container {
+    margin: 0 -2px 12px !important;
+    padding: 2px 2px 8px !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scroll-snap-type: x proximity;
+  }
+  body.mobile-admin #adminTabs {
+    display: flex !important;
+    width: max-content;
+    min-width: 100%;
+    flex-wrap: nowrap !important;
+    gap: 7px !important;
+  }
+  body.mobile-admin #adminTabs .nav-item {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+  body.mobile-admin #adminTabs .nav-link {
+    min-height: 42px;
+    padding: 9px 12px !important;
+    border-radius: 10px;
+    font-size: .82rem;
+    white-space: nowrap;
+  }
+  body.mobile-admin .card {
+    margin-bottom: 13px !important;
+  }
+  body.mobile-admin .card-header {
+    padding: 11px !important;
+    gap: 8px !important;
+  }
+  body.mobile-admin .card-header.d-flex {
+    align-items: stretch !important;
+    flex-direction: column;
+  }
+  body.mobile-admin .card-header h5,
+  body.mobile-admin .card-header h6 {
+    font-size: .96rem !important;
+    line-height: 1.35;
+  }
+  body.mobile-admin .card-header > .btn,
+  body.mobile-admin .card-header > .d-flex {
+    width: 100%;
+  }
+  body.mobile-admin .card-body {
+    padding: 10px !important;
+  }
+  body.mobile-admin .card-body .row {
+    --bs-gutter-x: .6rem;
+    --bs-gutter-y: .65rem;
+  }
+  body.mobile-admin .pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+/* QUẢN LÝ DÂN CƯ */
+@media (max-width: 767.98px) {
+  body.mobile-residents .page-wrap {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  body.mobile-residents .topbar {
+    padding: 12px !important;
+  }
+  body.mobile-residents .topbar .d-flex {
+    gap: 8px !important;
+  }
+  body.mobile-residents .topbar .btn {
+    flex: 1 1 0;
+    padding: 8px 9px !important;
+    font-size: .84rem !important;
+  }
+  body.mobile-residents .nav-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 5px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 6px;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  body.mobile-residents .nav-tabs .nav-item {
+    flex: 0 0 auto;
+  }
+  body.mobile-residents .nav-tabs .nav-link {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: .82rem;
+    white-space: nowrap;
+  }
+  body.mobile-residents .card-body {
+    padding: 11px !important;
+  }
+  body.mobile-residents .searchbox {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
+  }
+  body.mobile-residents #tabDanhSach .card-body > .d-flex:first-child > div:first-child {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 7px !important;
+  }
+  body.mobile-residents #filterAp,
+  body.mobile-residents #filterDiaBan {
+    flex: 1 1 calc(50% - 4px);
+    width: calc(50% - 4px) !important;
+    min-width: 0 !important;
+    font-size: 15px !important;
+  }
+  body.mobile-residents .filters {
+    width: 100%;
+    margin: 0 0 10px !important;
+    --bs-gutter-x: .55rem;
+    --bs-gutter-y: .65rem;
+  }
+  body.mobile-residents .filters .form-label {
+    min-height: 2.1em;
+    font-size: .76rem;
+    line-height: 1.25;
+  }
+  body.mobile-residents .filters .form-control,
+  body.mobile-residents .filters .form-select {
+    min-height: 42px;
+    font-size: 15px !important;
+  }
+  body.mobile-residents #btnResetFilters {
+    min-height: 40px;
+  }
+  body.mobile-residents #summary {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 9px;
+    background: #f3f6fa;
+    line-height: 1.4;
+  }
+  body.mobile-residents .household-start td {
+    border-top-width: 0 !important;
+  }
+  body.mobile-residents .mobile-card-table > tbody > tr.household-start {
+    border-left: 3px solid #2563eb !important;
+  }
+}
+
+/* QUẢN LÝ PHỤ NỮ 15-49 & BPTT */
+@media (max-width: 767.98px) {
+  body.mobile-women .container.my-4 {
+    width: 100%;
+    max-width: 100%;
+    padding-left: 8px;
+    padding-right: 8px;
+    margin-top: 12px !important;
+  }
+  body.mobile-women .container > .d-flex.no-print {
+    align-items: stretch !important;
+    flex-direction: column;
+    gap: 8px;
+  }
+  body.mobile-women .container > .d-flex.no-print h2 {
+    font-size: 1.06rem;
+    line-height: 1.35;
+    margin: 0;
+  }
+  body.mobile-women .container > .d-flex.no-print > a {
+    width: 100%;
+  }
+  body.mobile-women #managerTabs {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 5px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    padding-bottom: 7px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  body.mobile-women #managerTabs .nav-item {
+    flex: 0 0 auto;
+  }
+  body.mobile-women #managerTabs .nav-link {
+    min-height: 42px;
+    padding: 9px 11px;
+    font-size: .8rem;
+    white-space: nowrap;
+  }
+  body.mobile-women #listSection .card-body {
+    padding: 11px !important;
+  }
+  body.mobile-women #listSection .card-body > .row.g-2 > [class*="col-"] {
+    width: 100%;
+  }
+  body.mobile-women #listSection .card-body > .row.g-2 > .col-md-3.d-flex {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  body.mobile-women #listSection .card-body > .row.g-2 > .col-md-3.d-flex .btn {
+    flex: 1 1 calc(50% - 5px);
+    min-height: 42px;
+    white-space: normal;
+  }
+  body.mobile-women #listSection .card-header {
+    padding: 11px !important;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  body.mobile-women #listSection .card-header #tableTitle {
+    flex: 1 1 100%;
+    line-height: 1.35;
+  }
+  body.mobile-women #listSection nav.d-flex {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  body.mobile-women #paginationNav {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  body.mobile-women #reportSection > .card.no-print .card-body {
+    padding: 11px !important;
+  }
+  body.mobile-women #reportSection > .card.no-print .row > [class*="col-"] {
+    width: 100%;
+  }
+  body.mobile-women #reportSection > .card.no-print .d-flex.gap-2 {
+    flex-wrap: wrap;
+  }
+  body.mobile-women #reportSection > .card.no-print .d-flex.gap-2 .btn {
+    flex: 1 1 100%;
+    min-height: 42px;
+  }
+  body.mobile-women .report-mobile-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding: 0 0 9px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+  body.mobile-women .report-mobile-scroll > .card {
+    width: 297mm !important;
+    min-width: 297mm;
+    margin: 0 !important;
+    padding: 10mm !important;
+    box-sizing: border-box;
+  }
+  body.mobile-women #bienDongPane .card-body {
+    padding: 11px !important;
+  }
+  body.mobile-women #bienDongPane .row.g-2 > [class*="col-"] {
+    width: 100%;
+  }
+  body.mobile-women #bienDongPane .row.g-2 .btn {
+    margin-top: 0 !important;
+    min-height: 42px;
+  }
+  body.mobile-women #bdTheThongKe .fs-3 {
+    font-size: 1.4rem !important;
+  }
+  body.mobile-women #bienDongPane .d-flex.justify-content-between.align-items-center.mb-2 {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+/* REPORT PAGES: controls fit the phone; report tables keep their real page width. */
+@media (max-width: 767.98px) {
+  body.mobile-report-all {
+    padding: 8px !important;
+  }
+  body.mobile-report-all .container-fluid {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  body.mobile-report-all .container-fluid > .d-flex:first-child {
+    align-items: stretch !important;
+    gap: 9px !important;
+    margin-bottom: 13px !important;
+  }
+  body.mobile-report-all .container-fluid > .d-flex:first-child h3 {
+    font-size: 1.08rem;
+    line-height: 1.35;
+  }
+  body.mobile-report-all .container-fluid > .d-flex:first-child a {
+    width: 100%;
+  }
+  body.mobile-report-all .filter-box {
+    padding: 12px !important;
+    margin-bottom: 14px !important;
+    border-radius: 13px !important;
+  }
+  body.mobile-report-all .filter-box .row {
+    --bs-gutter-x: .65rem;
+    --bs-gutter-y: .7rem;
+  }
+  body.mobile-report-all .filter-box .form-label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: .84rem;
+  }
+  body.mobile-report-all .filter-box .form-select,
+  body.mobile-report-all .filter-box .form-control {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  body.mobile-report-all .filter-box .col-12.text-center {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  body.mobile-report-all .filter-box .col-12.text-center .btn {
+    flex: 1 1 calc(50% - 7px);
+    min-height: 42px;
+    margin: 0 !important;
+  }
+  body.mobile-report-all #dynamicWebTitle {
+    font-size: .9rem;
+    line-height: 1.4;
+  }
+  body.mobile-report-all .table-responsive {
+    margin-bottom: 13px;
+    border-radius: 10px;
+    border: 1px solid #e5eaf0;
+  }
+  body.mobile-report-all .table-responsive:not(.has-mobile-cards)::before {
+    content: "↔ Vuốt ngang để xem đầy đủ các cột báo cáo";
+    text-align: left;
+    padding: 7px 9px;
+    background: #f8fafc;
+  }
+  body.mobile-report-all .table-responsive table {
+    min-width: 820px;
+    width: max-content;
+    max-width: none;
+    font-size: .77rem !important;
+    margin-bottom: 0 !important;
+  }
+  body.mobile-report-all .table-responsive th,
+  body.mobile-report-all .table-responsive td {
+    padding: 7px 6px !important;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  body.mobile-report-all #wrapper_sang_loc_so_sinh table,
+  body.mobile-report-all #wrapper_sang_loc_truoc_sinh table {
+    min-width: 1180px;
+  }
+  body.mobile-report-all #wrapper_phu_nu_15_49 table {
+    min-width: 1320px;
+  }
+  body.mobile-report-all #wrapper_phu_nu_15_49 {
+    padding: 10px !important;
+  }
+  body.mobile-report-all #wrapper_phu_nu_15_49 .d-flex.justify-content-between {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  body.mobile-report-all #reportPageInfo {
+    flex: 1 1 100%;
+  }
+  body.mobile-report-all #reportPaginationNav {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  body.mobile-report-all .report-footer-note {
+    font-size: .82rem;
+  }
+  body.mobile-report-all .report-footer-note > [class*="col-"] {
+    flex: 0 0 100%;
+    max-width: 100%;
+    margin-bottom: 8px;
+  }
+
+  body.mobile-report .container.my-4 {
+    width: 100%;
+    max-width: 100%;
+    padding-left: 7px;
+    padding-right: 7px;
+    margin-top: 9px !important;
+  }
+  body.mobile-report .report-controls,
+  body.mobile-report .container > .card.no-print {
+    border-radius: 13px;
+  }
+  body.mobile-report .report-viewport {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding: 0 0 10px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+  body.mobile-report .report-mobile-hint {
+    display: block;
+    margin: 0 8px 8px;
+    padding: 7px 9px;
+    border-radius: 8px;
+    background: #eaf2fb;
+    color: #315477;
+    font: 12px/1.4 Arial, sans-serif;
+    text-align: center;
+  }
+  body.mobile-report .report-page {
+    scroll-snap-align: start;
+  }
+}
+
+@media (max-width: 380px) {
+  body.mobile-index .online-data-panel { padding: 9px !important; }
+  body.mobile-index .online-data-panel h4 { font-size: .98rem; }
+  body.mobile-form-admin .navbar-brand,
+  body.mobile-admin .navbar-brand { font-size: .9rem !important; }
+  body.mobile-residents .filters .form-label { font-size: .72rem; }
+  body.mobile-women #managerTabs .nav-link,
+  body.mobile-admin #adminTabs .nav-link { padding: 8px 9px !important; font-size: .75rem; }
+  body.mobile-v2 table.mobile-card-table > tbody > tr { padding: 5px 9px !important; }
+  body.mobile-v2 table.mobile-card-table > tbody > tr > td {
+    grid-template-columns: minmax(82px, 34%) minmax(0, 1fr) !important;
+    column-gap: 7px !important;
+    font-size: .82rem !important;
+  }
+}
+
+@media print {
+  body.mobile-v2:not(.mobile-index) .table-responsive:not(.has-mobile-cards)::before,
+  body.mobile-index .online-data-panel .table-responsive:not(.has-mobile-cards)::before { display: none !important; }
+  body.mobile-v2 table.mobile-card-table { display: table !important; width: 100% !important; }
+  body.mobile-v2 table.mobile-card-table thead { position: static !important; width: auto !important; height: auto !important; clip: auto !important; }
+  body.mobile-v2 table.mobile-card-table tbody { display: table-row-group !important; }
+  body.mobile-v2 table.mobile-card-table tbody tr { display: table-row !important; box-shadow: none !important; border: 0 !important; }
+  body.mobile-v2 table.mobile-card-table tbody td { display: table-cell !important; border: 1px solid #000 !important; }
+  body.mobile-v2 table.mobile-card-table td::before { display: none !important; }
+}
+
+
+/* ================================================================
+   MOBILE UI V3 - card hierarchy, touch ergonomics and form clarity.
+   All rules remain mobile-only; desktop and print layouts are unchanged.
+   ================================================================ */
+@media (max-width: 767.98px) {
+  body.mobile-v2:not(.mobile-index) {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    scroll-padding-top: 12px;
+  }
+
+  body.mobile-v2:not(.mobile-index) .card,
+  body.mobile-v2:not(.mobile-index) .table-responsive,
+  body.mobile-v2:not(.mobile-index) .filter-box {
+    min-width: 0;
+  }
+
+  /* Make the main value in a record card immediately recognizable. */
+  body.mobile-v2 table.mobile-card-table > tbody > tr > td[data-mobile-primary="true"] {
+    display: block !important;
+    padding: 10px 2px 11px !important;
+    margin: 0 0 2px !important;
+    color: #142b45 !important;
+    font-size: .98rem !important;
+    font-weight: 750 !important;
+    line-height: 1.35 !important;
+    border-bottom: 1px solid #e7edf4 !important;
+    background: transparent !important;
+  }
+  body.mobile-v2 table.mobile-card-table > tbody > tr > td[data-mobile-primary="true"]::before {
+    display: block;
+    margin-bottom: 3px;
+    color: #77869a;
+    font-size: .69rem;
+    font-weight: 700;
+    letter-spacing: .035em;
+    text-transform: uppercase;
+  }
+  body.mobile-v2 table.mobile-card-table > tbody > tr > td[data-mobile-meta="true"] {
+    grid-template-columns: auto 1fr !important;
+    align-items: center !important;
+    padding: 5px 2px 7px !important;
+    color: #66758a !important;
+    font-size: .73rem !important;
+    border-bottom: 1px dashed #e8edf3 !important;
+  }
+  body.mobile-v2 table.mobile-card-table > tbody > tr > td[data-mobile-meta="true"]::before {
+    font-size: .68rem;
+    color: #8a96a6;
+  }
+  body.mobile-v2 table.mobile-card-table > tbody > tr > td[data-mobile-empty="true"] {
+    display: none !important;
+  }
+  body.mobile-v2 table.mobile-card-table > tbody > tr > td[data-mobile-actions="true"] {
+    margin-top: 5px !important;
+    padding: 10px 2px 3px !important;
+    border-top: 1px solid #edf1f5 !important;
+    border-bottom: 0 !important;
+  }
+  body.mobile-v2 table.mobile-card-table > tbody > tr > td[data-mobile-actions="true"]::before {
+    color: #53657a;
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .025em;
+  }
+  body.mobile-v2 table.mobile-card-table td[data-mobile-actions="true"] .btn,
+  body.mobile-v2 table.mobile-card-table td[data-mobile-actions="true"] a.btn {
+    min-height: 40px !important;
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+  body.mobile-v2 table.mobile-card-table > tbody > tr.mobile-irregular-row {
+    display: table-row !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  body.mobile-v2 table.mobile-card-table > tbody > tr.mobile-irregular-row > td {
+    display: table-cell !important;
+    white-space: normal !important;
+  }
+
+  /* Comfortable controls and readable labels in mobile forms. */
+  body.mobile-v2:not(.mobile-index) form .form-label,
+  body.mobile-v2:not(.mobile-index) form label {
+    display: block;
+    margin-bottom: 5px;
+    line-height: 1.35;
+    font-size: .86rem;
+    font-weight: 650;
+  }
+  body.mobile-v2:not(.mobile-index) form .form-control,
+  body.mobile-v2:not(.mobile-index) form .form-select,
+  body.mobile-v2:not(.mobile-index) form textarea,
+  body.mobile-v2:not(.mobile-index) .input-group > .form-control,
+  body.mobile-v2:not(.mobile-index) .input-group > .form-select {
+    min-height: 44px;
+    font-size: 16px !important;
+    border-radius: 9px;
+  }
+  body.mobile-v2:not(.mobile-index) form textarea.form-control {
+    min-height: 88px;
+  }
+  body.mobile-v2:not(.mobile-index) form .form-check {
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  body.mobile-v2:not(.mobile-index) form .form-check-input {
+    width: 19px;
+    height: 19px;
+    margin: 0;
+    flex: 0 0 auto;
+  }
+  body.mobile-v2:not(.mobile-index) form .form-check-label {
+    margin: 0;
+    font-weight: 500;
+  }
+  body.mobile-v2:not(.mobile-index) .btn:focus-visible,
+  body.mobile-v2:not(.mobile-index) .form-control:focus-visible,
+  body.mobile-v2:not(.mobile-index) .form-select:focus-visible,
+  body.mobile-v2:not(.mobile-index) .nav-link:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, .25);
+    outline-offset: 2px;
+  }
+
+  /* Mobile tab strips: clear active state and predictable horizontal swipe. */
+  body.mobile-v2:not(.mobile-index) .nav-tabs,
+  body.mobile-v2:not(.mobile-index) .nav-pills {
+    scrollbar-width: thin;
+    scroll-snap-type: x proximity;
+    overscroll-behavior-x: contain;
+  }
+  body.mobile-v2:not(.mobile-index) .nav-tabs .nav-item,
+  body.mobile-v2:not(.mobile-index) .nav-pills .nav-item {
+    scroll-snap-align: start;
+  }
+  body.mobile-v2:not(.mobile-index) .nav-tabs .nav-link,
+  body.mobile-v2:not(.mobile-index) .nav-pills .nav-link {
+    min-height: 42px;
+  }
+
+  /* Residents: reserve breathing room for filters and the person list. */
+  body.mobile-residents #tabDanhSach .card-body > .d-flex:first-child {
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  body.mobile-residents #tabDanhSach .searchbox .input-group-text,
+  body.mobile-residents #tabDanhSach .searchbox .form-control,
+  body.mobile-residents #tabDanhSach .searchbox .btn {
+    min-height: 44px;
+  }
+  body.mobile-residents #tabDanhSach .table-responsive {
+    border: 0;
+    overflow: visible;
+  }
+  body.mobile-residents #tabDanhSach .table-responsive::before {
+    display: none;
+  }
+
+  /* Women list: keep frequent actions together and make record cards breathe. */
+  body.mobile-women #listSection .table-responsive {
+    overflow: visible !important;
+  }
+  body.mobile-women #listSection .table-responsive::before {
+    display: none !important;
+  }
+  body.mobile-women #listSection .table-responsive.has-mobile-cards {
+    border: 0 !important;
+    background: transparent !important;
+  }
+  body.mobile-women #listSection .card-header #totalInfo {
+    white-space: normal;
+  }
+
+  /* Floating page helper, appears only after the user scrolls down. */
+  body.mobile-v2 .mobile-v3-back-to-top {
+    position: fixed;
+    right: 14px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    z-index: 1030;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    padding: 0;
+    border: 1px solid rgba(255,255,255,.75);
+    border-radius: 50%;
+    background: #155eaa;
+    color: #fff;
+    font-size: 25px;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 5px 18px rgba(15, 23, 42, .22);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px);
+    transition: opacity .18s ease, transform .18s ease, visibility .18s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body.mobile-v2 .mobile-v3-back-to-top.is-visible {
+    opacity: .96;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  body.mobile-v2 .mobile-v3-back-to-top:active {
+    transform: scale(.94);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.mobile-v2 .mobile-v3-back-to-top {
+    transition: none !important;
+  }
+}

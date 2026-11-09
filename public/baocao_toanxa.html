@@ -45,7 +45,47 @@
             color: #000;
             line-height: 1.5;
         }
+
+        /* Giao diện điện thoại: bộ lọc gọn, bảng sổ cuộn ngang độc lập */
+        @media (max-width: 767.98px) {
+            html, body { max-width: 100%; overflow-x: hidden; }
+            body { padding: 8px; }
+            .container-fluid { padding-left: 0; padding-right: 0; }
+            .container-fluid.mt-2 { margin-top: 6px !important; }
+            .container-fluid > .d-flex:first-child { align-items: stretch !important; gap: 10px !important; margin-bottom: 14px !important; }
+            .container-fluid > .d-flex:first-child h3 { font-size: 1.12rem; line-height: 1.35; order: 1; }
+            .container-fluid > .d-flex:first-child a { width: 100%; order: 2; }
+            .filter-box { padding: 12px; margin-bottom: 14px; border-radius: 12px; }
+            .filter-box .row { --bs-gutter-x: .65rem; --bs-gutter-y: .7rem; }
+            .filter-box .form-label { display: block; margin-bottom: 5px; font-size: .86rem; }
+            .filter-box .form-select,
+            .filter-box .form-control { min-height: 42px; font-size: 16px; }
+            .filter-box .col-12.text-center { display: flex; flex-wrap: wrap; gap: 6px; }
+            .filter-box .col-12.text-center .btn { flex: 1 1 calc(50% - 6px); min-height: 40px; margin: 0 !important; white-space: normal; }
+            #dynamicWebTitle { font-size: .92rem; line-height: 1.4; }
+            .table-responsive { width: 100%; max-width: 100%; margin-bottom: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; border-radius: 9px; }
+            .table-responsive table { min-width: 820px; width: max-content; max-width: none; font-size: .76rem !important; margin-bottom: 0; }
+            .table-responsive th,
+            .table-responsive td { padding: 7px 6px !important; white-space: nowrap; vertical-align: middle; }
+            #wrapper_sang_loc_so_sinh table,
+            #wrapper_sang_loc_truoc_sinh table { min-width: 1180px; }
+            #wrapper_phu_nu_15_49 table { min-width: 1320px; }
+            #wrapper_phu_nu_15_49 { padding: 10px !important; }
+            #wrapper_phu_nu_15_49 .d-flex.justify-content-between { flex-wrap: wrap; gap: 8px; }
+            #reportPageInfo { flex: 1 1 100%; }
+            #reportPaginationNav { flex-wrap: wrap; }
+            .report-footer-note { font-size: .82rem; }
+            .report-footer-note > [class*="col-"] { flex: 0 0 100%; max-width: 100%; margin-bottom: 8px; }
+        }
+        @media (max-width: 380px) {
+            body { padding: 6px; }
+            .filter-box { padding: 9px; }
+            .container-fluid > .d-flex:first-child h3 { font-size: 1.02rem; }
+            .table-responsive table { min-width: 760px; }
+        }
+
     </style>
+    <link rel="stylesheet" href="mobile-responsive.css?v=20261110-v3">
 </head>
 <body>
 
@@ -335,5 +375,6 @@
 
 </div>
 <script src="baocao_toanxa.js"></script>
+    <script src="mobile-ui.js?v=20261110-v3"></script>
 </body>
 </html>

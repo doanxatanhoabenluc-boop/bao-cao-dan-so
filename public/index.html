@@ -9,6 +9,100 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css?v=20261103-leader-shortcuts">
+
+    <style>
+        /* Chỉ tối ưu khung Dữ liệu trực tuyến trên điện thoại; không tác động form nhập liệu */
+        @media (max-width: 767.98px) {
+            .online-data-panel {
+                padding: 12px !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                border-radius: 14px !important;
+                min-width: 0;
+            }
+            .online-data-panel > .d-flex:first-child {
+                align-items: flex-start !important;
+                gap: 8px !important;
+            }
+            .online-data-panel h4 {
+                font-size: 1.05rem;
+                line-height: 1.35;
+            }
+            .online-data-panel #dataTotalInfo {
+                max-width: 100%;
+                white-space: normal;
+                font-size: .78rem !important;
+                line-height: 1.3;
+                padding: .45rem .65rem;
+            }
+            .online-data-panel .online-data-filter {
+                padding: 10px;
+                border-radius: 10px;
+            }
+            .online-data-panel .online-data-filter .row {
+                margin-left: 0;
+                margin-right: 0;
+                row-gap: 10px;
+            }
+            .online-data-panel .online-data-filter .row > [class*="col-"] {
+                padding-left: 0;
+                padding-right: 0;
+            }
+            .online-data-panel .online-data-filter label {
+                font-size: .88rem !important;
+                margin-bottom: 5px !important;
+            }
+            .online-data-panel .online-data-filter .form-select,
+            .online-data-panel .online-data-filter .btn {
+                min-height: 44px;
+                font-size: .95rem !important;
+            }
+            .online-data-panel > .table-responsive {
+                width: 100%;
+                max-width: 100%;
+                overflow-x: auto;
+                overscroll-behavior-x: contain;
+                -webkit-overflow-scrolling: touch;
+                border-radius: 9px;
+            }
+            .online-data-panel > .table-responsive > table {
+                min-width: 760px;
+                width: max-content;
+                max-width: none;
+                font-size: .8rem !important;
+                margin-bottom: 0;
+            }
+            .online-data-panel > .table-responsive th,
+            .online-data-panel > .table-responsive td {
+                padding: 8px 7px !important;
+                white-space: nowrap;
+                vertical-align: middle;
+            }
+            .online-data-panel .online-data-pagination {
+                padding-top: 10px;
+                font-size: .84rem;
+            }
+            .online-data-panel .online-data-pagination > div {
+                flex-wrap: wrap;
+                gap: 8px !important;
+            }
+            .online-data-panel .online-data-pagination .pagination {
+                flex-wrap: wrap;
+                gap: 3px;
+            }
+            .online-data-panel .online-data-pagination .page-link {
+                min-width: 34px;
+                padding: 6px 8px;
+                font-size: .82rem;
+            }
+        }
+        @media (max-width: 380px) {
+            .online-data-panel { padding: 9px !important; }
+            .online-data-panel h4 { font-size: .98rem; }
+            .online-data-panel > .table-responsive > table { min-width: 700px; }
+        }
+    </style>
+    <link rel="stylesheet" href="mobile-responsive.css?v=20261110-v3">
 </head>
 <body class="bg-light">
 
@@ -165,7 +259,7 @@
         </div>
 
         <!-- Bảng Dữ Liệu -->
-        <div class="card shadow-sm p-4 border-0">
+        <div class="card shadow-sm p-4 border-0 online-data-panel">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                 <h4 class="text-secondary mb-0">📋 Dữ liệu trực tuyến</h4>
                 <span id="dataTotalInfo" class="badge bg-primary fs-6">0 dữ liệu</span>
@@ -243,5 +337,6 @@
     <script src="phunu-search.js"></script>
     <script src="bhyt-search.js"></script>
      <script src="app.js?v=20261102-leader"></script>
+    <script src="mobile-ui.js?v=20261110-v3"></script>
 </body>
 </html>

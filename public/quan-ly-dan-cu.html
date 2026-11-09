@@ -8,7 +8,60 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
   <style>
     body{background:#f4f7fb;color:#1f2937}.topbar{background:#173b67;color:#fff}.page-wrap{max-width:1600px}.card{border:0;border-radius:14px;box-shadow:0 5px 22px #0f172a0c}.table thead th{white-space:nowrap;font-size:.84rem}.table tbody td{font-size:.9rem;vertical-align:middle}.searchbox{max-width:440px}.pagination .page-link{cursor:pointer}.required:after{content:' *';color:#dc3545}.form-label{font-weight:600;font-size:.9rem}.muted-small{font-size:.82rem;color:#64748b}.table-responsive{min-height:250px}.action-btn{width:34px;height:32px;padding:0}.loading{padding:48px!important;color:#64748b}.household-start td{border-top:3px solid #2563eb!important}.filters .form-label{margin-bottom:4px}
+
+    @media (max-width: 767.98px) {
+      html, body { max-width: 100%; overflow-x: hidden; }
+      .topbar { padding: 10px 8px !important; }
+      .topbar .page-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+      .topbar .navbar-brand { flex: 1 1 100%; white-space: normal; font-size: .95rem; line-height: 1.3; margin: 0; }
+      .topbar .page-wrap > .d-flex { width: 100%; gap: 7px !important; }
+      .topbar .page-wrap > .d-flex .btn { flex: 1 1 50%; min-height: 38px; white-space: normal; }
+      main.page-wrap { padding-top: 14px !important; padding-bottom: 16px !important; }
+      main.page-wrap > .d-flex:first-child { align-items: stretch !important; gap: 10px !important; }
+      main.page-wrap > .d-flex:first-child h4 { font-size: 1.12rem; }
+      #btnAdd { width: 100%; min-height: 42px; }
+      #populationTabs { display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; white-space: nowrap; gap: 5px; padding-bottom: 5px; -webkit-overflow-scrolling: touch; }
+      #populationTabs .nav-item { flex: 0 0 auto; }
+      #populationTabs .nav-link { font-size: .82rem; padding: 9px 11px; }
+      .card { border-radius: 12px; }
+      .card-body { padding: 11px !important; }
+      #tabDanhSach .card-body > .d-flex:first-child { align-items: stretch !important; gap: 10px !important; }
+      #tabDanhSach .searchbox { width: 100%; max-width: none; flex: 1 1 100%; }
+      #tabDanhSach .searchbox .form-control { min-width: 0; font-size: 16px; }
+      #tabDanhSach .card-body > .d-flex:first-child > .d-flex { width: 100%; }
+      #filterAp, #filterDiaBan { width: 100% !important; min-width: 0 !important; min-height: 42px; font-size: 16px; }
+      .filters { width: 100%; margin: 0 0 10px !important; --bs-gutter-x: .55rem; --bs-gutter-y: .6rem; }
+      .filters .form-label { font-size: .8rem; line-height: 1.25; }
+      .filters .form-control, .filters .form-select { min-height: 40px; font-size: 16px; }
+      #btnResetFilters { min-height: 38px; }
+      .table-responsive { width: 100%; max-width: 100%; min-height: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+      #tabDanhSach .table-responsive table { min-width: 980px; width: max-content; }
+      #tabThongBao .table-responsive table { min-width: 850px; width: max-content; }
+      .table-responsive th, .table-responsive td { padding: 7px 6px !important; white-space: nowrap; }
+      #pagination { flex-wrap: wrap; justify-content: center; }
+      #tabDanhSach nav[aria-label="Phân trang"] { margin-top: 10px; }
+      .modal-dialog { width: calc(100% - 16px); max-width: none; margin: 8px auto; }
+      .modal-content { border-radius: 12px !important; }
+      .modal-header, .modal-footer { padding: 12px; }
+      .modal-title { font-size: 1rem; line-height: 1.35; }
+      .modal-body { padding: 12px; max-height: calc(100dvh - 145px); overflow-y: auto; }
+      #formFields { row-gap: 8px !important; }
+      #formFields > [class*="col-"] { width: 100%; }
+      #formFields .input-group { flex-wrap: nowrap; }
+      #formFields .input-group .form-control { min-width: 0; }
+      #formFields .input-group .btn { white-space: nowrap; }
+      .modal-footer { display: flex; flex-wrap: wrap; gap: 8px; }
+      .modal-footer .btn { flex: 1 1 120px; min-height: 40px; margin: 0 !important; }
+      .toast-container { width: calc(100% - 16px); right: 8px !important; left: 8px !important; padding: 0 !important; }
+    }
+    @media (max-width: 380px) {
+      .topbar .navbar-brand { font-size: .88rem; }
+      #populationTabs .nav-link { font-size: .76rem; padding: 8px 9px; }
+      #tabDanhSach .table-responsive table { min-width: 920px; }
+    }
+
   </style>
+    <link rel="stylesheet" href="mobile-responsive.css?v=20261110-v3">
 </head>
 <body>
 <nav class="navbar topbar px-3 py-3 shadow-sm">
@@ -241,5 +294,6 @@
  (async()=>{try{await loadFormOptions();await loadFilterOptions();await load();}catch(e){notify(e.message,true);load();}})();
 })();
 </script>
+    <script src="mobile-ui.js?v=20261110-v3"></script>
 </body>
 </html>
