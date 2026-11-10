@@ -61,13 +61,13 @@
     }
 
   </style>
-    <link rel="stylesheet" href="mobile-responsive.css?v=20261110-v3">
+    <link rel="stylesheet" href="mobile-responsive.css?v=20261110-v7">
 </head>
 <body>
-<nav class="navbar topbar px-3 py-3 shadow-sm">
+<nav class="navbar topbar site-topbar px-3 py-3 shadow-sm no-print">
   <div class="container-fluid page-wrap">
     <span class="navbar-brand text-white fw-bold"><i class="fa-solid fa-users me-2"></i>QUẢN LÝ DÂN CƯ</span>
-    <div class="d-flex gap-2">
+    <div class="site-topbar-actions">
       <a href="admin.html" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-arrow-left me-1"></i>Quản trị</a>
       <a href="index.html" class="btn btn-light btn-sm"><i class="fa-solid fa-house me-1"></i>Trang chính</a>
     </div>
@@ -237,7 +237,7 @@
    $('summary').innerHTML = `<div><strong>Tổng cộng ${Number(data.totalHouseholds||0).toLocaleString('vi-VN')} hộ</strong> · Tổng số dân ${Number(data.totalPopulation||0).toLocaleString('vi-VN')} người · Đang hiển thị ${Number(data.totalRows||0).toLocaleString('vi-VN')} thành viên</div><div class="small text-muted mt-1">Đã chết/khai tử: ${Number(data.deadHouseholds||0).toLocaleString('vi-VN')} hộ · ${Number(data.deadPopulation||0).toLocaleString('vi-VN')} người &nbsp;|&nbsp; Đã chuyển đi: ${Number(data.movedHouseholds||0).toLocaleString('vi-VN')} hộ · ${Number(data.movedPopulation||0).toLocaleString('vi-VN')} người</div>`;
    $('pageInfo').textContent=`Trang ${data.page}/${totalPages} · ${data.data.length} thành viên (tối đa 20 hộ/trang)`;
    if(!data.data.length){body.innerHTML='<tr><td colspan="10" class="text-center text-muted py-5">Không tìm thấy hồ sơ dân cư.</td></tr>';}
-   else body.innerHTML=data.data.map((r,i)=>{const prev=data.data[i-1];const newHouse=!prev||String(prev._ma_dia_ban||'')!==String(r._ma_dia_ban||'')||String(prev.ma_ho||'')!==String(r.ma_ho||'');const status=String(r.trang_thai_cu_tru||'').toUpperCase();const inactive=['DA_CHUYEN_DI','DA_KHAI_TU','DA_CHET'].includes(status);const rowClasses=[newHouse?'household-start':'',inactive?'table-secondary':''].filter(Boolean).join(' ');return `<tr${rowClasses?` class="${rowClasses}"`: ''}><td class="text-center">${i+1}</td><td class="fw-semibold">${esc(r.ho_ten)}</td><td>${esc(r.ma_ho)}</td><td>${esc(r.ngay_sinh)}</td><td>${esc(r.gioi_tinh)}</td><td>${esc(r.quan_he)}</td><td>${esc(r.cccd)}</td><td>${esc(r.ma_bhyt)}</td><td>${esc(r.dia_chi)}</td><td class="text-center text-nowrap"><button class="btn btn-sm btn-outline-primary action-btn me-1" title="Sửa" data-edit="${r.id}"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-outline-danger action-btn" title="Xóa" data-delete="${r.id}" data-name="${esc(r.ho_ten)}"><i class="fa-solid fa-trash"></i></button></td></tr>`;}).join('');
+   else body.innerHTML=data.data.map((r,i)=>{const prev=data.data[i-1];const newHouse=!prev||String(prev._ma_dia_ban||'')!==String(r._ma_dia_ban||'')||String(prev.ma_ho||'')!==String(r.ma_ho||'');const status=String(r.trang_thai_cu_tru||'').toUpperCase();const inactive=['DA_CHUYEN_DI','DA_KHAI_TU','DA_CHET'].includes(status);const rowClasses=[newHouse?'household-start':'household-member',inactive?'table-secondary':''].filter(Boolean).join(' ');return `<tr${rowClasses?` class="${rowClasses}"`: ''}><td class="text-center">${i+1}</td><td class="fw-semibold">${esc(r.ho_ten)}</td><td>${esc(r.ma_ho)}</td><td>${esc(r.ngay_sinh)}</td><td>${esc(r.gioi_tinh)}</td><td>${esc(r.quan_he)}</td><td>${esc(r.cccd)}</td><td>${esc(r.ma_bhyt)}</td><td>${esc(r.dia_chi)}</td><td class="text-center text-nowrap"><button class="btn btn-sm btn-outline-primary action-btn me-1" title="Sửa" data-edit="${r.id}"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-outline-danger action-btn" title="Xóa" data-delete="${r.id}" data-name="${esc(r.ho_ten)}"><i class="fa-solid fa-trash"></i></button></td></tr>`;}).join('');
    renderPages();
   }catch(e){body.innerHTML=`<tr><td colspan="10" class="text-center text-danger py-5">${esc(e.message)}</td></tr>`;$('summary').textContent='Không tải được dữ liệu';$('pageInfo').textContent='';$('pagination').innerHTML='';if(e.message.includes('quyền')||e.message.includes('đăng nhập'))$('btnAdd').disabled=true;}
  }
@@ -294,6 +294,6 @@
  (async()=>{try{await loadFormOptions();await loadFilterOptions();await load();}catch(e){notify(e.message,true);load();}})();
 })();
 </script>
-    <script src="mobile-ui.js?v=20261110-v3"></script>
+    <script src="mobile-ui.js?v=20261110-v6"></script>
 </body>
 </html>

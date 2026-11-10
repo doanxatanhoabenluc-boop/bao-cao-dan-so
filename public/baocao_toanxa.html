@@ -85,21 +85,22 @@
         }
 
     </style>
-    <link rel="stylesheet" href="mobile-responsive.css?v=20261110-v3">
+    <link rel="stylesheet" href="mobile-responsive.css?v=20261110-v7">
 </head>
-<body>
+<body class="report-all-page">
+<nav class="navbar topbar site-topbar px-3 py-3 shadow-sm no-print" aria-label="Điều hướng chính">
+  <div class="container-fluid page-wrap">
+    <span class="navbar-brand text-white fw-bold"><i class="fa-solid fa-chart-column me-2" aria-hidden="true"></i>BÁO CÁO DÂN SỐ TOÀN XÃ</span>
+    <div class="site-topbar-actions">
+      <a href="quan-ly-bieu-mau.html" data-requires-role="admin-leader" aria-hidden="true" style="display:none !important;" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-arrow-left me-1" aria-hidden="true"></i>11 Biểu mẫu</a>
+      <a href="index.html" class="btn btn-light btn-sm"><i class="fa-solid fa-house me-1" aria-hidden="true"></i>Trang chính</a>
+    </div>
+  </div>
+</nav>
 
+    <!-- Thanh điều hướng điện thoại đồng nhất với trang Quản lý dân cư -->
 <div class="container-fluid mt-2">
     
-    <!-- Tiêu đề & Nút Về trang chủ -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
-        <a href="index.html" class="btn btn-outline-secondary btn-sm shadow-sm order-2 order-md-1">
-            <i class="fa-solid fa-house me-1"></i> Về trang chủ
-        </a>
-        <h3 class="text-primary fw-bold text-center m-0 order-1 order-md-2">BÁO CÁO DÂN SỐ TOÀN XÃ</h3>
-        <div class="d-none d-md-block order-3" style="width: 100px;"></div> <!-- Giữ cân bằng layout -->
-    </div>
-
    <!-- Thanh lọc chung -->
 <div class="filter-box shadow-sm">
     <div class="row g-3 align-items-end">
@@ -124,10 +125,25 @@
                 <option value="1">Tháng 1</option><option value="2">Tháng 2</option>
                 <option value="3">Tháng 3</option><option value="4">Tháng 4</option>
                 <option value="5">Tháng 5</option><option value="6">Tháng 6</option>
-                <option value="7">Tháng 7</option><option value="8" selected>Tháng 8</option>
+                <option value="7">Tháng 7</option><option value="8">Tháng 8</option>
                 <option value="9">Tháng 9</option><option value="10">Tháng 10</option>
                 <option value="11">Tháng 11</option><option value="12">Tháng 12</option>
             </select>
+                <script>
+                (function setVietnamCurrentReportMonth() {
+                    var select = document.getElementById('filterThang');
+                    if (!select) return;
+                    var month;
+                    try {
+                        month = Number(new Intl.DateTimeFormat('en-US', {
+                            timeZone: 'Asia/Ho_Chi_Minh', month: 'numeric'
+                        }).format(new Date()));
+                    } catch (e) {
+                        month = new Date().getMonth() + 1;
+                    }
+                    if (month >= 1 && month <= 12) select.value = String(month);
+                })();
+                </script>
         </div>
 
         <div class="col-12 col-sm-6 col-md-2">
@@ -375,6 +391,6 @@
 
 </div>
 <script src="baocao_toanxa.js"></script>
-    <script src="mobile-ui.js?v=20261110-v3"></script>
+    <script src="mobile-ui.js?v=20261110-v9-navigation-month"></script>
 </body>
 </html>

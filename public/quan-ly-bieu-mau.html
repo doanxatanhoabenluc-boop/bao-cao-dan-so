@@ -51,38 +51,23 @@
             .table-responsive table { min-width: 780px; }
         }
     </style>
-    <link rel="stylesheet" href="mobile-responsive.css?v=20261110-v3">
+    <link rel="stylesheet" href="mobile-responsive.css?v=20261110-v7">
 </head>
 <body class="bg-light">
+<nav class="navbar topbar site-topbar px-3 py-3 shadow-sm no-print" aria-label="Điều hướng chính">
+  <div class="container-fluid page-wrap">
+    <span class="navbar-brand text-white fw-bold"><i class="fa-solid fa-table-list me-2" aria-hidden="true"></i>QUẢN LÝ BIỂU MẪU</span>
+    <div class="site-topbar-actions">
+      <a href="baocao_toanxa.html" data-requires-role="admin-leader" aria-hidden="true" style="display:none !important;" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-arrow-left me-1" aria-hidden="true"></i>Quản lý sổ</a>
+      <a href="index.html" class="btn btn-light btn-sm"><i class="fa-solid fa-house me-1" aria-hidden="true"></i>Trang chính</a>
+      <button type="button" onclick="logout()" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-right-from-bracket me-1" aria-hidden="true"></i>Đăng xuất</button>
+    </div>
+  </div>
+</nav>
 
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3 shadow-sm">
-        <div class="container-fluid">
-            <a class="navbar-brand fw-bold fs-6 fs-md-5" href="#">
-                <i class="fa-solid fa-table-list text-warning me-1"></i> Quản lý Biểu mẫu Dữ liệu
-            </a>
-            
-            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="collapse navbar-collapse justify-content-end mt-2 mt-lg-0" id="adminNavbar">
-                <div class="d-flex flex-column flex-lg-row gap-2">
-                    <a href="admin.html" class="btn btn-outline-light btn-sm">
-                        <i class="fa-solid fa-arrow-left me-1"></i> Quay lại Admin
-                    </a>
-                    <a href="index.html" class="btn btn-outline-light btn-sm">
-                        <i class="fa-solid fa-house me-1"></i> Về trang nhập liệu
-                    </a>
-                    <button onclick="logout()" class="btn btn-danger btn-sm">
-                        <i class="fa-solid fa-right-from-bracket me-1"></i> Đăng xuất
-                    </button>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container-fluid my-4 px-3 px-md-4">
+    <!-- Thanh điều hướng điện thoại đồng nhất với trang Quản lý dân cư -->
+<!-- Navbar -->
+<div class="container-fluid my-4 px-3 px-md-4">
         <div class="card shadow-sm mb-4 border-0">
             <div class="card-header bg-success text-white d-flex justify-content-between align-items-center flex-wrap gap-2 py-3">
                 <h5 class="mb-0 fs-6 fs-md-5"><i class="fa-solid fa-database me-1"></i> Xem & Chỉnh sửa Dữ liệu 11 Biểu mẫu</h5>
@@ -170,6 +155,6 @@
             }
         });
     </script>
-    <script src="mobile-ui.js?v=20261110-v3"></script>
+    <script src="mobile-ui.js?v=20261110-v9-navigation-month"></script>
 </body>
 </html>

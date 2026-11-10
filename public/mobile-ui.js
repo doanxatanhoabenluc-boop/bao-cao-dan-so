@@ -127,6 +127,54 @@
     else if (mobileMedia.addListener) mobileMedia.addListener(initializeTables);
   }
 
+  // Chỉ Admin/Lãnh đạo mới được thấy liên kết đến các trang quản trị và sổ toàn xã.
+  // Quyền được xác minh từ phiên máy chủ qua /api/me, không dùng localStorage để tránh dữ liệu vai trò cũ.
+  async function applyPrivilegedNavigation() {
+    const guardedLinks = Array.from(document.querySelectorAll('[data-requires-role="admin-leader"]'));
+    if (!guardedLinks.length) return;
+
+    // Mặc định ẩn ngay từ đầu; chỉ mở sau khi máy chủ xác nhận quyền hợp lệ.
+    guardedLinks.forEach(link => {
+      link.style.setProperty('display', 'none', 'important');
+      link.setAttribute('aria-hidden', 'true');
+    });
+
+    try {
+      const response = await fetch('/api/me', {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!response.ok) return;
+
+      const user = await response.json();
+      const role = String(user && user.role || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .trim()
+        .toLowerCase()
+        .replace(/[\s_-]+/g, '');
+      const canManage = role === 'admin' || role.includes('lanhdao') || role.includes('quantri');
+      if (!canManage) return;
+
+      guardedLinks.forEach(link => {
+        link.style.removeProperty('display');
+        link.setAttribute('aria-hidden', 'false');
+      });
+    } catch (error) {
+      // Fail closed: nếu không xác minh được phiên thì giữ liên kết quản trị ở trạng thái ẩn.
+      console.warn('Không xác minh được quyền hiển thị điều hướng quản trị:', error);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyPrivilegedNavigation, { once: true });
+  } else {
+    applyPrivilegedNavigation();
+  }
+
   // Navigation helper only: no form, record, API, or business-rule interception.
   function installBackToTop() {
     if (page === 'index.html') return;
