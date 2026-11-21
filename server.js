@@ -1460,7 +1460,7 @@ async function updateReportResidentLink(client, tableName, recordId, residentId,
     if (result.rowCount !== 1) throw new Error(`Không tìm thấy bản ghi ${tableName} cần gắn ID dân cư.`);
 }
 
-async function getExplicitResidentById(client, residentId, householdCode, fullName) {
+async function getExplicitResidentById(client, residentId, householdCode, fullName, options = {}) {
     const rawId = String(residentId ?? '').trim();
     if (!rawId) return null;
     if (!/^\d+$/.test(rawId) || Number(rawId) <= 0) {
@@ -1473,7 +1473,11 @@ async function getExplicitResidentById(client, residentId, householdCode, fullNa
     const expectedHousehold = reportHouseholdCode(householdCode);
     const actualHousehold = reportHouseholdCode(person.ma_ho);
     if (expectedHousehold && actualHousehold && expectedHousehold !== actualHousehold && !options.allowHouseholdChange) {
-        const error = new Error('Mã hộ trên biểu mẫu không khớp với nhân khẩu đã chọn. Vui lòng chọn lại người dân.'); error.status = 409; throw error;
+        const error = new Error(
+            `Mã hộ không khớp: biểu mẫu đang là ${expectedHousehold}, nhưng nhân khẩu đã chọn thuộc hộ ${actualHousehold}. ` +
+            'Hệ thống đã giữ nguyên kiểm tra để tránh gắn nhầm người. Hãy chọn nhân khẩu thuộc đúng hộ; nếu nhập hộ mới, bỏ lựa chọn cũ và bổ sung hồ sơ nhân khẩu mới.'
+        );
+        error.status = 409; throw error;
     }
     // Mặc định vẫn kiểm tra tên nghiêm ngặt. Chỉ cho phép tên khác khi caller
     // đã xác minh ID này được lưu sẵn trên chính bản ghi báo cáo đang xử lý.
@@ -3989,7 +3993,10 @@ app.post('/api/admin/sync-phu-nu-from-table1', async (req, res) => {
             await client.query(`UPDATE dan_cu_sinh_con_events SET ho_ten_me=$1, ma_ho=$2 WHERE dan_cu_id=$3`, [tenMe, maHo, childId]);
         }
         const dateForHistory = childDate || new Date().toISOString().slice(0,10);
-        const activeCommune = await getActiveCommune();
+        // Dùng chính client đang giữ transaction để truy vấn cấu hình xã.
+        // Không gọi pool.query ở đây vì route đã giữ một connection; lấy thêm
+        // connection thứ hai có thể làm cạn pool khi nhiều lượt đồng bộ chạy đồng thời.
+        const activeCommune = await getActiveCommune(client);
         const defaultClinic = noi_de || activeCommune?.ten_tram_y_te || null;
         await client.query(`INSERT INTO lich_su_bptt(dan_cu_id,ma_bptt,ngay_ap_dung,noi_thuc_hien)
             SELECT $1,'S',$2::date,$3::varchar WHERE NOT EXISTS

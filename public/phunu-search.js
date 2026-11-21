@@ -29,9 +29,104 @@ function renderPhuNuSearchField(field) {
     return col;
 }
 
+// Chuẩn hóa mã hộ giống cách kiểm tra ở server.js (lấy 5 số đầu).
+function normalizeResidentHouseholdCode(value) {
+    const text = String(value ?? '').trim();
+    if (!text) return '';
+    const leading = text.match(/^(\d{1,5})/);
+    if (leading) return leading[1].padStart(5, '0');
+    const digits = text.replace(/\D/g, '');
+    if (!digits) return '';
+    return digits.length <= 5 ? digits.padStart(5, '0') : digits;
+}
+
+// Ghi nhận các trường Bảng 1 được tự điền từ nhân khẩu đã chọn.
+// Khi đổi mã hộ, chỉ xóa những giá trị vẫn còn nguyên từ lần tự điền;
+// trường nào người nhập đã chỉnh sửa thì giữ nguyên để không mất dữ liệu nhập tay.
+function rememberTable1AutoFilledMotherFields(form, sourceValues = {}) {
+    if (!form) return;
+    const residentIdInput = form.querySelector('input[name="dan_cu_me_id"]');
+    if (!residentIdInput || !residentIdInput.value) return;
+
+    const fields = {};
+    const names = ['ho_ten_me', 'ngay_sinh_me', 'so_the_bhyt_me'];
+    for (const name of names) {
+        const sourceValue = sourceValues[name];
+        if (sourceValue === undefined || sourceValue === null || String(sourceValue).trim() === '') continue;
+        const field = form.querySelector(`[name="${name}"]`);
+        if (!field) continue;
+        fields[name] = {
+            element: field,
+            autoValue: String(sourceValue),
+            userEdited: false
+        };
+    }
+    residentIdInput._table1AutoFilledMotherFields = fields;
+}
+
+// Nếu người nhập sửa mã hộ sau khi đã chọn một nhân khẩu, bỏ ID liên kết cũ.
+// Chỉ xóa các trường mẹ vốn được tự điền và chưa bị người nhập chỉnh sửa;
+// mọi trường nhập tay hoặc đã chỉnh sửa đều được giữ nguyên.
+function attachTable1HouseholdLinkGuard(form) {
+    if (!form || form.dataset.table1HouseholdGuardBound === '1') return;
+    form.dataset.table1HouseholdGuardBound = '1';
+
+    const markMotherFieldAsManuallyEdited = event => {
+        const residentIdInput = form.querySelector('input[name="dan_cu_me_id"]');
+        const tracked = residentIdInput?._table1AutoFilledMotherFields;
+        if (!tracked || !event.target?.name) return;
+        const record = tracked[event.target.name];
+        if (record && record.element === event.target) record.userEdited = true;
+    };
+    form.addEventListener('input', markMotherFieldAsManuallyEdited);
+    form.addEventListener('change', markMotherFieldAsManuallyEdited);
+
+    form.addEventListener('change', event => {
+        if (!event.target || event.target.name !== 'ho_so') return;
+        const residentIdInput = form.querySelector('input[name="dan_cu_me_id"]');
+        if (!residentIdInput || !residentIdInput.value) return;
+        if (!Object.prototype.hasOwnProperty.call(residentIdInput.dataset, 'selectedHouseholdCode')) return;
+
+        const currentCode = normalizeResidentHouseholdCode(event.target.value);
+        const selectedCode = residentIdInput.dataset.selectedHouseholdCode;
+        if (currentCode === selectedCode) return;
+
+        // Chỉ bỏ các giá trị vẫn khớp chính xác với dữ liệu được tự điền.
+        // Giá trị do người nhập sửa sẽ được giữ, kể cả khi họ sửa rồi nhập lại giống ban đầu.
+        const tracked = residentIdInput._table1AutoFilledMotherFields || {};
+        for (const record of Object.values(tracked)) {
+            if (!record?.element || record.userEdited) continue;
+            if (String(record.element.value ?? '') === record.autoValue) {
+                record.element.value = '';
+            }
+        }
+
+        // Mã hộ đã thay đổi: bỏ ID nhân khẩu cũ, không tự chuyển người sang hộ mới.
+        residentIdInput.value = '';
+        delete residentIdInput.dataset.selectedHouseholdCode;
+        delete residentIdInput._table1AutoFilledMotherFields;
+
+        const searchInput = document.getElementById('inputSearchPhuNu');
+        if (searchInput && String(searchInput.value || '').startsWith('Đã chọn:')) {
+            searchInput.value = '';
+            searchInput.style.backgroundColor = '#fff';
+            if (typeof handlePhuNuSearchInput === 'function') {
+                handlePhuNuSearchInput(searchInput);
+            }
+        }
+
+        const help = searchInput?.closest('.col-12')?.querySelector('small');
+        if (help) {
+            help.textContent = 'Mã hộ đã thay đổi nên liên kết nhân khẩu cũ đã được bỏ. Thông tin tự điền chưa chỉnh sửa đã được xóa; thông tin bạn đã nhập hoặc chỉnh sửa được giữ nguyên. Hãy chọn người thuộc mã hộ mới hoặc tiếp tục bổ sung hồ sơ nhân khẩu mới.';
+            help.classList.remove('text-muted');
+            help.classList.add('text-warning');
+        }
+    });
+}
+
 // Lưu ID nhân khẩu đã chọn vào hidden input của chính biểu mẫu.
 // FormData sẽ tự gửi khóa này cùng dữ liệu nghiệp vụ.
-function setResidentLinkId(fieldName, residentId) {
+function setResidentLinkId(fieldName, residentId, householdCode) {
     const form = document.getElementById('dynamicForm');
     if (!form || !fieldName) return;
     let input = form.querySelector(`[name="${fieldName}"]`);
@@ -42,6 +137,14 @@ function setResidentLinkId(fieldName, residentId) {
         form.appendChild(input);
     }
     input.value = residentId ? String(residentId) : '';
+    if (residentId && fieldName === 'dan_cu_me_id') {
+        input.dataset.selectedHouseholdCode = normalizeResidentHouseholdCode(householdCode);
+        delete input._table1AutoFilledMotherFields;
+        attachTable1HouseholdLinkGuard(form);
+    } else {
+        delete input.dataset.selectedHouseholdCode;
+        if (fieldName === 'dan_cu_me_id') delete input._table1AutoFilledMotherFields;
+    }
 }
 
 // Xử lý hiển thị/ẩn nút X khi gõ chữ
@@ -190,7 +293,7 @@ function selectPhuNuFromMasterList(item) {
         return;
     }
     const selectedTable = typeof currentTable !== 'undefined' ? currentTable : '';
-    if (selectedTable === 'table_1') setResidentLinkId('dan_cu_me_id', item.id);
+    if (selectedTable === 'table_1') setResidentLinkId('dan_cu_me_id', item.id, item.ma_ho);
     else if (['table_3','table_5','table_7','table_9','table_11'].includes(selectedTable)) setResidentLinkId('dan_cu_id', item.id);
 
     let hoSoInput = document.querySelector('[name="ho_so"]');
@@ -218,6 +321,15 @@ function selectPhuNuFromMasterList(item) {
     if (hoSoInput) hoSoInput.value = item.ma_ho || '';
     if (hoTenInput) hoTenInput.value = item.ho_ten || '';
     if (bhytInput) bhytInput.value = item.ma_bhyt || '';
+
+    if (isTable1) {
+        const form = document.getElementById('dynamicForm');
+        rememberTable1AutoFilledMotherFields(form, {
+            ho_ten_me: item.ho_ten,
+            ngay_sinh_me: item.ngay_sinh,
+            so_the_bhyt_me: item.ma_bhyt
+        });
+    }
 
     // Khi chọn nhân khẩu từ dan_cu ở Bảng 3/5, tự điền các thông tin đã có.
     // Đây là các ô của biểu mẫu biến động; không cập nhật ngược dữ liệu dân cư tại bước chọn.
@@ -272,7 +384,13 @@ function selectPhuNuFromMasterList(item) {
     if (searchInput) {
         searchInput.value = `Đã chọn: ${item.ho_ten} (Mã hộ: ${item.ma_ho})`;
         searchInput.style.backgroundColor = '#e8f5e9';
-        // 🌟 KÍCH HOẠT SỰ KIỆN ĐỂ NÚT X HIỆN RA NGAY LẬP TỨC
+        const help = searchInput.closest('.col-12')?.querySelector('small');
+        if (help) {
+            help.textContent = '💡 Chọn người để tự điền mã hộ, họ tên, ngày sinh và địa chỉ.';
+            help.classList.remove('text-warning');
+            help.classList.add('text-muted');
+        }
+        // Kích hoạt sự kiện để nút X hiện ra ngay lập tức.
         searchInput.dispatchEvent(new Event('input'));
     }
 }
