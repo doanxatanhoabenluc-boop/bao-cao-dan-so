@@ -1229,15 +1229,61 @@ app.post("/api/data/:table", async (req, res) => {
                             String(value.ap || '').trim(),
                             String(value.dia_chi || '').trim().replace(/^\s*\d{3}\s*,\s*/, '')
                         ].filter(Boolean).join(' · ') || '(Trống)';
-                        const oldText = addressText(old);
-                        const newText = addressText(newAddress);
+                        const oldAddressText = addressText(old);
+                        const newAddressText = addressText(newAddress);
+                        const oldAreaPrefix = String(old.dia_chi || '').trim().match(/^([0-9]{3})/)?.[1]
+                            || String(old.diabanh || '').trim().match(/^([0-9]{3})/)?.[1] || '';
+                        const newAreaPrefix = areaCodeMatch?.[1] || '';
+                        const oldAreaName = String(old.diabanh || '').trim().toLocaleLowerCase('vi');
+                        const newAreaName = selectedArea.toLocaleLowerCase('vi');
+                        const movingAcrossAreas = oldAreaPrefix && newAreaPrefix
+                            ? oldAreaPrefix !== newAreaPrefix
+                            : oldAreaName !== newAreaName;
+
+                        if (movingAcrossAreas) {
+                            if (!oldAreaPrefix || !newAreaPrefix) {
+                                await client.query('ROLLBACK');
+                                return res.status(400).json({ success: false, message: 'Không xác định được mã địa bàn cũ hoặc mới. Vui lòng kiểm tra danh mục địa bàn trước khi chuyển hộ.' });
+                            }
+                            if (!isPrivileged) {
+                                await client.query('ROLLBACK');
+                                return res.status(403).json({ success: false, message: 'Chuyển toàn bộ hộ sang địa bàn khác cần tài khoản Admin hoặc Lãnh đạo thực hiện sau khi xác nhận mã hộ với địa bàn tiếp nhận.' });
+                            }
+                            if (v.apply_to_household !== true) {
+                                await client.query('ROLLBACK');
+                                return res.status(400).json({ success: false, message: 'Khi chuyển sang địa bàn khác, bắt buộc chuyển toàn bộ hộ. Nếu chỉ chuyển một người, hãy tách hộ trước khi đổi địa chỉ.' });
+                            }
+                            if (v.confirm_new_household !== true) {
+                                await client.query('ROLLBACK');
+                                return res.status(400).json({ success: false, message: 'Bạn cần xác nhận mã hộ mới đã được địa bàn tiếp nhận cung cấp.' });
+                            }
+                        }
+
+                        let newHouseholdCode = null;
+                        let ghiChuMaHoMoi = '';
+                        if (movingAcrossAreas) {
+                            const rawNewHousehold = String(v.new_ma_ho || '').trim();
+                            const householdMatch = rawNewHousehold.match(/^(\d{1,5})(?:\.(\d+(?:\.\d+)*))?$/);
+                            if (!householdMatch) {
+                                await client.query('ROLLBACK');
+                                return res.status(400).json({ success: false, message: 'Mã hộ mới tại địa bàn tiếp nhận phải có phần chính từ 1 đến 5 chữ số; phần sau dấu chấm (nếu có) chỉ gồm chữ số.' });
+                            }
+                            newHouseholdCode = householdMatch[1].padStart(5, '0') + (householdMatch[2] ? `.${householdMatch[2]}` : '');
+                            ghiChuMaHoMoi = String(v.ghi_chu_ma_ho || '').trim();
+                        }
+
+                        const oldText = movingAcrossAreas
+                            ? `${oldAddressText} · Mã hộ cũ: ${String(old.ma_ho || '').trim()}`
+                            : oldAddressText;
+                        const newText = movingAcrossAreas
+                            ? `${newAddressText} · Mã hộ mới: ${newHouseholdCode}`
+                            : newAddressText;
                         let householdRows = null;
                         let householdHasChanges = false;
 
                         if (v.apply_to_household === true) {
                             const householdCode = String(old.ma_ho || '').trim();
-                            const areaPrefix = String(old.dia_chi || '').trim().match(/^([0-9]{3})/)?.[1]
-                                || String(old.diabanh || '').trim().match(/^([0-9]{3})/)?.[1] || '';
+                            const areaPrefix = oldAreaPrefix;
                             if (!householdCode || !areaPrefix) {
                                 await client.query('ROLLBACK');
                                 return res.status(400).json({ success: false, message: 'Không đủ mã hộ hoặc địa bàn để áp dụng địa chỉ cho cả hộ.' });
@@ -1270,13 +1316,43 @@ app.post("/api/data/:table", async (req, res) => {
                                 return res.status(409).json({ success: false, message: 'Không xác định được người được chọn trong hộ hiện tại. Vui lòng tải lại danh sách.' });
                             }
                             householdRows = householdAddressMembers.rows;
-                            householdHasChanges = householdRows.some(member => addressText(member) !== newText);
+
+                            if (movingAcrossAreas) {
+                                const memberIds = householdRows.map(member => Number(member.id));
+                                // Khóa theo mã địa bàn + mã hộ để tránh hai thao tác đồng thời
+                                // cùng kiểm tra thấy mã còn trống rồi gán trùng cho hai hộ.
+                                await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`table6-household:${newAreaPrefix}:${newHouseholdCode}`]);
+                                const duplicateNewHousehold = await client.query(`
+                                    SELECT id, ho_ten FROM dan_cu
+                                    WHERE TRIM(COALESCE(ma_ho,'')) = $1
+                                      AND COALESCE(NULLIF(LEFT(BTRIM(COALESCE(dia_chi,'')),3),''), SUBSTRING(BTRIM(COALESCE(diabanh,'')) FROM '^[0-9]{3}')) = $2
+                                      AND NOT (id = ANY($3::bigint[]))
+                                    ORDER BY id LIMIT 1
+                                `, [newHouseholdCode, newAreaPrefix, memberIds]);
+                                if (duplicateNewHousehold.rowCount) {
+                                    await client.query('ROLLBACK');
+                                    return res.status(409).json({ success: false, message: `Mã hộ ${newHouseholdCode} đã tồn tại tại địa bàn tiếp nhận. Vui lòng liên hệ địa bàn mới để xác nhận một mã hộ khác.` });
+                                }
+                            }
+
+                            householdHasChanges = householdRows.some(member =>
+                                addressText(member) !== newAddressText ||
+                                (movingAcrossAreas && String(member.ma_ho || '').trim() !== newHouseholdCode)
+                            );
                         }
 
-                        if (oldText !== newText || householdHasChanges) {
-                            if (oldText !== newText) Object.assign(updates, newAddress);
+                        if (oldAddressText !== newAddressText || movingAcrossAreas || householdHasChanges) {
+                            if (oldAddressText !== newAddressText) Object.assign(updates, newAddress);
+                            if (movingAcrossAreas) updates.ma_ho = newHouseholdCode;
                             if (householdRows) {
-                                addressHousehold = { ids: householdRows.map(member => Number(member.id)), rows: householdRows, newAddress };
+                                addressHousehold = {
+                                    ids: householdRows.map(member => Number(member.id)),
+                                    rows: householdRows,
+                                    newAddress,
+                                    newHousehold: newHouseholdCode,
+                                    ghiChuMaHoMoi,
+                                    isCrossAreaMove: Boolean(movingAcrossAreas)
+                                };
                             }
                             historyRows.push({ label: 'Địa chỉ (địa bàn, Ấp, địa chỉ cụ thể)', oldText, newText });
                         }
@@ -1322,9 +1398,10 @@ app.post("/api/data/:table", async (req, res) => {
                     if (otherIds.length) {
                         await client.query(`
                             UPDATE dan_cu
-                            SET diabanh=$1, ap=$2, ma_xa_phuong=$3, dia_chi=$4, updated_at=CURRENT_TIMESTAMP
-                            WHERE id = ANY($5::bigint[])
-                        `, [address.diabanh, address.ap, address.ma_xa_phuong, address.dia_chi, otherIds]);
+                            SET diabanh=$1, ap=$2, ma_xa_phuong=$3, dia_chi=$4,
+                                ma_ho=COALESCE($5, ma_ho), updated_at=CURRENT_TIMESTAMP
+                            WHERE id = ANY($6::bigint[])
+                        `, [address.diabanh, address.ap, address.ma_xa_phuong, address.dia_chi, addressHousehold.newHousehold || null, otherIds]);
                     }
                 }
 
@@ -1353,13 +1430,19 @@ app.post("/api/data/:table", async (req, res) => {
                         const targetId = Number(target.id);
                         const targetUpdated = targetId === Number(danCuId)
                             ? updatedPerson
-                            : { ...target, ...addressHousehold?.newAddress };
+                            : {
+                                ...target,
+                                ...addressHousehold?.newAddress,
+                                ...(addressHousehold?.newHousehold ? { ma_ho: addressHousehold.newHousehold } : {})
+                            };
                         const targetOldAddress = targetId === Number(danCuId)
                             ? change.oldText
-                            : [target.diabanh, target.ap, String(target.dia_chi || '').trim().replace(/^\s*\d{3}\s*,\s*/, '')].filter(Boolean).join(' · ') || '(Trống)';
+                            : ([target.diabanh, target.ap, String(target.dia_chi || '').trim().replace(/^\s*\d{3}\s*,\s*/, '')].filter(Boolean).join(' · ') || '(Trống)')
+                                + (addressHousehold?.isCrossAreaMove ? ` · Mã hộ cũ: ${String(target.ma_ho || '').trim()}` : '');
                         const targetNewAddress = targetId === Number(danCuId)
                             ? change.newText
-                            : [targetUpdated.diabanh, targetUpdated.ap, String(targetUpdated.dia_chi || '').trim().replace(/^\s*\d{3}\s*,\s*/, '')].filter(Boolean).join(' · ') || change.newText;
+                            : ([targetUpdated.diabanh, targetUpdated.ap, String(targetUpdated.dia_chi || '').trim().replace(/^\s*\d{3}\s*,\s*/, '')].filter(Boolean).join(' · ') || change.newText)
+                                + (addressHousehold?.isCrossAreaMove ? ` · Mã hộ mới: ${String(targetUpdated.ma_ho || '').trim()}` : '');
                         if (change.label === 'Địa chỉ (địa bàn, Ấp, địa chỉ cụ thể)' && targetOldAddress === targetNewAddress) continue;
                         const insertedTable6 = await client.query(`
                             INSERT INTO table_6
@@ -1369,8 +1452,13 @@ app.post("/api/data/:table", async (req, res) => {
                             RETURNING id
                         `, [targetId, targetUpdated.ma_ho || '', targetUpdated.ho_ten || '', targetUpdated.ngay_sinh || '', targetUpdated.ma_bhyt || '', targetUpdated.gioi_tinh || '',
                             `${change.label === 'Tách hộ' ? change.oldText : `${change.label}: ${targetOldAddress}`}`, `${change.label === 'Tách hộ' ? change.newText : `${change.label}: ${targetNewAddress}`}`, targetUpdated.ap || apLog, targetUpdated.diabanh || areaLog,
-                            `${user.fullname} (${user.username})`, createdAt, [change.note, dataObj.ghi_chu].filter(Boolean).join('. '),
-                            change.label === 'Tách hộ' ? String(splitHousehold?.ghiChuMaHoMoi || '') : '']);
+                            `${user.fullname} (${user.username})`, createdAt,
+                            [change.note, dataObj.ghi_chu,
+                                change.label === 'Địa chỉ (địa bàn, Ấp, địa chỉ cụ thể)' && addressHousehold?.isCrossAreaMove
+                                    ? `Đã xác nhận mã hộ mới ${addressHousehold.newHousehold} với địa bàn tiếp nhận ${addressHousehold.newAddress.diabanh}` : ''
+                            ].filter(Boolean).join('. '),
+                            change.label === 'Tách hộ' ? String(splitHousehold?.ghiChuMaHoMoi || '')
+                                : (change.label === 'Địa chỉ (địa bàn, Ấp, địa chỉ cụ thể)' && addressHousehold?.isCrossAreaMove ? String(addressHousehold.ghiChuMaHoMoi || '') : '')]);
                         if (change.label === 'Tách hộ' && splitHousehold) {
                             const table6RowId = insertedTable6.rows[0]?.id;
                             for (const memberId of splitHousehold.ids.filter(id => Number(id) !== Number(danCuId))) {
@@ -1381,12 +1469,17 @@ app.post("/api/data/:table", async (req, res) => {
                     }
                 }
                 await client.query('COMMIT');
-                await logAction(user, 'Cập nhật thông tin dân cư qua Bảng 6', Number(danCuId), `[${old.ho_ten}] ${historyRows.map(x => x.label).join(', ')}`);
+                const actionDetail = addressHousehold?.isCrossAreaMove
+                    ? `[${old.ho_ten}] Chuyển toàn hộ ${old.ma_ho} sang hộ ${addressHousehold.newHousehold} tại ${addressHousehold.newAddress.diabanh}`
+                    : `[${old.ho_ten}] ${historyRows.map(x => x.label).join(', ')}`;
+                await logAction(user, 'Cập nhật thông tin dân cư qua Bảng 6', Number(danCuId), actionDetail);
                 const message = splitHousehold
                     ? `Đã tách ${splitHousehold.ids.length} người sang hộ ${splitHousehold.newHousehold} và ghi 1 dòng lịch sử vào Bảng 6.`
-                    : (addressHousehold
-                        ? `Đã cập nhật địa chỉ cho ${addressHousehold.ids.length} nhân khẩu trong hộ và ghi lịch sử riêng cho từng người.`
-                        : `Đã cập nhật hồ sơ dân cư và ghi nhận ${historyRows.length} nội dung thay đổi vào Bảng 6.`);
+                    : (addressHousehold?.isCrossAreaMove
+                        ? `Đã chuyển toàn bộ ${addressHousehold.ids.length} nhân khẩu từ hộ ${old.ma_ho} sang hộ ${addressHousehold.newHousehold} tại ${addressHousehold.newAddress.diabanh}; đã ghi lịch sử riêng cho từng người.`
+                        : (addressHousehold
+                            ? `Đã cập nhật địa chỉ cho ${addressHousehold.ids.length} nhân khẩu trong hộ và ghi lịch sử riêng cho từng người.`
+                            : `Đã cập nhật hồ sơ dân cư và ghi nhận ${historyRows.length} nội dung thay đổi vào Bảng 6.`));
                 return res.json({ success: true, message, updated: historyRows.length, household_updated: addressHousehold?.ids.length || 0 });
             } catch (table6Error) {
                 try { await client.query('ROLLBACK'); } catch (_) {}

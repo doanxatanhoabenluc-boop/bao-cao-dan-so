@@ -762,6 +762,35 @@ function updateTable6AreasForSelectedAp(row, selectedArea = '') {
     areaSelect.innerHTML = table6AreaOptionHtml(areas, selectedArea, placeholder);
     areaSelect.disabled = !ap || areas.length === 0;
 }
+function table6AreaPrefix(value) {
+    return String(value || '').trim().match(/^(\d{3})/)?.[1] || '';
+}
+
+function updateTable6AddressMoveUI(row) {
+    if (!row) return false;
+    const selectedArea = row.querySelector('.table6-address-area')?.value || '';
+    const oldPrefix = table6AreaPrefix(table6Resident?.dia_chi) || table6AreaPrefix(table6Resident?.diabanh);
+    const newPrefix = table6AreaPrefix(selectedArea);
+    const oldAreaName = String(table6Resident?.diabanh || '').trim().toLocaleLowerCase('vi');
+    const newAreaName = String(selectedArea || '').trim().toLocaleLowerCase('vi');
+    const movingAcrossAreas = oldPrefix && newPrefix ? oldPrefix !== newPrefix : oldAreaName !== newAreaName;
+    const wholeToggle = row.querySelector('.table6-address-whole-household');
+    const movePanel = row.querySelector('.table6-address-move-panel');
+
+    if (movingAcrossAreas) {
+        // Di chuyển khác địa bàn luôn là thao tác chuyển cả hộ; không cho tắt cờ này.
+        if (wholeToggle) {
+            wholeToggle.checked = true;
+            wholeToggle.disabled = true;
+        }
+        if (movePanel) movePanel.style.display = 'block';
+    } else {
+        if (wholeToggle) wholeToggle.disabled = false;
+        if (movePanel) movePanel.style.display = 'none';
+    }
+    return movingAcrossAreas;
+}
+
 function table6OldValue(field) {
     if (!table6Resident) return '';
     if (field === 'dia_chi_nhom') return [table6Resident.diabanh, table6Resident.ap, table6Resident.dia_chi].filter(Boolean).join(' · ');
@@ -928,23 +957,44 @@ function renderTable6NewInput(row) {
     } else if (field === 'dia_chi_nhom') {
         const oldDetail = String(table6Resident?.dia_chi || '').replace(/^\s*\d{3}\s*,\s*/, '');
         const addressHouseholdToggleId = `table6-address-whole-${table6Resident?.id || 'resident'}`;
+        const addressMovePanelId = `table6-address-move-${table6Resident?.id || 'resident'}`;
         newEl.innerHTML = `<div class="row g-2">
           <div class="col-12 col-md-6"><label class="form-label small">Ấp <span class="text-danger">*</span></label><select class="form-select table6-address-ap" aria-label="Ấp">${table6OptionHtml(table6UniqueValues('ap'), table6Resident?.ap)}</select></div>
           <div class="col-12 col-md-6"><label class="form-label small">Địa bàn <span class="text-danger">*</span></label><select class="form-select table6-address-area" aria-label="Địa bàn" disabled><option value="">-- Chọn Ấp trước --</option></select></div>
           <div class="col-12"><label class="form-label small">Địa chỉ cụ thể</label><input class="form-control table6-address-detail" placeholder="Số nhà, đường..." value="${oldDetail.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"></div>
           <div class="col-12"><div class="form-check border rounded p-2 bg-light">
-            <input class="form-check-input table6-address-whole-household" type="checkbox" id="${addressHouseholdToggleId}">
+            <input class="form-check-input table6-address-whole-household" type="checkbox" id="${addressHouseholdToggleId}" checked>
             <label class="form-check-label fw-semibold" for="${addressHouseholdToggleId}">Áp dụng địa chỉ mới cho toàn bộ hộ</label>
-            <div class="small text-muted">Khi xác nhận, địa bàn, Ấp và địa chỉ cụ thể sẽ được cập nhật cho tất cả nhân khẩu thuộc cùng mã hộ trong địa bàn hiện tại.</div>
+            <div class="small text-muted">Mặc định cập nhật địa bàn, Ấp và địa chỉ cho tất cả nhân khẩu trong cùng hộ. Bỏ chọn nếu chỉ sửa địa chỉ người đang chọn (chỉ áp dụng khi vẫn ở cùng địa bàn).</div>
           </div></div>
+          <div class="col-12 table6-address-move-panel" id="${addressMovePanelId}" style="display:none">
+            <div class="border border-warning rounded p-3 bg-warning-subtle">
+              <div class="fw-semibold text-warning-emphasis mb-1">Chuyển hộ sang địa bàn khác</div>
+              <div class="small mb-2">Hệ thống sẽ chuyển toàn bộ nhân khẩu của hộ sang địa bàn mới. Bạn phải nhận và xác nhận mã hộ do địa bàn tiếp nhận cung cấp trước khi lưu.</div>
+              <label class="form-label small fw-semibold">Mã hộ mới tại địa bàn tiếp nhận <span class="text-danger">*</span></label>
+              <input type="text" class="form-control table6-address-new-household" inputmode="decimal" autocomplete="off" placeholder="Nhập mã hộ mới được địa bàn tiếp nhận xác nhận">
+              <div class="small text-muted mt-1">Mã hộ được chuẩn hóa đủ 5 chữ số. Không được trùng mã hộ đã tồn tại tại địa bàn mới.</div>
+              <div class="form-check mt-2">
+                <input class="form-check-input table6-address-confirm-new-household" type="checkbox" id="${addressMovePanelId}-confirm">
+                <label class="form-check-label small fw-semibold" for="${addressMovePanelId}-confirm">Tôi đã xác nhận mã hộ mới với địa bàn tiếp nhận</label>
+              </div>
+            </div>
+          </div>
         </div>`;
         const apSelect = row.querySelector('.table6-address-ap');
         if (apSelect) apSelect.addEventListener('change', () => {
             updateTable6AreasForSelectedAp(row, '');
+            updateTable6AddressMoveUI(row);
             syncTable6Changes();
         });
         const areaSelect = row.querySelector('.table6-address-area');
-        if (areaSelect) areaSelect.addEventListener('change', syncTable6Changes);
+        if (areaSelect) areaSelect.addEventListener('change', () => {
+            updateTable6AddressMoveUI(row);
+            syncTable6Changes();
+        });
+        row.querySelector('.table6-address-whole-household')?.addEventListener('change', syncTable6Changes);
+        row.querySelector('.table6-address-new-household')?.addEventListener('input', syncTable6Changes);
+        row.querySelector('.table6-address-confirm-new-household')?.addEventListener('change', syncTable6Changes);
         loadTable6Options().then(() => {
             if (!row.isConnected) return;
             const ap = row.querySelector('.table6-address-ap');
@@ -953,6 +1003,7 @@ function renderTable6NewInput(row) {
             ap.innerHTML = table6OptionHtml(table6UniqueValues('ap'), currentAp);
             // Chỉ chọn lại địa bàn cũ nếu địa bàn đó thực sự thuộc Ấp đang chọn.
             updateTable6AreasForSelectedAp(row, table6Resident?.diabanh || '');
+            updateTable6AddressMoveUI(row);
             syncTable6Changes();
         });
     } else if (table6SelectOptions[field]) {
@@ -980,7 +1031,17 @@ function syncTable6Changes() {
             row.querySelector('.table6-old').textContent = oldText;
             changes.push({field, value, oldText, newText, companionNames:names});
         } else if (field === 'dia_chi_nhom') {
-            const value = { diabanh:row.querySelector('.table6-address-area')?.value||'', ap:row.querySelector('.table6-address-ap')?.value||'', dia_chi:row.querySelector('.table6-address-detail')?.value||'', apply_to_household: Boolean(row.querySelector('.table6-address-whole-household')?.checked) };
+            const rawNewHousehold = row.querySelector('.table6-address-new-household')?.value || '';
+            const parsedNewHousehold = rawNewHousehold.trim() ? parseTable6HouseholdCode(rawNewHousehold) : { value: '', note: '', error: '' };
+            const value = {
+                diabanh: row.querySelector('.table6-address-area')?.value || '',
+                ap: row.querySelector('.table6-address-ap')?.value || '',
+                dia_chi: row.querySelector('.table6-address-detail')?.value || '',
+                apply_to_household: Boolean(row.querySelector('.table6-address-whole-household')?.checked),
+                new_ma_ho: parsedNewHousehold.value || '',
+                ghi_chu_ma_ho: parsedNewHousehold.note || '',
+                confirm_new_household: Boolean(row.querySelector('.table6-address-confirm-new-household')?.checked)
+            };
             const oldText = table6OldValue(field), newText = [value.diabanh,value.ap,value.dia_chi].filter(Boolean).join(' · ');
             row.querySelector('.table6-old').textContent = oldText || '(Trống)'; changes.push({field,value,oldText,newText});
         } else {
@@ -2071,12 +2132,38 @@ const allowSharedHousehold = true;
         const autoNote = !isHouseholdSplit && changedLabels.length ? `Thay đổi ${changedLabels.join(', ')}` : '';
         const manualNote = String(dataObj.ghi_chu || '').trim();
         dataObj.ghi_chu = [autoNote, manualNote].filter(Boolean).join('. ');
-        const addressWholeHousehold = changes.some(ch =>
-            ch.field === 'dia_chi_nhom' && ch.value?.apply_to_household === true
-        );
-        if (addressWholeHousehold) {
-            const code = String(dataObj.ho_so || '').trim();
-            if (!confirm(`Bạn đang chọn áp dụng địa chỉ mới cho TOÀN BỘ HỘ ${code}. Hệ thống sẽ cập nhật địa bàn, Ấp và địa chỉ cụ thể cho tất cả nhân khẩu trong cùng mã hộ và địa bàn hiện tại, đồng thời ghi lịch sử riêng cho từng người. Bạn xác nhận thực hiện?`)) return;
+        const addressChange = changes.find(ch => ch.field === 'dia_chi_nhom');
+        if (addressChange) {
+            const oldAreaPrefix = table6AreaPrefix(table6Resident?.dia_chi) || table6AreaPrefix(table6Resident?.diabanh);
+            const newAreaPrefix = table6AreaPrefix(addressChange.value?.diabanh);
+            const oldAreaName = String(table6Resident?.diabanh || '').trim().toLocaleLowerCase('vi');
+            const newAreaName = String(addressChange.value?.diabanh || '').trim().toLocaleLowerCase('vi');
+            const movingAcrossAreas = oldAreaPrefix && newAreaPrefix ? oldAreaPrefix !== newAreaPrefix : oldAreaName !== newAreaName;
+            if (movingAcrossAreas) {
+                const addressRow = [...document.querySelectorAll('#table6ChangeRows .table6-change-row')].find(row => row.querySelector('.table6-address-new-household'));
+                const rawNewHousehold = addressRow?.querySelector('.table6-address-new-household')?.value || '';
+                const parsedNewHousehold = parseTable6HouseholdCode(rawNewHousehold);
+                if (parsedNewHousehold.error) {
+                    alert(`❌ Vui lòng nhập mã hộ mới do địa bàn tiếp nhận xác nhận. ${parsedNewHousehold.error}`);
+                    addressRow?.querySelector('.table6-address-new-household')?.focus();
+                    return;
+                }
+                const confirmInput = addressRow?.querySelector('.table6-address-confirm-new-household');
+                if (!confirmInput?.checked) {
+                    alert('Vui lòng xác nhận bạn đã nhận mã hộ mới từ địa bàn tiếp nhận.');
+                    confirmInput?.focus();
+                    return;
+                }
+                addressChange.value.new_ma_ho = parsedNewHousehold.value;
+                addressChange.value.ghi_chu_ma_ho = parsedNewHousehold.note || '';
+                addressChange.value.apply_to_household = true;
+                addressChange.value.confirm_new_household = true;
+                const oldCode = String(table6Resident?.ma_ho || dataObj.ho_so || '').trim();
+                if (!confirm(`Bạn đang chuyển TOÀN BỘ HỘ ${oldCode} từ địa bàn ${table6Resident?.diabanh || ''} sang ${addressChange.value.diabanh}. Mã hộ mới tại địa bàn tiếp nhận: ${parsedNewHousehold.value}. Hệ thống sẽ kiểm tra mã hộ chưa được sử dụng, cập nhật tất cả thành viên và ghi lịch sử riêng cho từng người. Bạn xác nhận?`)) return;
+            } else if (addressChange.value?.apply_to_household === true) {
+                const code = String(dataObj.ho_so || '').trim();
+                if (!confirm(`Bạn đang chọn áp dụng địa chỉ mới cho TOÀN BỘ HỘ ${code}. Hệ thống sẽ cập nhật địa bàn, Ấp và địa chỉ cụ thể cho tất cả nhân khẩu thuộc hộ, đồng thời ghi lịch sử riêng cho từng người. Bạn xác nhận thực hiện?`)) return;
+            }
         }
         dataObj.changes = changes;
         delete dataObj.changes_json;
