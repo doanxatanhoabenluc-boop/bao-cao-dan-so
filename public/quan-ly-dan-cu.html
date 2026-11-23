@@ -187,7 +187,7 @@
       <div class="col-md-4"><label class="form-label" for="tinh_trang_cu_tru">Tình trạng cư trú</label><select class="form-select" id="tinh_trang_cu_tru"><option value="">-- Chọn tình trạng cư trú --</option><option>Thực tế thường trú có mặt</option><option>Thực tế thường trú vắng mặt</option></select></div>
       <div class="col-md-4"><label class="form-label" for="trang_thai_cu_tru">Trạng thái cư trú</label><select class="form-select" id="trang_thai_cu_tru"><option value="DANG_CU_TRU">Đang cư trú</option><option value="TAM_TRU">Tạm trú</option><option value="TAM_VANG">Tạm vắng</option><option value="DA_CHUYEN_DI">Đã chuyển đi</option><option value="DA_CHET">Đã chết</option><option value="DA_KHAI_TU">Đã khai tử</option><option value="MOI_CHUYEN_DEN">Mới chuyển đến</option></select></div>
       <div class="col-md-4"><label class="form-label" for="cccd">Số CMND/CCCD</label><input class="form-control" id="cccd" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="Nhập 9 số CMND hoặc 12 số CCCD"><div class="form-text">Chấp nhận CMND cũ 9 số hoặc CCCD 12 số.</div></div>
-      <div class="col-md-4"><label class="form-label" for="ngay_cap_cccd">Ngày cấp CMND/CCCD</label><input class="form-control" id="ngay_cap_cccd" type="date"></div>
+      <div class="col-md-4"><label class="form-label" for="ngay_cap_cccd">Ngày cấp CMND/CCCD</label><input class="form-control" id="ngay_cap_cccd" type="date"><div class="form-text">Người dưới 14 tuổi có thể để trống nếu chưa có ngày cấp.</div></div>
       <div class="col-md-4"><label class="form-label" for="noi_cap_cccd">Nơi cấp CMND/CCCD (không bắt buộc)</label><input class="form-control" id="noi_cap_cccd" maxlength="255" placeholder="Có thể để trống"></div>
       <div class="col-md-4"><label class="form-label" for="ma_bhyt">Mã thẻ BHYT</label><div class="input-group"><input class="form-control" id="ma_bhyt" autocomplete="off"><button type="button" class="btn btn-outline-primary" id="btnSearchBhyt"><i class="fa-solid fa-magnifying-glass me-1"></i>Tra cứu</button></div><div class="form-text">Tra cứu từ file dữ liệu bảo hiểm y tế của hệ thống.</div></div>
       <div class="col-md-8"><label class="form-label" for="dia_chi">Địa chỉ (có mã địa bàn 3 số ở đầu nếu có)</label><input class="form-control" id="dia_chi"></div>
@@ -210,11 +210,11 @@
     <input type="hidden" id="quickCccdResidentId">
     <div class="alert alert-light border py-2 mb-3"><div class="fw-bold" id="quickCccdPersonName"></div><div class="small text-muted" id="quickCccdPersonInfo"></div></div>
     <div class="mb-3"><label class="form-label required" for="quickCccdNumber">Số CMND/CCCD (9 hoặc 12 chữ số)</label><input class="form-control" id="quickCccdNumber" inputmode="numeric" autocomplete="off" maxlength="12" pattern="([0-9]{9}|[0-9]{12})" required placeholder="Nhập 9 số CMND hoặc 12 số CCCD"></div>
-    <div class="mb-3"><label class="form-label required">Ngày cấp CMND/CCCD</label><div class="row g-2">
-      <div class="col-4"><select class="form-select" id="quickCccdDay" required><option value="">-- Ngày --</option></select></div>
-      <div class="col-4"><select class="form-select" id="quickCccdMonth" required><option value="">-- Tháng --</option></select></div>
-      <div class="col-4"><select class="form-select" id="quickCccdYear" required><option value="">-- Năm --</option></select></div>
-     </div><input type="hidden" id="quickCccdIssueDate"><div class="form-text">Chọn đủ ngày, tháng và năm cấp.</div></div>
+    <div class="mb-3"><label class="form-label">Ngày cấp CMND/CCCD</label><div class="row g-2">
+      <div class="col-4"><select class="form-select" id="quickCccdDay"><option value="">-- Ngày --</option></select></div>
+      <div class="col-4"><select class="form-select" id="quickCccdMonth"><option value="">-- Tháng --</option></select></div>
+      <div class="col-4"><select class="form-select" id="quickCccdYear"><option value="">-- Năm --</option></select></div>
+     </div><input type="hidden" id="quickCccdIssueDate"><input type="hidden" id="quickCccdBirthDate"><div class="form-text">Người từ đủ 14 tuổi cần nhập đủ ngày cấp. Người dưới 14 tuổi có thể để trống nếu chưa được cấp giấy tờ.</div></div>
     <div class="mb-2">
      <label class="form-label" for="quickCccdPlace">Nơi cấp CMND/CCCD (không bắt buộc)</label>
      <div class="d-flex flex-wrap gap-2 mb-2" role="group" aria-label="Chọn nhanh nơi cấp">
@@ -269,7 +269,7 @@
    $('summary').innerHTML = `<div><strong>Tổng cộng ${Number(data.totalHouseholds||0).toLocaleString('vi-VN')} hộ</strong> · Tổng số dân ${Number(data.totalPopulation||0).toLocaleString('vi-VN')} người · Đang hiển thị ${Number(data.totalRows||0).toLocaleString('vi-VN')} thành viên</div><div class="small text-muted mt-1">Đã chết/khai tử: ${Number(data.deadHouseholds||0).toLocaleString('vi-VN')} hộ · ${Number(data.deadPopulation||0).toLocaleString('vi-VN')} người &nbsp;|&nbsp; Đã chuyển đi: ${Number(data.movedHouseholds||0).toLocaleString('vi-VN')} hộ · ${Number(data.movedPopulation||0).toLocaleString('vi-VN')} người</div>`;
    $('pageInfo').textContent=`Trang ${data.page}/${totalPages} · ${data.data.length} thành viên (tối đa 20 hộ/trang)`;
    if(!data.data.length){body.innerHTML='<tr><td colspan="10" class="text-center text-muted py-5">Không tìm thấy hồ sơ dân cư.</td></tr>';}
-   else body.innerHTML=data.data.map((r,i)=>{const prev=data.data[i-1];const newHouse=!prev||String(prev._ma_dia_ban||'')!==String(r._ma_dia_ban||'')||String(prev.ma_ho||'')!==String(r.ma_ho||'');const status=String(r.trang_thai_cu_tru||'').toUpperCase();const inactive=['DA_CHUYEN_DI','DA_KHAI_TU','DA_CHET'].includes(status);const rowClasses=[newHouse?'household-start':'household-member',inactive?'table-secondary':''].filter(Boolean).join(' ');const quick=`${canQuickCccd?`<button class="btn btn-sm btn-outline-success me-1" title="Bổ sung nhanh CMND/CCCD" data-quick-cccd="${r.id}" data-name="${esc(r.ho_ten)}" data-ma-ho="${esc(r.ma_ho||'')}" data-dia-chi="${esc(r.dia_chi||'')}" data-cccd="${esc(r.cccd||'')}" data-ngay-cap="${esc(r.ngay_cap_cccd||'')}" data-noi-cap="${esc(r.noi_cap_cccd||'')}"><i class="fa-solid fa-id-card me-1"></i>CMND/CCCD</button>`:''}`;const manage=canEdit?`<button class="btn btn-sm btn-outline-primary action-btn me-1" title="Sửa" data-edit="${r.id}"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-outline-danger action-btn" title="Xóa" data-delete="${r.id}" data-name="${esc(r.ho_ten)}"><i class="fa-solid fa-trash"></i></button>`:'<span class="small text-muted">Chỉ xem thông tin khác</span>';const actions=`${quick}${manage}`;return `<tr${rowClasses?` class="${rowClasses}"`: ''}><td class="text-center">${i+1}</td><td class="fw-semibold">${esc(r.ho_ten)}</td><td>${esc(r.ma_ho)}</td><td>${esc(r.ngay_sinh)}</td><td>${esc(r.gioi_tinh)}</td><td>${esc(r.quan_he)}</td><td>${esc(r.cccd)}</td><td>${esc(r.ma_bhyt)}</td><td>${esc(r.dia_chi)}</td><td class="text-center text-nowrap">${actions}</td></tr>`;}).join('');
+   else body.innerHTML=data.data.map((r,i)=>{const prev=data.data[i-1];const newHouse=!prev||String(prev._ma_dia_ban||'')!==String(r._ma_dia_ban||'')||String(prev.ma_ho||'')!==String(r.ma_ho||'');const status=String(r.trang_thai_cu_tru||'').toUpperCase();const inactive=['DA_CHUYEN_DI','DA_KHAI_TU','DA_CHET'].includes(status);const rowClasses=[newHouse?'household-start':'household-member',inactive?'table-secondary':''].filter(Boolean).join(' ');const quick=`${canQuickCccd?`<button class="btn btn-sm btn-outline-success me-1" title="Bổ sung nhanh CMND/CCCD" data-quick-cccd="${r.id}" data-name="${esc(r.ho_ten)}" data-ma-ho="${esc(r.ma_ho||'')}" data-dia-chi="${esc(r.dia_chi||'')}" data-ngay-sinh="${esc(r.ngay_sinh||'')}" data-cccd="${esc(r.cccd||'')}" data-ngay-cap="${esc(r.ngay_cap_cccd||'')}" data-noi-cap="${esc(r.noi_cap_cccd||'')}"><i class="fa-solid fa-id-card me-1"></i>CMND/CCCD</button>`:''}`;const manage=canEdit?`<button class="btn btn-sm btn-outline-primary action-btn me-1" title="Sửa" data-edit="${r.id}"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-outline-danger action-btn" title="Xóa" data-delete="${r.id}" data-name="${esc(r.ho_ten)}"><i class="fa-solid fa-trash"></i></button>`:'<span class="small text-muted">Chỉ xem thông tin khác</span>';const actions=`${quick}${manage}`;return `<tr${rowClasses?` class="${rowClasses}"`: ''}><td class="text-center">${i+1}</td><td class="fw-semibold">${esc(r.ho_ten)}</td><td>${esc(r.ma_ho)}</td><td>${esc(r.ngay_sinh)}</td><td>${esc(r.gioi_tinh)}</td><td>${esc(r.quan_he)}</td><td>${esc(r.cccd)}</td><td>${esc(r.ma_bhyt)}</td><td>${esc(r.dia_chi)}</td><td class="text-center text-nowrap">${actions}</td></tr>`;}).join('');
    renderPages();
   }catch(e){body.innerHTML=`<tr><td colspan="10" class="text-center text-danger py-5">${esc(e.message)}</td></tr>`;$('summary').textContent='Không tải được dữ liệu';$('pageInfo').textContent='';$('pagination').innerHTML='';if(e.message.includes('quyền')||e.message.includes('đăng nhập'))$('btnAdd').disabled=true;}
  }
@@ -298,6 +298,17 @@
   const currentYear=new Date().getFullYear();for(let y=currentYear;y>=1900;y--)year.insertAdjacentHTML('beforeend',`<option value="${y}">${y}</option>`);
  }
  function parseDateParts(value){const raw=String(value||'').trim();let m=raw.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return {year:m[1],month:m[2],day:m[3]};m=raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);if(m)return {day:m[1],month:m[2],year:m[3]};return null;}
+ function isUnder14Date(value){
+  const raw=String(value||'').trim();if(!raw)return false;
+  let parts=parseDateParts(raw);
+  const todayParts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+  const today=Object.fromEntries(todayParts.map(x=>[x.type,x.value]));
+  const cy=Number(today.year),cm=Number(today.month),cd=Number(today.day);
+  if(!parts){const yearOnly=raw.match(/^(\d{4})$/);return !!yearOnly&&cy-Number(yearOnly[1])>=0&&cy-Number(yearOnly[1])<=13;}
+  const y=Number(parts.year),m=Number(parts.month),d=Number(parts.day),date=new Date(Date.UTC(y,m-1,d));
+  if(date.getUTCFullYear()!==y||date.getUTCMonth()!==m-1||date.getUTCDate()!==d)return false;
+  let age=cy-y;if(cm<m||(cm===m&&cd<d))age--;return age>=0&&age<14;
+ }
  function syncQuickCccdDate(){
   const day=$('quickCccdDay').value,month=$('quickCccdMonth').value,year=$('quickCccdYear').value;
   if(!day||!month||!year){$('quickCccdIssueDate').value='';return '';}
@@ -322,7 +333,9 @@
   e.preventDefault();if(!canQuickCccd)return;
   const id=$('quickCccdResidentId').value,cccd=$('quickCccdNumber').value.trim(),ngay_cap_cccd=syncQuickCccdDate();
   if(!/^(?:\d{9}|\d{12})$/.test(cccd)){notify('Số CMND/CCCD phải gồm đúng 9 hoặc 12 chữ số.',true);$('quickCccdNumber').focus();return;}
-  if(!ngay_cap_cccd){notify('Vui lòng chọn ngày, tháng và năm cấp CMND/CCCD hợp lệ.',true);$('quickCccdDay').focus();return;}
+  const datePartsSelected=[$('quickCccdDay').value,$('quickCccdMonth').value,$('quickCccdYear').value].some(Boolean);
+  if(datePartsSelected&&!ngay_cap_cccd){notify('Ngày cấp chưa hợp lệ. Vui lòng chọn đủ ngày, tháng, năm hoặc xóa cả ba ô.',true);$('quickCccdDay').focus();return;}
+  if(!ngay_cap_cccd&&!isUnder14Date($('quickCccdBirthDate').value)){notify('Người từ đủ 14 tuổi cần nhập đầy đủ ngày, tháng và năm cấp CMND/CCCD.',true);$('quickCccdDay').focus();return;}
   const payload={cccd,ngay_cap_cccd,noi_cap_cccd:$('quickCccdPlace').value.trim()};
   $('btnSaveQuickCccd').disabled=true;
   try{const result=await api(`/api/admin/dan-cu/${encodeURIComponent(id)}/cccd`,{method:'PUT',body:JSON.stringify(payload)});quickCccdModal.hide();notify(result.message);load();}
@@ -335,6 +348,7 @@
    $('quickCccdResidentId').value=quick.dataset.quickCccd;
    $('quickCccdPersonName').textContent=quick.dataset.name||'';
    $('quickCccdPersonInfo').textContent=`Mã hộ: ${quick.dataset.maHo||'—'} · ${quick.dataset.diaChi||''}`;
+   $('quickCccdBirthDate').value=quick.dataset.ngaySinh||'';
    $('quickCccdNumber').value=quick.dataset.cccd||'';
    $('quickCccdPlace').value=quick.dataset.noiCap||'';
    document.querySelectorAll('.quick-issuer').forEach(x=>{const active=x.dataset.issuer===$('quickCccdPlace').value;x.classList.toggle('active',active);x.setAttribute('aria-pressed',active?'true':'false');});
@@ -346,7 +360,7 @@
   if(edit){try{const id=edit.dataset.edit;const result=await api(`/api/admin/dan-cu?q=${encodeURIComponent(id)}&page=1&limit=100`);const row=result.data.find(x=>String(x.id)===String(id));if(!row)throw new Error('Không tìm thấy hồ sơ.');resetForm(row);modal.show();}catch(err){notify(err.message,true);}}
   if(del){const id=del.dataset.delete,name=del.dataset.name;if(!confirm(`Bạn có chắc muốn xóa hồ sơ “${name}” không?\nThao tác này không thể hoàn tác.`))return;try{const result=await api(`/api/admin/dan-cu/${id}`,{method:'DELETE'});notify(result.message);if(page>1&&$('residentBody').querySelectorAll('tr').length<=1)page--;load();}catch(err){notify(err.message,true);}}
  });
- $('residentForm').addEventListener('submit',async e=>{e.preventDefault();if(!canEdit)return;const id=$('residentId').value;const cccd=String($('cccd').value||'').trim();if(cccd&&cccd!==originalCccd&&!/^(?:\d{9}|\d{12})$/.test(cccd)){notify('Số CMND/CCCD mới phải gồm đúng 9 hoặc 12 chữ số.',true);$('cccd').focus();return;}if(cccd&&cccd!==originalCccd&&!$('ngay_cap_cccd').value){notify('Vui lòng chọn đầy đủ ngày cấp CMND/CCCD.',true);$('ngay_cap_cccd').focus();return;}const payload={};fields.forEach(k=>payload[k]=$(k).value);payload.theo_doi_15_49=$('theo_doi_15_49').checked;
+ $('residentForm').addEventListener('submit',async e=>{e.preventDefault();if(!canEdit)return;const id=$('residentId').value;const cccd=String($('cccd').value||'').trim();if(cccd&&cccd!==originalCccd&&!/^(?:\d{9}|\d{12})$/.test(cccd)){notify('Số CMND/CCCD mới phải gồm đúng 9 hoặc 12 chữ số.',true);$('cccd').focus();return;}if(cccd&&cccd!==originalCccd&&!$('ngay_cap_cccd').value&&!isUnder14Date($('ngay_sinh').value)){notify('Người từ đủ 14 tuổi cần nhập ngày cấp CMND/CCCD. Người dưới 14 tuổi có thể để trống.',true);$('ngay_cap_cccd').focus();return;}const payload={};fields.forEach(k=>payload[k]=$(k).value);payload.theo_doi_15_49=$('theo_doi_15_49').checked;
   $('btnSave').disabled=true;try{const result=await api(id?`/api/admin/dan-cu/${id}`:'/api/admin/dan-cu',{method:id?'PUT':'POST',body:JSON.stringify(payload)});modal.hide();notify(result.message);page=1;load();}catch(err){notify(err.message,true);}finally{$('btnSave').disabled=false;}
  });
  $('cccd').addEventListener('input',()=>{$('cccd').value=$('cccd').value.replace(/\D/g,'').slice(0,12);});

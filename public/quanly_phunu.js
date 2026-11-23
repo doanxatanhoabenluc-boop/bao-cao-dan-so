@@ -328,39 +328,124 @@ async function loadData(page = 1) {
     }
 }
 
+function getBpttHistoryRows(item) {
+    if (Array.isArray(item?.bptt_history)) return item.bptt_history;
+    if (typeof item?.bptt_history === 'string') {
+        try {
+            const parsed = JSON.parse(item.bptt_history);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (_) {
+            return [];
+        }
+    }
+    return [];
+}
+
 function renderTable(data) {
-    let tbody = document.getElementById('tblPhuNuBody');
-    tbody.innerHTML = "";
+    const tbody = document.getElementById('tblPhuNuBody');
+    const summary = document.getElementById('listWarningSummary');
+    tbody.replaceChildren();
 
     if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted">Không tìm thấy dữ liệu phù hợp.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted">Không tìm thấy dữ liệu phù hợp.</td></tr>`;
+        if (summary) {
+            summary.className = 'alert alert-info rounded-0 mb-0 py-2';
+            summary.textContent = 'Không có hồ sơ trong danh sách hiện tại để rà soát cảnh báo.';
+        }
         return;
     }
 
+    let warningCount = 0;
+    let pregnancyCount = 0;
+    let noHistoryCount = 0;
+
     data.forEach(item => {
+        const historyRows = getBpttHistoryRows(item);
+        if (!historyRows.length) noHistoryCount++;
+        const warnings = getBpttHistoryWarnings(historyRows, item.ngay_sinh || '');
+        if (warnings.length) warningCount++;
+        const hasPregnancyWarning = warnings.some(w => w.includes('Mang thai (T)'));
+        if (hasPregnancyWarning) pregnancyCount++;
+
         let bpttBadge = `<span class="badge bg-secondary">Không dùng / Trống</span>`;
         if (item.current_bptt && item.current_bptt !== '0') {
-            let tenBptt = getBpttDisplayName(item.current_bptt);
-            bpttBadge = `<span class="badge bg-success" title="${tenBptt}">Mã: ${item.current_bptt}</span> <small class="text-muted">${tenBptt}</small>`;
+            const tenBptt = getBpttDisplayName(item.current_bptt);
+            bpttBadge = `<span class="badge bg-success" title="${escapeHtmlBienDong(tenBptt)}">Mã: ${escapeHtmlBienDong(item.current_bptt)}</span> <small class="text-muted">${escapeHtmlBienDong(tenBptt)}</small>`;
         }
 
-        tbody.innerHTML += `
-            <tr>
-                <td class="text-center">${item.ma_ho}</td>
-                <td class="fw-bold">${item.ho_ten}</td>
-                <td class="text-center">${item.ngay_sinh || ''}</td>
-                <td>${item.diabanh || item.dia_chi || ''}</td>
-                <td class="text-center">${item.so_con}</td>
-                <td class="text-center">${item.nam_sinh_con || ''}</td>
-                <td class="text-center">${item.so_the_bhyt || ''}</td>
-                <td class="text-center">${bpttBadge}</td>
-                <td class="text-center">
-                    <button class="btn btn-sm btn-warning mb-1" onclick='openEditModal(${JSON.stringify(item)})'>Sửa & Lịch sử</button>
-                    <button class="btn btn-sm btn-danger mb-1" onclick='deletePhuNu("${item.ma_dinh_danh}")'>Ngừng theo dõi</button>
-                </td>
-            </tr>
-        `;
+        const tr = document.createElement('tr');
+        const cells = [
+            { text: item.ma_ho || '', className: 'text-center' },
+            { text: item.ho_ten || '', className: 'fw-bold' },
+            { text: item.ngay_sinh || '', className: 'text-center' },
+            { text: item.diabanh || item.dia_chi || '' },
+            { text: item.so_con ?? 0, className: 'text-center' },
+            { text: item.nam_sinh_con || '', className: 'text-center' },
+            { text: item.so_the_bhyt || '', className: 'text-center' }
+        ];
+        cells.forEach(cell => {
+            const td = document.createElement('td');
+            td.textContent = String(cell.text ?? '');
+            if (cell.className) td.className = cell.className;
+            tr.appendChild(td);
+        });
+
+        const bpttCell = document.createElement('td');
+        bpttCell.className = 'text-center';
+        bpttCell.innerHTML = bpttBadge;
+        tr.appendChild(bpttCell);
+
+        const warningCell = document.createElement('td');
+        warningCell.className = 'text-center';
+        if (!historyRows.length) {
+            warningCell.innerHTML = '<span class="badge bg-secondary-subtle text-secondary border">Chưa có lịch sử BPTT</span>';
+            warningCell.title = 'Hồ sơ chưa có mốc lịch sử BPTT, vì vậy chưa đủ dữ liệu để rà soát.';
+        } else if (!warnings.length) {
+            warningCell.innerHTML = '<span class="badge bg-success-subtle text-success border border-success-subtle">✓ Chưa phát hiện</span>';
+            warningCell.title = 'Chưa phát hiện bất thường theo các quy tắc rà soát hiện có.';
+        } else {
+            const labels = getBpttShortWarningLabels(warnings);
+            warningCell.title = warnings.join('\n');
+            warningCell.innerHTML = `
+                <span class="badge ${hasPregnancyWarning ? 'bg-danger' : 'bg-warning text-dark'}">${hasPregnancyWarning ? '⚠ Mang thai cần xác minh' : '⚠ Cần rà soát'}</span>
+                <div class="small mt-1 text-start">${labels.map(label => `<div>${escapeHtmlBienDong(label)}</div>`).join('')}</div>
+            `;
+        }
+        tr.appendChild(warningCell);
+
+        const actionCell = document.createElement('td');
+        actionCell.className = 'text-center';
+        const editButton = document.createElement('button');
+        editButton.type = 'button';
+        editButton.className = 'btn btn-sm btn-warning mb-1';
+        editButton.textContent = 'Sửa & Lịch sử';
+        editButton.addEventListener('click', () => openEditModal(item));
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'btn btn-sm btn-danger mb-1';
+        deleteButton.textContent = 'Ngừng theo dõi';
+        deleteButton.addEventListener('click', () => deletePhuNu(item.ma_dinh_danh));
+        actionCell.append(editButton, document.createTextNode(' '), deleteButton);
+        tr.appendChild(actionCell);
+        tbody.appendChild(tr);
     });
+
+    if (summary) {
+        const pageLabel = `Đang rà soát ${data.length} hồ sơ trên trang này`;
+        if (warningCount) {
+            summary.className = 'alert alert-warning rounded-0 mb-0 py-2';
+            summary.innerHTML = `<strong>⚠ ${pageLabel}:</strong> ${warningCount} hồ sơ cần kiểm tra` +
+                (pregnancyCount ? `, trong đó <strong>${pregnancyCount} trường hợp có mốc Mang thai (T) quá 10 tháng chưa thấy mốc kết thúc</strong>` : '') +
+                (noHistoryCount ? `; ${noHistoryCount} hồ sơ chưa có lịch sử BPTT` : '') +
+                `. Xem lý do ngay tại cột <strong>Cảnh báo</strong> của từng người.`;
+        } else if (noHistoryCount) {
+            summary.className = 'alert alert-info rounded-0 mb-0 py-2';
+            summary.innerHTML = `✓ ${pageLabel}: chưa phát hiện bất thường ở các hồ sơ đã có lịch sử; <strong>${noHistoryCount} hồ sơ chưa có lịch sử BPTT</strong> nên chưa đủ dữ liệu để rà soát.`;
+        } else {
+            summary.className = 'alert alert-success rounded-0 mb-0 py-2';
+            summary.innerHTML = `✓ ${pageLabel}: chưa phát hiện trường hợp bất thường theo các quy tắc rà soát hiện có.`;
+        }
+    }
 }
 
 function renderPagination(page, totalPages, totalRows) {
@@ -544,6 +629,11 @@ async function openAddPhuNuModal() {
 
         document.getElementById('tblHistoryBody').innerHTML =
             '<tr><td colspan="4" class="text-center text-muted">Lưu hồ sơ trước, sau đó có thể thêm lịch sử BPTT.</td></tr>';
+        const warningPanel = document.getElementById('bpttWarningPanel');
+        if (warningPanel) {
+            warningPanel.className = 'alert alert-info py-2 mb-2';
+            warningPanel.textContent = 'Lưu hồ sơ trước, sau đó hệ thống sẽ rà soát các mốc lịch sử BPTT.';
+        }
 
         setValue('newMaBptt', '');
         setValue('newNgayApDung', '');
@@ -594,6 +684,122 @@ async function openEditModal(item) {
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
 }
 
+
+/**
+ * Cảnh báo rà soát dữ liệu BPTT (không thay thế chỉ định chuyên môn).
+ * Mốc >10 tháng chỉ được gắn nhãn "cần rà soát cập nhật", không kết luận
+ * người dân đã quá hạn biện pháp vì mỗi phương pháp có thời hạn khác nhau.
+ */
+function getBpttHistoryWarnings(rows, dobRaw = '') {
+    const list = Array.isArray(rows) ? rows : [];
+    const warnings = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const seenDates = new Set();
+    const validDates = [];
+
+    list.forEach((item) => {
+        const raw = String(item.ngay_ap_dung || '').trim();
+        const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!match) {
+            warnings.push(`Mốc ${raw || '(chưa nhập ngày)'} không đúng định dạng ngày hoặc đang bỏ trống.`);
+            return;
+        }
+        const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+        if (date.getFullYear() !== Number(match[1]) ||
+            date.getMonth() !== Number(match[2]) - 1 ||
+            date.getDate() !== Number(match[3])) {
+            warnings.push(`Ngày ${raw} không hợp lệ.`);
+            return;
+        }
+        if (date > today) warnings.push(`Ngày áp dụng ${raw} nằm trong tương lai.`);
+        if (seenDates.has(raw)) warnings.push(`Có nhiều mốc BPTT cùng ngày ${raw}; cần kiểm tra trùng.`);
+        seenDates.add(raw);
+        validDates.push({
+            date,
+            raw,
+            code: String(item.ma_bptt || '').trim().toUpperCase()
+        });
+    });
+
+    // Mốc T quá 10 tháng chỉ được cảnh báo khi chưa có sự kiện kết thúc sau nó.
+    const pregnancyRecords = validDates.filter(x => x.code === 'T');
+    if (pregnancyRecords.length) {
+        const newestPregnancy = pregnancyRecords.reduce((a, b) => a.date > b.date ? a : b);
+        const hasEndingRecord = validDates.some(x =>
+            ['S', 'ST', 'PT'].includes(x.code) && x.date >= newestPregnancy.date
+        );
+        if (!hasEndingRecord) {
+            const threshold = new Date(
+                newestPregnancy.date.getFullYear(),
+                newestPregnancy.date.getMonth() + 10,
+                1
+            );
+            const lastDay = new Date(threshold.getFullYear(), threshold.getMonth() + 1, 0).getDate();
+            threshold.setDate(Math.min(newestPregnancy.date.getDate(), lastDay));
+            if (today > threshold) {
+                warnings.push(`Có mốc Mang thai (T) từ ngày ${newestPregnancy.raw}, đã quá 10 tháng nhưng chưa có mốc Sinh con (S), Sảy thai (ST) hoặc Phá thai (PT) sau ngày này; cần xác minh và cập nhật kết quả thai kỳ.`);
+            }
+        }
+    }
+
+    if (validDates.length) {
+        const newest = validDates.reduce((a, b) => a.date > b.date ? a : b);
+        const isPregnancyOutcome = ['T', 'S', 'ST', 'PT'].includes(newest.code);
+        if (!isPregnancyOutcome) {
+            const threshold = new Date(newest.date.getFullYear(), newest.date.getMonth() + 10, 1);
+            const lastDay = new Date(threshold.getFullYear(), threshold.getMonth() + 1, 0).getDate();
+            threshold.setDate(Math.min(newest.date.getDate(), lastDay));
+            if (today > threshold) {
+                const months = (today.getFullYear() - newest.date.getFullYear()) * 12 +
+                    today.getMonth() - newest.date.getMonth();
+                warnings.push(`Đã hơn 10 tháng chưa ghi nhận mốc BPTT mới nhất (từ ${newest.raw}, khoảng ${months} tháng); cần rà soát và cập nhật nếu thực tế có phát sinh.`);
+            }
+        }
+    }
+
+    const dobMatch = String(dobRaw || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dobMatch) {
+        const dob = new Date(Number(dobMatch[1]), Number(dobMatch[2]) - 1, Number(dobMatch[3]));
+        if (validDates.some(x => x.date < dob)) {
+            warnings.push('Có ngày áp dụng BPTT trước ngày sinh đã khai báo; cần kiểm tra lại hồ sơ.');
+        }
+    }
+
+    return [...new Set(warnings)];
+}
+
+function getBpttShortWarningLabels(warnings) {
+    const labels = [];
+    if (warnings.some(w => w.includes('Mang thai (T)'))) labels.push('Mang thai >10 tháng, chưa có kết quả');
+    if (warnings.some(w => w.includes('hơn 10 tháng chưa ghi nhận'))) labels.push('Lâu chưa cập nhật BPTT');
+    if (warnings.some(w => w.includes('tương lai'))) labels.push('Ngày áp dụng ở tương lai');
+    if (warnings.some(w => w.includes('cùng ngày'))) labels.push('Có mốc bị trùng ngày');
+    if (warnings.some(w => w.includes('không hợp lệ') || w.includes('bỏ trống') || w.includes('định dạng'))) labels.push('Ngày BPTT không hợp lệ');
+    if (warnings.some(w => w.includes('trước ngày sinh'))) labels.push('Ngày BPTT trước ngày sinh');
+    return labels.slice(0, 3);
+}
+
+function renderBpttHistoryWarnings(rows) {
+    const panel = document.getElementById('bpttWarningPanel');
+    if (!panel) return;
+
+    const dobRaw = document.getElementById('editNgaySinh')?.value || '';
+    const warnings = getBpttHistoryWarnings(rows, dobRaw);
+    if (!Array.isArray(rows) || rows.length === 0) {
+        panel.className = 'alert alert-info py-2 mb-2';
+        panel.innerHTML = '<strong>Chưa có lịch sử BPTT để rà soát.</strong> Hồ sơ chưa có mốc ghi nhận nên hệ thống chưa thể đánh giá tính hợp lý của lịch sử.';
+    } else if (!warnings.length) {
+        panel.className = 'alert alert-success py-2 mb-2';
+        panel.innerHTML = '<strong>✓ Chưa phát hiện bất thường dữ liệu.</strong> Lưu ý: hệ thống chỉ rà soát tính hợp lý của ngày và khoảng cách ghi nhận, không tự kết luận thời hạn chuyên môn của từng BPTT.';
+    } else {
+        panel.className = 'alert alert-warning py-2 mb-2';
+        panel.innerHTML = '<strong>⚠ Cần rà soát:</strong><ul class="mb-0 mt-1">' +
+            warnings.map(w => `<li>${escapeHtmlBienDong(w)}</li>`).join('') +
+            '</ul><small class="d-block mt-1">Cảnh báo hỗ trợ kiểm tra dữ liệu, không phải kết luận y khoa hay tự động xác định quá hạn biện pháp.</small>';
+    }
+}
+
 async function loadHistory(maDinhDanh) {
     const tbody = document.getElementById('tblHistoryBody');
     if (!tbody) return;
@@ -609,6 +815,7 @@ async function loadHistory(maDinhDanh) {
         }
 
         const rows = Array.isArray(res.data) ? res.data : [];
+        renderBpttHistoryWarnings(rows);
         if (!rows.length) {
             tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Chưa có mốc lịch sử BPTT nào.</td></tr>';
             return;

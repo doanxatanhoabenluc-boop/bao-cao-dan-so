@@ -3216,6 +3216,53 @@ function normalizeCccdIssueDate(value) {
     return `${String(y).padStart(4,'0')}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 }
 
+// Tính tuổi theo ngày Việt Nam; người dưới 14 tuổi có thể chưa có ngày cấp CCCD.
+function getAgeFromBirthDate(value) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return null;
+
+    let year, month, day;
+    let match = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T)/);
+    if (match) [, year, month, day] = match;
+    else {
+        match = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (match) [, day, month, year] = match;
+        else {
+            match = raw.match(/^(\d{4})$/);
+            if (match) {
+                year = match[1];
+                const todayParts = new Intl.DateTimeFormat('en-CA', {
+                    timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric'
+                }).formatToParts(new Date());
+                const currentYear = Number(todayParts.find(part => part.type === 'year')?.value);
+                const birthYear = Number(year);
+                // Nếu chỉ có năm sinh, chỉ miễn ngày cấp khi chắc chắn người đó chưa đủ 14 tuổi.
+                return birthYear > 0 && currentYear - birthYear <= 13 && currentYear >= birthYear
+                    ? currentYear - birthYear : null;
+            }
+            return null;
+        }
+    }
+
+    const y = Number(year), m = Number(month), d = Number(day);
+    const birth = new Date(Date.UTC(y, m - 1, d));
+    if (!y || birth.getUTCFullYear() !== y || birth.getUTCMonth() !== m - 1 || birth.getUTCDate() !== d) return null;
+
+    const todayParts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date());
+    const today = Object.fromEntries(todayParts.map(part => [part.type, part.value]));
+    const currentYear = Number(today.year), currentMonth = Number(today.month), currentDay = Number(today.day);
+    let age = currentYear - y;
+    if (currentMonth < m || (currentMonth === m && currentDay < d)) age--;
+    return age >= 0 ? age : null;
+}
+
+function isUnder14FromBirthDate(value) {
+    const age = getAgeFromBirthDate(value);
+    return age !== null && age < 14;
+}
+
 const danCuEditableFields = [
     'ho_ten', 'ma_ho', 'household_id', 'quan_he', 'gioi_tinh', 'ngay_sinh',
     'dan_toc', 'hoc_van', 'hon_nhan', 'tinh_trang_cu_tru', 'ma_bhyt',
@@ -3565,13 +3612,15 @@ app.put('/api/admin/dan-cu/:id/cccd', requireQuanLyDanCu, async (req, res) => {
         let ngayCap;
         try { ngayCap = normalizeCccdIssueDate(req.body.ngay_cap_cccd); }
         catch (dateError) { return res.status(400).json({ success: false, message: dateError.message }); }
-        if (!ngayCap) return res.status(400).json({ success: false, message: 'Vui lòng chọn đầy đủ ngày, tháng và năm cấp CMND/CCCD.' });
         const noiCap = String(req.body.noi_cap_cccd || '').trim().slice(0, 255);
 
         const current = await pool.query(
-            'SELECT id, ho_ten, dia_chi, diabanh FROM dan_cu WHERE id = $1', [id]
+            'SELECT id, ho_ten, dia_chi, diabanh, ngay_sinh FROM dan_cu WHERE id = $1', [id]
         );
         if (!current.rowCount) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ dân cư.' });
+        if (!ngayCap && !isUnder14FromBirthDate(current.rows[0].ngay_sinh)) {
+            return res.status(400).json({ success: false, message: 'Người từ đủ 14 tuổi cần nhập đầy đủ ngày, tháng và năm cấp CMND/CCCD. Người dưới 14 tuổi có thể để trống.' });
+        }
         const user = req.session.user;
         if (laCongTacVien(user)) {
             const withinAssignedArea = thuocDiaBanCongTacVien(user, current.rows[0].dia_chi)
@@ -3592,7 +3641,7 @@ app.put('/api/admin/dan-cu/:id/cccd', requireQuanLyDanCu, async (req, res) => {
         }
 
         await pool.query(
-            `UPDATE dan_cu SET cccd = $1, ngay_cap_cccd = $2, noi_cap_cccd = NULLIF($3,''), updated_at = CURRENT_TIMESTAMP WHERE id = $4`,
+            `UPDATE dan_cu SET cccd = $1, ngay_cap_cccd = NULLIF($2,''), noi_cap_cccd = NULLIF($3,''), updated_at = CURRENT_TIMESTAMP WHERE id = $4`,
             [cccd, ngayCap, noiCap, id]
         );
         await logAction(user, 'BỔ SUNG CCCD DÂN CƯ', id, current.rows[0].ho_ten);
@@ -3608,6 +3657,9 @@ app.post('/api/admin/dan-cu', requireSuaDanCu, async (req, res) => {
         const data = danCuPayload(req.body);
         if (String(data.cccd || '').trim() && !isValidCmndCccd(data.cccd)) {
             return res.status(400).json({ success: false, message: 'Số CMND/CCCD phải gồm đúng 9 hoặc 12 chữ số.' });
+        }
+        if (String(data.cccd || '').trim() && !String(data.ngay_cap_cccd || '').trim() && !isUnder14FromBirthDate(data.ngay_sinh)) {
+            return res.status(400).json({ success: false, message: 'Người từ đủ 14 tuổi cần nhập ngày cấp CMND/CCCD. Người dưới 14 tuổi có thể để trống.' });
         }
         if (!String(data.ma_xa_phuong || '').trim()) {
             const commune = await getActiveCommune();
@@ -3634,12 +3686,19 @@ app.put('/api/admin/dan-cu/:id', requireSuaDanCu, async (req, res) => {
         const id = String(req.params.id || '').trim();
         if (!/^\d+$/.test(id)) return res.status(400).json({ success: false, message: 'ID dân cư không hợp lệ.' });
         const data = danCuPayload(req.body);
-        const oldRecord = await pool.query('SELECT cccd FROM dan_cu WHERE id = $1', [id]);
+        const oldRecord = await pool.query('SELECT cccd, ngay_cap_cccd, ngay_sinh FROM dan_cu WHERE id = $1', [id]);
         if (!oldRecord.rowCount) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ dân cư.' });
         const oldCccd = String(oldRecord.rows[0].cccd || '').trim();
         const newCccd = String(data.cccd || '').trim();
         if (newCccd && newCccd !== oldCccd && !isValidCmndCccd(newCccd)) {
             return res.status(400).json({ success: false, message: 'Số CMND/CCCD mới phải gồm đúng 9 hoặc 12 chữ số.' });
+        }
+        const nextIssueDate = data.ngay_cap_cccd !== undefined
+            ? String(data.ngay_cap_cccd || '').trim()
+            : String(oldRecord.rows[0].ngay_cap_cccd || '').trim();
+        const birthDate = data.ngay_sinh !== undefined ? data.ngay_sinh : oldRecord.rows[0].ngay_sinh;
+        if (newCccd && newCccd !== oldCccd && !nextIssueDate && !isUnder14FromBirthDate(birthDate)) {
+            return res.status(400).json({ success: false, message: 'Người từ đủ 14 tuổi cần nhập ngày cấp CMND/CCCD. Người dưới 14 tuổi có thể để trống.' });
         }
         const columns = Object.keys(data);
         const sets = columns.map((key, i) => `${key} = $${i + 1}`);
@@ -5584,7 +5643,15 @@ app.get('/api/admin/phu-nu-15-49-list', async (req, res) => {
                    CASE WHEN d.ngay_sinh ~ '^\\d{2}/\\d{2}/\\d{4}$' THEN to_char(to_date(d.ngay_sinh,'DD/MM/YYYY'),'YYYY-MM-DD')
                         WHEN d.ngay_sinh ~ '^\\d{4}-\\d{2}-\\d{2}$' THEN d.ngay_sinh ELSE '' END AS ngay_sinh,
                    d.ma_bhyt AS so_the_bhyt, COALESCE(d.so_con,0) AS so_con, COALESCE(d.nam_sinh_con,'') AS nam_sinh_con,
-                   lb.ma_bptt AS current_bptt
+                   lb.ma_bptt AS current_bptt,
+                   COALESCE((
+                       SELECT json_agg(json_build_object(
+                           'ma_bptt', h.ma_bptt,
+                           'ngay_ap_dung', TO_CHAR(h.ngay_ap_dung, 'YYYY-MM-DD')
+                       ) ORDER BY h.ngay_ap_dung ASC, h.id ASC)
+                       FROM lich_su_bptt h
+                       WHERE h.dan_cu_id = d.id
+                   ), '[]'::json) AS bptt_history
             ${base} ORDER BY d.ma_ho ASC, d.ho_ten ASC LIMIT $${n} OFFSET $${n+1}
         `, dataParams);
         res.json({ success: true, data: result.rows, currentPage: page, totalPages: Math.ceil(totalRows / limit) || 1, totalRows });
@@ -5720,8 +5787,55 @@ app.get('/api/admin/quan-ly-lich-su-bptt', async (req, res) => {
     try {
         const id = String(req.query.ma_dinh_danh || '').trim();
         const params=[]; const cond=[];
-        if (id) { params.push(Number(id)); cond.push(`d.id=$${params.length}`); }
-        if (!laQuanLyToanXa(user)) { params.push(String(user.diabanh || '').trim()); cond.push(`d.diabanh=$${params.length}`); }
+        if (id) {
+            const personId = Number(id);
+            if (!Number.isSafeInteger(personId) || personId <= 0) {
+                return res.status(400).json({success:false,message:'Mã hồ sơ không hợp lệ.'});
+            }
+            params.push(personId);
+            cond.push(`d.id=$${params.length}`);
+        }
+
+        // Phải áp dụng cùng quy tắc phân địa bàn như API danh sách 15-49.
+        // Trước đây dùng d.diabanh = user.diabanh (so sánh tuyệt đối), trong khi
+        // danh sách dùng 3 số đầu của d.dia_chi. Vì vậy CTV thấy được hồ sơ trong
+        // danh sách nhưng API lịch sử lại trả [] dù lịch sử vẫn tồn tại.
+        if (!laQuanLyToanXa(user)) {
+            const userDiaBan = String(user.diabanh || '').trim();
+            const maDiaBan = userDiaBan.match(/^\d{3}/)?.[0] || '';
+
+            if (maDiaBan) {
+                params.push(maDiaBan);
+                cond.push(`LEFT(COALESCE(d.dia_chi,''),3) = $${params.length}`);
+            } else {
+                const userAp = String(user.ap || '').trim();
+                if (userAp) {
+                    const dbRes = await pool.query(
+                        `SELECT DISTINCT diabanh FROM users
+                         WHERE ap ILIKE $1 AND diabanh IS NOT NULL AND diabanh <> '' AND diabanh <> '00'`,
+                        [`%${userAp}%`]
+                    );
+                    const maDiaBans = [...new Set(dbRes.rows
+                        .map(r => String(r.diabanh || '').trim().match(/^\d{3}/)?.[0] || '')
+                        .filter(Boolean))];
+
+                    if (maDiaBans.length) {
+                        const terms = maDiaBans.map(code => {
+                            params.push(code);
+                            return `LEFT(COALESCE(d.dia_chi,''),3) = $${params.length}`;
+                        });
+                        cond.push(`(${terms.join(' OR ')})`);
+                    } else {
+                        params.push(`%${userAp}%`);
+                        cond.push(`COALESCE(d.dia_chi,'') ILIKE $${params.length}`);
+                    }
+                } else {
+                    // Không có địa bàn/ấp được phân công thì không trả dữ liệu.
+                    return res.json({success:true,data:[]});
+                }
+            }
+        }
+
         const where=cond.length ? `WHERE ${cond.join(' AND ')}` : '';
         const result=await pool.query(`
             SELECT l.id, d.id::text AS ma_dinh_danh, d.ho_ten, d.diabanh, l.ma_bptt,
