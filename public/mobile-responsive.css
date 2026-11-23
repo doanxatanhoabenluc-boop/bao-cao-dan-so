@@ -1643,3 +1643,254 @@ body.mobile-residents .site-topbar-actions > .btn-light {
 
 
 /* V7: household rails stay visible on mobile card rows. */
+
+
+/* Form bổ sung nhân khẩu (đặc biệt người mẹ ở Bảng 1) trên điện thoại. */
+@media (max-width: 767.98px) {
+  body.mobile-v2 .resident-details-modal { padding: 0 !important; }
+  body.mobile-v2 .resident-details-modal .modal-dialog {
+    width: calc(100% - 12px) !important; max-width: none !important;
+    height: calc(100dvh - 12px); max-height: calc(100dvh - 12px);
+    margin: 6px auto !important; display: flex; align-items: stretch;
+  }
+  body.mobile-v2 .resident-details-modal .modal-content {
+    width: 100%; max-height: 100%; display: flex; flex-direction: column;
+    border-radius: 14px !important; overflow: hidden;
+  }
+  body.mobile-v2 .resident-details-modal .modal-header {
+    flex: 0 0 auto; padding: 13px !important;
+  }
+  body.mobile-v2 .resident-details-modal .modal-title {
+    font-size: 1rem !important; line-height: 1.35;
+  }
+  body.mobile-v2 .resident-details-modal .modal-body {
+    flex: 1 1 auto; min-height: 0; max-height: none !important;
+    overflow-y: auto !important; overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch; padding: 12px !important;
+  }
+  body.mobile-v2 .resident-details-modal .resident-details-fields {
+    display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px !important;
+    margin: 0;
+  }
+  body.mobile-v2 .resident-details-modal .resident-details-fields > [class*="col-"] {
+    width: 100%; max-width: 100%; padding: 0;
+  }
+  body.mobile-v2 .resident-details-modal .form-control,
+  body.mobile-v2 .resident-details-modal .form-select {
+    min-height: 44px; width: 100%; font-size: 16px;
+  }
+  body.mobile-v2 .resident-details-modal .modal-footer {
+    flex: 0 0 auto; display: flex; flex-wrap: nowrap; gap: 8px;
+    padding: 10px !important; background: #fff;
+    border-top: 1px solid #e8edf3;
+  }
+  body.mobile-v2 .resident-details-modal .modal-footer .btn {
+    flex: 1 1 0; min-width: 0; min-height: 44px; margin: 0 !important;
+    white-space: normal;
+  }
+}
+
+
+/* Bản vá cuộn chắc chắn cho biểu mẫu bổ sung người mẹ/nhân khẩu trên điện thoại.
+   Dùng một vùng cuộn duy nhất ở modal; không cuộn lồng trong .modal-body. */
+@media (max-width: 767.98px) {
+  .resident-details-modal-mobile {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+  }
+  .resident-details-modal-mobile .modal-dialog {
+    display: flex !important;
+    align-items: stretch !important;
+    width: calc(100% - 12px) !important;
+    max-width: none !important;
+    min-height: calc(100dvh - 16px) !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 8px auto !important;
+  }
+  .resident-details-modal-mobile .modal-content {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    min-height: calc(100dvh - 16px) !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border-radius: 14px !important;
+  }
+  .resident-details-modal-mobile .modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    flex: 0 0 auto;
+    padding: 13px !important;
+    background: var(--bs-primary) !important;
+  }
+  .resident-details-modal-mobile .modal-body {
+    flex: 0 0 auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 12px !important;
+    touch-action: pan-y;
+  }
+  .resident-details-modal-mobile .resident-details-fields {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px !important;
+    margin: 0 !important;
+  }
+  .resident-details-modal-mobile .resident-details-fields > [class*="col-"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+  .resident-details-modal-mobile .form-control,
+  .resident-details-modal-mobile .form-select {
+    width: 100% !important;
+    min-height: 46px !important;
+    font-size: 16px !important;
+  }
+  .resident-details-modal-mobile .modal-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    display: flex !important;
+    flex: 0 0 auto;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    background: #fff !important;
+    border-top: 1px solid #e8edf3 !important;
+    box-shadow: 0 -4px 12px rgba(15, 23, 42, .06);
+  }
+  .resident-details-modal-mobile .modal-footer .btn {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    min-height: 46px !important;
+    margin: 0 !important;
+    white-space: normal !important;
+  }
+}
+
+
+/* V4: Biểu mẫu bổ sung nhân khẩu trên điện thoại chỉ cuộn một lần.
+   Nút xác nhận nằm sau toàn bộ trường nhập, không ghim/đè lên nội dung.
+   Vì vậy người dùng phải cuộn đến cuối biểu mẫu mới nhìn thấy nút lưu. */
+@media (max-width: 767.98px) {
+  body.mobile-v2 .resident-details-modal-mobile {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: none !important;
+    padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
+    touch-action: pan-y !important;
+  }
+
+  body.mobile-v2 .resident-details-modal-mobile .modal-dialog {
+    display: block !important;
+    width: calc(100% - 12px) !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 8px auto !important;
+  }
+
+  body.mobile-v2 .resident-details-modal-mobile .modal-content {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border-radius: 14px !important;
+  }
+
+  body.mobile-v2 .resident-details-modal-mobile .modal-header {
+    position: static !important;
+    flex: 0 0 auto !important;
+  }
+
+  /* Ghi đè rule cũ có specificity cao khiến .modal-body tiếp tục cuộn riêng. */
+  body.mobile-v2 .resident-details-modal-mobile .modal-body {
+    display: block !important;
+    flex: 0 0 auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 12px !important;
+    touch-action: pan-y !important;
+  }
+
+  body.mobile-v2 .resident-details-modal-mobile .resident-details-fields {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+    margin: 0 !important;
+  }
+
+  body.mobile-v2 .resident-details-modal-mobile .resident-details-fields > [class*="col-"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  body.mobile-v2 .resident-details-modal-mobile .form-control,
+  body.mobile-v2 .resident-details-modal-mobile .form-select {
+    width: 100% !important;
+    min-height: 46px !important;
+    font-size: 16px !important;
+  }
+
+  /* Không dùng sticky/fixed: footer nằm sau trường cuối cùng trong luồng nội dung. */
+  body.mobile-v2 .resident-details-modal-mobile .modal-footer {
+    position: static !important;
+    inset: auto !important;
+    display: flex !important;
+    flex: 0 0 auto !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    background: #fff !important;
+    border-top: 1px solid #e8edf3 !important;
+    box-shadow: none !important;
+  }
+
+  body.mobile-v2 .resident-details-modal-mobile .modal-footer .btn {
+    position: static !important;
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    min-height: 46px !important;
+    margin: 0 !important;
+    white-space: normal !important;
+  }
+}
+
+
+@media (max-width: 767.98px) {
+  body.mobile-v2 .resident-details-modal-mobile:not(.resident-details-scroll-complete) .modal-footer {
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+  body.mobile-v2 .resident-details-modal-mobile.resident-details-scroll-complete .modal-footer {
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+}

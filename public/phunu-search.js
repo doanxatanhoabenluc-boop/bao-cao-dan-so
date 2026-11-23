@@ -4,27 +4,43 @@
 
 // 1. Render ô tìm kiếm cho Bảng 7 (Đã tích hợp sẵn CSS riêng, không ảnh hưởng nơi khác)
 function renderPhuNuSearchField(field) {
+    const isTable1Search = typeof currentTable !== 'undefined' && currentTable === 'table_1';
     let col = document.createElement('div');
     col.className = "col-12 w-100 mb-3 bg-light p-3 border rounded position-relative border-success";
+    col.style.position = 'relative';
+    col.style.zIndex = '1055';
     col.innerHTML = `
         <style>
-            .phunu-search-wrapper { position: relative; display: block; width: 100%; }
+            .phunu-search-wrapper { position: relative; display: block; width: 100%; z-index: 1055; }
             .phunu-clear-btn {
                 position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
                 background: #e0e0e0; border: none; border-radius: 50%;
-                width: 24px; height: 24px; font-size: 14px; font-weight: bold;
+                width: 28px; height: 28px; font-size: 17px; font-weight: bold;
                 color: #555; cursor: pointer; display: flex; align-items: center;
-                justify-content: center; z-index: 10;
+                justify-content: center; z-index: 2; touch-action: manipulation;
             }
             .phunu-clear-btn:hover { background: #dc3545; color: #fff; }
+            .phunu-suggest-box {
+                position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+                width: 100%; max-height: min(48vh, 320px); overflow-y: auto;
+                z-index: 1056; background: #fff; border-radius: 10px;
+                -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+                touch-action: pan-y; box-shadow: 0 8px 24px rgba(15,23,42,.18);
+            }
+            .phunu-suggest-box .list-group-item { white-space: normal; text-align: left; }
+            .phunu-suggest-box button { min-height: 44px; touch-action: manipulation; }
+            @media (max-width: 767.98px) {
+                .phunu-suggest-box { max-height: min(52vh, 360px); }
+                .phunu-suggest-box .list-group-item { padding: 12px !important; line-height: 1.45; }
+            }
         </style>
         <label class="fw-bold text-success mb-1">${field.label}</label>
         <div class="phunu-search-wrapper">
-            <input type="text" id="inputSearchPhuNu" class="form-control shadow-none pe-5" placeholder="Nhập mã hộ hoặc họ tên để tìm dân cư theo khu vực được phân công..." oninput="handlePhuNuSearchInput(this)">
-            <button type="button" id="clearSearchPhuNuBtn" class="phunu-clear-btn" style="display: none;" onclick="clearPhuNuSearch()">&times;</button>
+            <input type="text" id="inputSearchPhuNu" class="form-control shadow-none pe-5" autocomplete="off" autocapitalize="off" placeholder="${isTable1Search ? 'Nhập mã hộ hoặc họ tên phụ nữ 15–49...' : 'Nhập mã hộ hoặc họ tên để tìm dân cư theo khu vực được phân công...'}" oninput="handlePhuNuSearchInput(this)">
+            <button type="button" id="clearSearchPhuNuBtn" class="phunu-clear-btn" style="display: none;" onclick="clearPhuNuSearch()" aria-label="Xóa nội dung tìm kiếm">&times;</button>
+            <div id="suggestBoxPhuNu" class="list-group phunu-suggest-box" role="listbox" aria-label="Kết quả tìm kiếm dân cư"></div>
         </div>
-        <div id="suggestBoxPhuNu" class="list-group position-absolute shadow-sm w-100" style="z-index: 1050; max-height: 220px; overflow-y: auto;"></div>
-        <small class="text-muted mt-1 d-block">💡 Chọn người để tự điền mã hộ, họ tên, ngày sinh và địa chỉ.</small>
+        <small id="phunuSearchHelp" class="text-muted mt-1 d-block">${isTable1Search ? '💡 Chỉ hiển thị phụ nữ từ 15–49 tuổi, giới tính Nữ và tình trạng hôn nhân Có vợ/Có chồng.' : '💡 Chọn người để tự điền mã hộ, họ tên, ngày sinh và địa chỉ.'}</small>
     `;
     return col;
 }
@@ -227,6 +243,7 @@ async function searchPhuNuMasterList(keyword) {
 
     try {
         const table = typeof currentTable !== 'undefined' ? currentTable : '';
+        // Bảng 1 chỉ tìm phụ nữ đủ điều kiện 15–49; không tìm toàn bộ thành viên hộ.
         const womanMode = ['table_1', 'table_7', 'table_9'].includes(table);
         const params = new URLSearchParams({ q: keyword, mode: womanMode ? 'woman' : 'all' });
         let res = await fetch(`/api/dan-cu/search?${params.toString()}`);
@@ -293,16 +310,14 @@ function selectPhuNuFromMasterList(item) {
         return;
     }
     const selectedTable = typeof currentTable !== 'undefined' ? currentTable : '';
-    if (selectedTable === 'table_1') setResidentLinkId('dan_cu_me_id', item.id, item.ma_ho);
+    const isTable1 = selectedTable === 'table_1';
+    const isTable9 = selectedTable === 'table_9';
+    const isTable7 = selectedTable === 'table_7';
+    const isTable11 = selectedTable === 'table_11';
+    if (isTable1) setResidentLinkId('dan_cu_me_id', item.id, item.ma_ho);
     else if (['table_3','table_5','table_7','table_9','table_11'].includes(selectedTable)) setResidentLinkId('dan_cu_id', item.id);
 
     let hoSoInput = document.querySelector('[name="ho_so"]');
-    
-    const isTable1 = typeof currentTable !== 'undefined' && currentTable === 'table_1';
-
-    const isTable9 = typeof currentTable !== 'undefined' && currentTable === 'table_9';
-    const isTable7 = typeof currentTable !== 'undefined' && currentTable === 'table_7';
-    const isTable11 = typeof currentTable !== 'undefined' && currentTable === 'table_11';
 
     let hoTenInput = isTable1
         ? document.querySelector('[name="ho_ten_me"]')
@@ -386,7 +401,7 @@ function selectPhuNuFromMasterList(item) {
         searchInput.style.backgroundColor = '#e8f5e9';
         const help = searchInput.closest('.col-12')?.querySelector('small');
         if (help) {
-            help.textContent = '💡 Chọn người để tự điền mã hộ, họ tên, ngày sinh và địa chỉ.';
+            help.textContent = '💡 Đã tự điền mã hộ và thông tin phụ nữ được chọn.';
             help.classList.remove('text-warning');
             help.classList.add('text-muted');
         }

@@ -7,6 +7,28 @@ let danhSachBptTOptions = [];
 let danhSachNoiThucHienOptions = [];
 let danhSachQuanHeOptions = []; // 🆕 Thêm biến lưu danh sách quan hệ từ DB
 
+// Chuẩn hóa quan hệ để lọc/kiểm tra nhất quán dù danh mục có dấu hoặc viết hoa.
+function normalizeRelationOption(value) {
+    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[đĐ]/g, 'd').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+function isHouseholdHeadRelation(value) {
+    const key = normalizeRelationOption(value);
+    return key === 'chu ho' || key.startsWith('chu ho ');
+}
+function isParentRelation(value) {
+    const key = normalizeRelationOption(value).replace(/[^a-z]/g, '');
+    return ['bo', 'me', 'cha', 'bo/me', 'cha/me', 'bome', 'chame'].includes(key);
+}
+function isAllowedTable1ChildRelation(value) {
+    return ['con de', 'chau', 'co quan he khac'].includes(normalizeRelationOption(value));
+}
+function getTable1ChildRelationOptions() {
+    // Bảng 1 chỉ cho phép ba quan hệ đã được thống nhất cho trẻ mới sinh.
+    // Không dùng danh mục quan hệ chung vì danh mục đó có các lựa chọn
+    // không phù hợp như Chủ hộ, Vợ/Chồng, Bố/Mẹ hoặc Con nuôi/Con dâu/rể.
+    return ['Con đẻ', 'Cháu', 'Có quan hệ khác'];
+}
 // Danh sách 54 dân tộc Việt Nam chuẩn
 const danhSachDanToc = [
     "Kinh", "Tày", "Thái", "Mường", "H'Mông", "Dao", "Khmer", "Nùng", "Gia Rai", 
@@ -22,7 +44,7 @@ const tinhTrangHonNhanOptions = ["Chưa có vợ hoặc chồng", "Có vợ/Có 
 
 const tableConfigs = {
     "table_1": { title: "1. Danh sách trẻ sinh ra", fields: [
-        { name: "search_phunu_helper", label: "🔍 Tìm phụ nữ 15–49 từ danh sách dân cư (Nữ, có vợ/có chồng)", type: "search-phunu-master" },
+        { name: "search_phunu_helper", label: "🔍 Tìm phụ nữ 15–49 trong danh sách dân cư", type: "search-phunu-master" },
         { name: "ho_so", label: "Hộ số", type: "text", required: true },
         { name: "ghi_chu_ma_ho", label: "Ghi chú mã hộ", type: "text-hidden-dynamic" },
         { name: "ho_ten_con", label: "Họ và tên con", type: "text", required: true },
@@ -95,6 +117,7 @@ const tableConfigs = {
         { name: "dan_toc", label: "Dân tộc", type: "select-dantoc", options: uniqueDanToc, required: true },
         { name: "ngay_di", label: "Ngày đi", type: "date", required: true },
         { name: "noi_den", label: "Nơi đến", type: "text" },
+        { name: "chuyen_ca_ho", label: "Xác nhận chuyển đi cả hộ", type: "checkbox-whole-household-transfer" },
         { name: "ghi_chu", label: "Ghi chú", type: "text" }
     ]},
     "table_6": { title: "6. Danh sách thay đổi thông tin cơ bản", fields: [
@@ -418,6 +441,72 @@ function switchTableForm() {
             container.appendChild(col);
             return;
         }
+        else if (field.type === 'checkbox-whole-household-transfer') {
+            col.className = 'col-12 mb-2';
+            col.innerHTML = `
+                <div class="border rounded-3 p-3 bg-warning-subtle">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="input_${field.name}" name="${field.name}" value="true">
+                        <label class="form-check-label fw-bold" for="input_${field.name}">🏠 ${field.label}</label>
+                    </div>
+                    <div class="small text-muted mt-1">Khi tích chọn, sau bước xác nhận, hệ thống sẽ ghi nhận chuyển đi cho tất cả nhân khẩu đang cư trú trong cùng mã hộ và địa bàn với người được chọn. Ghi chú sẽ tự thêm “Chuyển Cả hộ”.</div>
+                </div>`;
+
+            // Bảng 5: tự thêm ghi chú khi chọn chuyển cả hộ.
+            // Nếu bỏ tích, chỉ gỡ phần ghi chú do checkbox tự thêm; giữ lại
+            // nội dung ghi chú ban đầu hoặc phần người dùng đã nhập thêm.
+            const wholeHouseholdCheckbox = col.querySelector(`[name="${field.name}"]`);
+            wholeHouseholdCheckbox?.addEventListener('change', () => {
+                const noteInput = document.querySelector('#dynamicForm [name="ghi_chu"]');
+                if (!noteInput) return;
+
+                const autoNote = 'Chuyển Cả hộ';
+                const normalizeNote = value => String(value || '').trim().toLocaleLowerCase('vi');
+
+                if (wholeHouseholdCheckbox.checked) {
+                    const currentNote = String(noteInput.value || '');
+                    const alreadyHasAutoNote = currentNote
+                        .split(/[;|]/)
+                        .some(part => normalizeNote(part) === normalizeNote(autoNote));
+                    if (alreadyHasAutoNote) return;
+
+                    const nextNote = currentNote.trim()
+                        ? `${currentNote.trim()}; ${autoNote}`
+                        : autoNote;
+                    wholeHouseholdCheckbox.dataset.autoHouseholdNote = 'true';
+                    wholeHouseholdCheckbox.dataset.noteBeforeAuto = currentNote;
+                    wholeHouseholdCheckbox.dataset.noteAfterAuto = nextNote;
+                    noteInput.value = nextNote;
+                } else if (wholeHouseholdCheckbox.dataset.autoHouseholdNote === 'true') {
+                    const currentNote = String(noteInput.value || '');
+                    const previousNote = wholeHouseholdCheckbox.dataset.noteBeforeAuto || '';
+                    const noteAfterAuto = wholeHouseholdCheckbox.dataset.noteAfterAuto || '';
+
+                    if (currentNote === noteAfterAuto) {
+                        noteInput.value = previousNote;
+                    } else {
+                        // Người dùng đã chỉnh ghi chú sau khi tích: chỉ bỏ
+                        // mục “Chuyển Cả hộ” được tự thêm, không xóa ghi chú khác.
+                        noteInput.value = currentNote
+                            .split(';')
+                            .map(part => part.trim())
+                            .filter(part => normalizeNote(part) !== normalizeNote(autoNote))
+                            .join('; ')
+                            .replace(/^[;\s]+|[;\s]+$/g, '');
+                    }
+
+                    delete wholeHouseholdCheckbox.dataset.autoHouseholdNote;
+                    delete wholeHouseholdCheckbox.dataset.noteBeforeAuto;
+                    delete wholeHouseholdCheckbox.dataset.noteAfterAuto;
+                }
+
+                noteInput.dispatchEvent(new Event('input', { bubbles: true }));
+                noteInput.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+
+            container.appendChild(col);
+            return;
+        }
         else if (field.type === 'table6-editor') {
             col.className = 'col-12 mb-3';
             col.innerHTML = `
@@ -506,7 +595,10 @@ function switchTableForm() {
                 select.disabled = true;
                 select.style.backgroundColor = '#e9ecef';
             }
-            select.innerHTML = `<option value="">-- Chọn quan hệ --</option>` + (typeof danhSachQuanHeOptions !== 'undefined' ? danhSachQuanHeOptions : []).map(o => `<option value="${o}">${o}</option>`).join('');
+            const relationOptions = field.name === 'quan_he_con'
+                ? getTable1ChildRelationOptions()
+                : (typeof danhSachQuanHeOptions !== 'undefined' ? danhSachQuanHeOptions : []);
+            select.innerHTML = `<option value="">-- Chọn quan hệ --</option>` + relationOptions.map(o => `<option value="${o}">${o}</option>`).join('');
             col.appendChild(select);
         } else if (field.type === 'search-phunu-master' || field.type === 'search-dancu-master') {
             if (typeof renderPhuNuSearchField === 'function') {
@@ -607,7 +699,9 @@ function switchTableForm() {
 }
 // ==================== BẢNG 6: THAY ĐỔI THÔNG TIN DÂN CƯ ====================
 let table6Resident = null;
-let table6Options = { ap: [], diabanh: [] };
+// Lưu đúng các cặp Ấp - Địa bàn từ tài khoản USER để không ghép nhầm
+// một Địa bàn của Ấp khác.
+let table6Options = { pairs: [] };
 let table6HouseholdMembers = [];
 const table6FieldLabels = {
     ho_ten: 'Họ và tên', ngay_sinh: 'Ngày sinh', gioi_tinh: 'Giới tính', dan_toc: 'Dân tộc',
@@ -620,8 +714,53 @@ const table6SelectOptions = {
     hon_nhan: tinhTrangHonNhanOptions, tinh_trang_cu_tru: ['Thường trú','Tạm trú','Tạm vắng','Khác']
 };
 async function loadTable6Options() {
-    try { const r = await fetch('/api/table6/options'); const j = await r.json(); if (r.ok && j.success) table6Options = { ap: j.ap || [], diabanh: j.diabanh || [] }; }
-    catch (e) { console.error('Không tải được danh mục Bảng 6:', e); }
+    try {
+        const r = await fetch('/api/table6/options');
+        const j = await r.json();
+        if (r.ok && j.success) {
+            const pairs = Array.isArray(j.pairs) ? j.pairs : (Array.isArray(j.options) ? j.options : []);
+            table6Options = {
+                pairs: pairs.map(item => ({
+                    ap: String(item.ap || '').trim(),
+                    diabanh: String(item.diabanh || '').trim()
+                })).filter(item => item.ap && item.diabanh)
+            };
+        }
+    } catch (e) { console.error('Không tải được danh mục Bảng 6:', e); }
+    return table6Options;
+}
+function table6UniqueValues(key) {
+    const values = table6Options.pairs.map(item => item[key]).filter(Boolean);
+    return [...new Map(values.map(value => [value.toLocaleLowerCase('vi'), value])).values()]
+        .sort((a, b) => a.localeCompare(b, 'vi'));
+}
+function table6AreasForAp(ap) {
+    const apKey = String(ap || '').trim().toLocaleLowerCase('vi');
+    if (!apKey) return [];
+    const values = table6Options.pairs
+        .filter(item => item.ap.toLocaleLowerCase('vi') === apKey)
+        .map(item => item.diabanh);
+    return [...new Map(values.map(value => [value.toLocaleLowerCase('vi'), value])).values()]
+        .sort((a, b) => a.localeCompare(b, 'vi'));
+}
+function table6AreaOptionHtml(items, selected = '', placeholder = '-- Chọn địa bàn --') {
+    const options = `<option value="">${placeholder}</option>` + (items || []).map(value => {
+        const safe = String(value).replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/</g, '&lt;');
+        return `<option value="${safe}" ${String(value).toLocaleLowerCase('vi') === String(selected || '').trim().toLocaleLowerCase('vi') ? 'selected' : ''}>${safe}</option>`;
+    }).join('');
+    return options;
+}
+function updateTable6AreasForSelectedAp(row, selectedArea = '') {
+    const apSelect = row?.querySelector('.table6-address-ap');
+    const areaSelect = row?.querySelector('.table6-address-area');
+    if (!apSelect || !areaSelect) return;
+    const ap = apSelect.value;
+    const areas = table6AreasForAp(ap);
+    const placeholder = !ap
+        ? '-- Chọn Ấp trước --'
+        : (areas.length ? '-- Chọn địa bàn --' : '-- Ấp này chưa có địa bàn --');
+    areaSelect.innerHTML = table6AreaOptionHtml(areas, selectedArea, placeholder);
+    areaSelect.disabled = !ap || areas.length === 0;
 }
 function table6OldValue(field) {
     if (!table6Resident) return '';
@@ -788,8 +927,34 @@ function renderTable6NewInput(row) {
         renderTable6SplitEditor(row);
     } else if (field === 'dia_chi_nhom') {
         const oldDetail = String(table6Resident?.dia_chi || '').replace(/^\s*\d{3}\s*,\s*/, '');
-        newEl.innerHTML = `<div class="row g-1"><div class="col-6"><select class="form-select table6-address-area" aria-label="Địa bàn">${table6OptionHtml(table6Options.diabanh,table6Resident?.diabanh)}</select></div><div class="col-6"><select class="form-select table6-address-ap" aria-label="Ấp">${table6OptionHtml(table6Options.ap,table6Resident?.ap)}</select></div><div class="col-12"><input class="form-control table6-address-detail mt-1" placeholder="Địa chỉ cụ thể (số nhà, đường...)" value="${oldDetail.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"></div></div>`;
-        loadTable6Options().then(() => { const a=row.querySelector('.table6-address-area'), ap=row.querySelector('.table6-address-ap'); if(a)a.innerHTML=table6OptionHtml(table6Options.diabanh,table6Resident?.diabanh); if(ap)ap.innerHTML=table6OptionHtml(table6Options.ap,table6Resident?.ap); });
+        const addressHouseholdToggleId = `table6-address-whole-${table6Resident?.id || 'resident'}`;
+        newEl.innerHTML = `<div class="row g-2">
+          <div class="col-12 col-md-6"><label class="form-label small">Ấp <span class="text-danger">*</span></label><select class="form-select table6-address-ap" aria-label="Ấp">${table6OptionHtml(table6UniqueValues('ap'), table6Resident?.ap)}</select></div>
+          <div class="col-12 col-md-6"><label class="form-label small">Địa bàn <span class="text-danger">*</span></label><select class="form-select table6-address-area" aria-label="Địa bàn" disabled><option value="">-- Chọn Ấp trước --</option></select></div>
+          <div class="col-12"><label class="form-label small">Địa chỉ cụ thể</label><input class="form-control table6-address-detail" placeholder="Số nhà, đường..." value="${oldDetail.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"></div>
+          <div class="col-12"><div class="form-check border rounded p-2 bg-light">
+            <input class="form-check-input table6-address-whole-household" type="checkbox" id="${addressHouseholdToggleId}">
+            <label class="form-check-label fw-semibold" for="${addressHouseholdToggleId}">Áp dụng địa chỉ mới cho toàn bộ hộ</label>
+            <div class="small text-muted">Khi xác nhận, địa bàn, Ấp và địa chỉ cụ thể sẽ được cập nhật cho tất cả nhân khẩu thuộc cùng mã hộ trong địa bàn hiện tại.</div>
+          </div></div>
+        </div>`;
+        const apSelect = row.querySelector('.table6-address-ap');
+        if (apSelect) apSelect.addEventListener('change', () => {
+            updateTable6AreasForSelectedAp(row, '');
+            syncTable6Changes();
+        });
+        const areaSelect = row.querySelector('.table6-address-area');
+        if (areaSelect) areaSelect.addEventListener('change', syncTable6Changes);
+        loadTable6Options().then(() => {
+            if (!row.isConnected) return;
+            const ap = row.querySelector('.table6-address-ap');
+            if (!ap) return;
+            const currentAp = String(table6Resident?.ap || '').trim();
+            ap.innerHTML = table6OptionHtml(table6UniqueValues('ap'), currentAp);
+            // Chỉ chọn lại địa bàn cũ nếu địa bàn đó thực sự thuộc Ấp đang chọn.
+            updateTable6AreasForSelectedAp(row, table6Resident?.diabanh || '');
+            syncTable6Changes();
+        });
     } else if (table6SelectOptions[field]) {
         newEl.innerHTML = `<select class="form-select table6-new-value">${table6OptionHtml(table6SelectOptions[field],table6Resident?.[field])}</select>`;
     } else {
@@ -815,7 +980,7 @@ function syncTable6Changes() {
             row.querySelector('.table6-old').textContent = oldText;
             changes.push({field, value, oldText, newText, companionNames:names});
         } else if (field === 'dia_chi_nhom') {
-            const value = { diabanh:row.querySelector('.table6-address-area')?.value||'', ap:row.querySelector('.table6-address-ap')?.value||'', dia_chi:row.querySelector('.table6-address-detail')?.value||'' };
+            const value = { diabanh:row.querySelector('.table6-address-area')?.value||'', ap:row.querySelector('.table6-address-ap')?.value||'', dia_chi:row.querySelector('.table6-address-detail')?.value||'', apply_to_household: Boolean(row.querySelector('.table6-address-whole-household')?.checked) };
             const oldText = table6OldValue(field), newText = [value.diabanh,value.ap,value.dia_chi].filter(Boolean).join(' · ');
             row.querySelector('.table6-old').textContent = oldText || '(Trống)'; changes.push({field,value,oldText,newText});
         } else {
@@ -932,7 +1097,11 @@ function showPreviewModal(dataObj, configFields) {
             let changes = Array.isArray(dataObj.changes) ? dataObj.changes : [];
             if (!changes.length) { try { changes = JSON.parse(dataObj.changes_json || '[]'); } catch (_) {} }
             modalHtml += `<tr><th colspan="2" class="table-primary">Các nội dung sẽ cập nhật vào danh sách dân cư</th></tr>`;
-            changes.forEach(ch => modalHtml += `<tr><th>${table6FieldLabels[ch.field] || ch.field}</th><td><div><b>Thông tin cũ:</b> ${ch.oldText || '(Trống)'}</div><div class="text-success"><b>Thông tin mới:</b> ${ch.newText || '(Trống)'}</div></td></tr>`);
+            changes.forEach(ch => {
+                const householdScope = ch.field === 'dia_chi_nhom' && ch.value?.apply_to_household === true
+                    ? '<div class="small fw-bold text-primary mt-1">Áp dụng cho toàn bộ nhân khẩu trong hộ</div>' : '';
+                modalHtml += `<tr><th>${table6FieldLabels[ch.field] || ch.field}</th><td><div><b>Thông tin cũ:</b> ${ch.oldText || '(Trống)'}</div><div class="text-success"><b>Thông tin mới:</b> ${ch.newText || '(Trống)'}</div>${householdScope}</td></tr>`;
+            });
         }
 
         if (currentTable === 'table_1') {
@@ -1247,7 +1416,7 @@ function showMissingResidentDetailsModal(table, fullName, defaults = {}, context
         document.getElementById('missingResidentDetailsModal')?.remove();
         const wrapper = document.createElement('div');
         wrapper.innerHTML = `
-          <div class="modal fade" id="missingResidentDetailsModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+          <div class="modal fade resident-details-modal" id="missingResidentDetailsModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
             <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
               <div class="modal-content border-0 shadow">
                 <div class="modal-header bg-primary text-white">
@@ -1260,7 +1429,7 @@ function showMissingResidentDetailsModal(table, fullName, defaults = {}, context
                       <b class="resident-name"></b> trong danh sách dân cư.
                       Vui lòng bổ sung các trường có dấu <b class="text-danger">*</b> để lưu thống nhất vào <code>dan_cu</code>.
                     </div>
-                    <div class="row g-3" id="missingResidentDetailsFields"></div>
+                    <div class="row g-3 resident-details-fields" id="missingResidentDetailsFields"></div>
                   </div>
                   <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-action="cancel">Hủy</button>
@@ -1272,6 +1441,17 @@ function showMissingResidentDetailsModal(table, fullName, defaults = {}, context
           </div>`;
         document.body.appendChild(wrapper);
         const modalEl = wrapper.querySelector('#missingResidentDetailsModal');
+        // Trên điện thoại, để toàn bộ hộp thoại cuộn theo một vùng duy nhất.
+        // Cách này tránh Bootstrap tạo vùng cuộn lồng nhau khiến không kéo tới
+        // nút xác nhận/lưu được trên một số trình duyệt Android/iOS.
+        const isMobileResidentModal = window.matchMedia
+            ? window.matchMedia('(max-width: 767.98px)').matches
+            : window.innerWidth <= 767;
+        if (isMobileResidentModal) {
+            modalEl.classList.add('resident-details-modal-mobile');
+            const dialog = modalEl.querySelector('.modal-dialog');
+            dialog?.classList.remove('modal-dialog-scrollable', 'modal-dialog-centered');
+        }
         modalEl.querySelector('.resident-name').textContent = fullName || '';
         const helpText = modalEl.querySelector('.resident-help-text');
         if (helpText) {
@@ -1301,8 +1481,13 @@ function showMissingResidentDetailsModal(table, fullName, defaults = {}, context
         }
         const fieldsEl = modalEl.querySelector('#missingResidentDetailsFields');
         const statuses = ['Chưa có vợ hoặc chồng', 'Có vợ/Có chồng', 'Ly hôn', 'Ly thân', 'Goá'];
-        const relationships = (Array.isArray(danhSachQuanHeOptions) && danhSachQuanHeOptions.length)
+        const allRelationships = (Array.isArray(danhSachQuanHeOptions) && danhSachQuanHeOptions.length)
             ? danhSachQuanHeOptions : ['Chủ hộ', 'Vợ', 'Chồng', 'Con', 'Cha', 'Mẹ', 'Anh', 'Chị', 'Em', 'Khác'];
+        // Riêng hồ sơ người mẹ thêm mới từ Bảng 1: người mẹ là thành viên hộ,
+        // không thể khai báo quan hệ với chủ hộ là chính "Chủ hộ".
+        const relationships = table === 'table_1'
+            ? allRelationships.filter(value => !isHouseholdHeadRelation(value))
+            : allRelationships;
         const fieldDefs = [
             {key:'ngay_sinh', label:'Ngày sinh', type:'date', required:true},
             {key:'gioi_tinh', label:'Giới tính', type:'select', required:true, options:['Nam','Nữ']},
@@ -1331,11 +1516,42 @@ function showMissingResidentDetailsModal(table, fullName, defaults = {}, context
                 const empty = document.createElement('option'); empty.value = ''; empty.textContent = '-- Chọn --'; control.appendChild(empty);
                 def.options.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; control.appendChild(o); });
             }
-            const value = defaults[def.key] ?? '';
+            let value = defaults[def.key] ?? '';
+            // Danh mục mặc định có thể dùng nhãn gộp "Vợ/Chồng" trong khi
+            // dữ liệu cũ đặt sẵn "Vợ"; giữ giá trị mặc định hợp lệ cho mẹ.
+            if (table === 'table_1' && def.key === 'quan_he' && value &&
+                !relationships.some(option => normalizeRelationOption(option) === normalizeRelationOption(value)) &&
+                normalizeRelationOption(value) === 'vo') {
+                const spouseOption = relationships.find(option => ['vo/chong', 'vo chong'].includes(normalizeRelationOption(option)));
+                if (spouseOption) value = spouseOption;
+            }
             if (value !== '') control.value = String(value);
             col.append(label, control); fieldsEl.appendChild(col);
         }
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        // Trên điện thoại, chỉ mở khóa khu vực Hủy/Xác nhận khi người dùng
+        // đã cuộn tới cuối biểu mẫu. Nếu toàn bộ form vừa trong màn hình thì
+        // hiện nút ngay vì người dùng đã nhìn thấy tất cả trường.
+        const refreshResidentModalFooter = () => {
+            if (!isMobileResidentModal) return;
+            const maxScroll = Math.max(0, modalEl.scrollHeight - modalEl.clientHeight);
+            const reachedEnd = maxScroll <= 4 ||
+                modalEl.scrollTop + modalEl.clientHeight >= modalEl.scrollHeight - 8;
+            modalEl.classList.toggle('resident-details-scroll-complete', reachedEnd);
+            const footer = modalEl.querySelector('.modal-footer');
+            if (footer) footer.setAttribute('aria-hidden', String(!reachedEnd));
+        };
+        if (isMobileResidentModal) {
+            modalEl.classList.remove('resident-details-scroll-complete');
+            modalEl.addEventListener('scroll', refreshResidentModalFooter, {passive: true});
+            modalEl.addEventListener('shown.bs.modal', () => {
+                window.requestAnimationFrame(() => {
+                    modalEl.scrollTop = 0;
+                    refreshResidentModalFooter();
+                });
+            }, {once: true});
+            window.addEventListener('resize', refreshResidentModalFooter);
+        }
         let settled = false;
         const finish = value => { if (settled) return; settled = true; modal.hide(); resolve(value); };
         modalEl.querySelector('[data-action="cancel"]').addEventListener('click', () => finish(null));
@@ -1348,9 +1564,22 @@ function showMissingResidentDetailsModal(table, fullName, defaults = {}, context
             values.diabanh = defaults.diabanh || '';
             finish(values);
         });
+        // Khi chạm vào trường ở gần cuối form, đưa trường đó vào vùng nhìn thấy.
+        // Trên mobile, vùng cuộn là chính modal chứ không phải một modal-body lồng nhau.
+        if (isMobileResidentModal) {
+            modalEl.addEventListener('focusin', (event) => {
+                const target = event.target;
+                if (!target || !target.matches('input, select, textarea')) return;
+                window.setTimeout(() => {
+                    try { target.scrollIntoView({block: 'nearest', inline: 'nearest', behavior: 'smooth'}); }
+                    catch (_) { target.scrollIntoView(false); }
+                }, 180);
+            });
+        }
         modalEl.addEventListener('hidden.bs.modal', () => {
+            if (isMobileResidentModal) window.removeEventListener('resize', refreshResidentModalFooter);
             if (!settled) { settled = true; resolve(null); }
-            modal.dispose(); modalEl.remove();
+            modal.dispose(); wrapper.remove();
         }, {once:true});
         modal.show();
     });
@@ -1372,6 +1601,34 @@ async function saveData(e) {
     formData.forEach((val, key) => {
         dataObj[key] = val;
     });
+
+    // Chốt dữ liệu Bảng 5: nếu chọn chuyển cả hộ thì luôn có ghi chú
+    // “Chuyển Cả hộ”, kể cả khi giá trị checkbox được khôi phục tự động.
+    if (currentTable === 'table_5' && String(dataObj.chuyen_ca_ho || '') === 'true') {
+        const autoNote = 'Chuyển Cả hộ';
+        const currentNote = String(dataObj.ghi_chu || '').trim();
+        const hasAutoNote = currentNote
+            .split(/[;|]/)
+            .some(part => part.trim().toLocaleLowerCase('vi') === autoNote.toLocaleLowerCase('vi'));
+        if (!hasAutoNote) {
+            dataObj.ghi_chu = currentNote ? `${currentNote}; ${autoNote}` : autoNote;
+            const noteInput = form.querySelector('[name="ghi_chu"]');
+            if (noteInput) noteInput.value = dataObj.ghi_chu;
+        }
+    }
+
+    // Chốt kiểm tra phía giao diện cho quan hệ của trẻ mới sinh.
+    // Danh mục đã ẩn các lựa chọn không hợp lệ; kiểm tra này bảo vệ trường hợp
+    // dữ liệu được điền tự động hoặc thay đổi bằng công cụ trình duyệt.
+    if (currentTable === 'table_1') {
+        const childRelation = String(dataObj.quan_he_con || '').trim();
+        if (!isAllowedTable1ChildRelation(childRelation)) {
+            alert('Bảng 1 chỉ cho phép chọn: Con đẻ, Cháu hoặc Có quan hệ khác. Vui lòng chọn lại.');
+            const relationInput = form.querySelector('[name="quan_he_con"]');
+            relationInput?.focus();
+            return;
+        }
+    }
 
     // =========================================================
     // HÀM HỖ TRỢ: ĐỌC PHẢN HỒI API AN TOÀN
@@ -1734,7 +1991,7 @@ const allowSharedHousehold = true;
         const defaults = {
             ngay_sinh: isTable1 ? (dataObj.ngay_sinh_me || '') : (dataObj.ngay_sinh || ''),
             gioi_tinh: isTable1 || isWomanEvent ? 'Nữ' : (dataObj.gioi_tinh || ''),
-            quan_he: isTable1 ? '' : (isWomanEvent ? 'Vợ' : (dataObj.quan_he || '')),
+            quan_he: isTable1 ? 'Vợ' : (isWomanEvent ? 'Vợ' : (dataObj.quan_he || '')),
             dan_toc: dataObj.dan_toc || '',
             hoc_van: dataObj.trinh_do_hoc_van || '',
             hon_nhan: isTable1 ? '' : (isWomanEvent ? 'Có vợ/Có chồng' : (dataObj.tinh_trang_hon_nhan || '')),
@@ -1814,6 +2071,13 @@ const allowSharedHousehold = true;
         const autoNote = !isHouseholdSplit && changedLabels.length ? `Thay đổi ${changedLabels.join(', ')}` : '';
         const manualNote = String(dataObj.ghi_chu || '').trim();
         dataObj.ghi_chu = [autoNote, manualNote].filter(Boolean).join('. ');
+        const addressWholeHousehold = changes.some(ch =>
+            ch.field === 'dia_chi_nhom' && ch.value?.apply_to_household === true
+        );
+        if (addressWholeHousehold) {
+            const code = String(dataObj.ho_so || '').trim();
+            if (!confirm(`Bạn đang chọn áp dụng địa chỉ mới cho TOÀN BỘ HỘ ${code}. Hệ thống sẽ cập nhật địa bàn, Ấp và địa chỉ cụ thể cho tất cả nhân khẩu trong cùng mã hộ và địa bàn hiện tại, đồng thời ghi lịch sử riêng cho từng người. Bạn xác nhận thực hiện?`)) return;
+        }
         dataObj.changes = changes;
         delete dataObj.changes_json;
     }
@@ -1998,6 +2262,12 @@ if (
         }
     }
 
+    // Nếu chọn chuyển đi cả hộ, yêu cầu xác nhận riêng để tránh thao tác nhầm.
+    if (currentTable === 'table_5' && String(dataObj.chuyen_ca_ho || '') === 'true') {
+        const householdName = String(dataObj.ho_so || '').trim();
+        if (!confirm(`Bạn đang chọn CHUYỂN ĐI CẢ HỘ ${householdName}. Hệ thống sẽ cập nhật trạng thái cho tất cả nhân khẩu đang cư trú trong cùng mã hộ và địa bàn. Bạn xác nhận chuyển cả hộ?`)) return;
+    }
+
     // =========================================================
     // 4. XEM TRƯỚC DỮ LIỆU TRƯỚC KHI LƯU
     // =========================================================
@@ -2073,6 +2343,8 @@ if (
         // API đồng bộ dân cư ở phía dưới, nhưng loại trường này khỏi payload
         // lưu bảng nghiệp vụ.
         const tablePayload = { ...dataObj };
+        // Đây là cờ điều khiển đồng bộ, không phải cột trong table_5.
+        delete tablePayload.chuyen_ca_ho;
         if (currentTable === 'table_1') {
             delete tablePayload.quan_he_con;
         }
@@ -2334,7 +2606,8 @@ if (
                 ngay_di: dataObj.ngay_di || '',
                 shared_household_confirmed: sharedHouseholdConfirmed,
                 resident_details_confirmed: residentDetailsConfirmed,
-                resident_details: sharedHouseholdResidentDetails
+                resident_details: sharedHouseholdResidentDetails,
+                chuyen_ca_ho: String(dataObj.chuyen_ca_ho || '') === 'true'
             }
         );
     }
@@ -3160,6 +3433,9 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     if (currentUser) {
         const role = (currentUser.role || "").trim().toLowerCase();
+        const roleKey = role.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/[\s_-]+/g, '');
+        const isCollaborator = roleKey.startsWith('congtacvien') || roleKey.startsWith('ctv') || roleKey === 'collaborator';
+        const isFullManager = role.includes("admin") || role.includes("lãnh đạo") || role.includes("lanh dao") || role.includes("quan tri");
         const adminBtn = document.getElementById("btnAdmin");
         const quanLyDanCuBtn = document.getElementById("btnQuanLyDanCu");
         const baocaoBtn = document.getElementById("btnBaocaoToanXa");
@@ -3178,16 +3454,16 @@ document.addEventListener("DOMContentLoaded", async function() {
             userInfoSpan.textContent = `${name} (${userRole}${locationInfo})`;
         }
 
-        if (role.includes("admin") || role.includes("lãnh đạo") || role.includes("lanh dao") || role.includes("quan tri")) {
+        if (isFullManager) {
             if (adminBtn) adminBtn.style.setProperty("display", "inline-block", "important");
             if (quanLyDanCuBtn) quanLyDanCuBtn.style.setProperty("display", "inline-block", "important");
             if (baocaoBtn) baocaoBtn.style.setProperty("display", "inline-block", "important");
-            if (quanLyBieuMauBtn) quanLyBieuMauBtn.style.setProperty("display", "inline-block", "important"); // 🆕 Hiển thị nút cho Admin/Lãnh đạo
+            if (quanLyBieuMauBtn) quanLyBieuMauBtn.style.setProperty("display", "inline-block", "important");
         } else {
             if (adminBtn) adminBtn.style.setProperty("display", "none", "important");
-            if (quanLyDanCuBtn) quanLyDanCuBtn.style.setProperty("display", "none", "important");
-            if (baocaoBtn) adminBtn.style.setProperty("display", "none", "important");
-            if (quanLyBieuMauBtn) quanLyBieuMauBtn.style.setProperty("display", "none", "important"); // 🆕 Ẩn nút đối với tài khoản thường
+            if (quanLyDanCuBtn) quanLyDanCuBtn.style.setProperty("display", isCollaborator ? "inline-block" : "none", "important");
+            if (baocaoBtn) baocaoBtn.style.setProperty("display", "none", "important");
+            if (quanLyBieuMauBtn) quanLyBieuMauBtn.style.setProperty("display", "none", "important");
         }
     }
 });

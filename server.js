@@ -238,7 +238,8 @@ async function initDatabase() {
                 so_con INTEGER,
                 nam_sinh_con VARCHAR(50),
                 cccd TEXT,
-                ngay_cap_cccd TEXT
+                ngay_cap_cccd TEXT,
+                noi_cap_cccd TEXT
             );
             ALTER TABLE dan_cu ADD COLUMN IF NOT EXISTS so_con INTEGER;
             ALTER TABLE dan_cu ADD COLUMN IF NOT EXISTS nam_sinh_con VARCHAR(50);
@@ -246,6 +247,7 @@ async function initDatabase() {
             ALTER TABLE dan_cu ADD COLUMN IF NOT EXISTS ap TEXT;
             ALTER TABLE dan_cu ADD COLUMN IF NOT EXISTS cccd TEXT;
             ALTER TABLE dan_cu ADD COLUMN IF NOT EXISTS ngay_cap_cccd TEXT;
+            ALTER TABLE dan_cu ADD COLUMN IF NOT EXISTS noi_cap_cccd TEXT;
             ALTER TABLE dan_cu ADD COLUMN IF NOT EXISTS theo_doi_15_49 BOOLEAN NOT NULL DEFAULT TRUE;
 
             -- Khóa sự kiện sinh để mỗi trẻ trong Bảng 1 chỉ làm tăng số con một lần,
@@ -1131,6 +1133,7 @@ app.post("/api/data/:table", async (req, res) => {
                 const historyRows = [];
                 const seen = new Set();
                 let splitHousehold = null;
+                let addressHousehold = null;
                 for (const item of changes) {
                     if (!item || typeof item !== 'object') continue;
                     const field = String(item.field || '').trim();
@@ -1195,25 +1198,86 @@ app.post("/api/data/:table", async (req, res) => {
                     }
                     if (field === 'dia_chi_nhom') {
                         const v = item.value || {};
+                        const selectedAp = String(v.ap || '').trim();
                         const selectedArea = String(v.diabanh || '').trim();
+                        if (!selectedAp || !selectedArea) {
+                            await client.query('ROLLBACK');
+                            return res.status(400).json({ success: false, message: 'Vui lòng chọn Ấp trước, sau đó chọn Địa bàn thuộc Ấp đó.' });
+                        }
+                        const validPair = await client.query(`
+                            SELECT 1 FROM users
+                            WHERE COALESCE(active, 1) = 1
+                              AND LOWER(BTRIM(ap)) = LOWER($1)
+                              AND LOWER(BTRIM(diabanh)) = LOWER($2)
+                              AND BTRIM(diabanh) NOT IN ('00', 'Toàn xã')
+                            LIMIT 1
+                        `, [selectedAp, selectedArea]);
+                        if (!validPair.rowCount) {
+                            await client.query('ROLLBACK');
+                            return res.status(400).json({ success: false, message: 'Địa bàn đã chọn không thuộc Ấp này. Vui lòng chọn lại Ấp và Địa bàn tương ứng.' });
+                        }
                         const areaCodeMatch = selectedArea.match(/^([0-9]{3})\s*,?/);
                         const addressDetail = String(v.dia_chi || '').trim();
                         const newAddress = {
                             diabanh: selectedArea,
                             ap: String(v.ap || '').trim(),
                             ma_xa_phuong: areaCodeMatch ? areaCodeMatch[1] : String(old.ma_xa_phuong || ''),
-                            // Bảo toàn quy tắc mã địa bàn là 3 số đầu của dia_chi.
                             dia_chi: areaCodeMatch ? `${areaCodeMatch[1]}, ${addressDetail}`.trim() : addressDetail
                         };
-                        const oldAddress = {
-                            diabanh: String(old.diabanh || '').trim(),
-                            ap: String(old.ap || '').trim(),
-                            dia_chi: String(old.dia_chi || '').trim().replace(/^\s*\d{3}\s*,\s*/, '')
-                        };
-                        const oldText = [oldAddress.diabanh, oldAddress.ap, oldAddress.dia_chi].filter(Boolean).join(' · ') || '(Trống)';
-                        const newText = [newAddress.diabanh, newAddress.ap, addressDetail].filter(Boolean).join(' · ') || '(Trống)';
-                        if (oldText !== newText) {
-                            Object.assign(updates, newAddress);
+                        const addressText = value => [
+                            String(value.diabanh || '').trim(),
+                            String(value.ap || '').trim(),
+                            String(value.dia_chi || '').trim().replace(/^\s*\d{3}\s*,\s*/, '')
+                        ].filter(Boolean).join(' · ') || '(Trống)';
+                        const oldText = addressText(old);
+                        const newText = addressText(newAddress);
+                        let householdRows = null;
+                        let householdHasChanges = false;
+
+                        if (v.apply_to_household === true) {
+                            const householdCode = String(old.ma_ho || '').trim();
+                            const areaPrefix = String(old.dia_chi || '').trim().match(/^([0-9]{3})/)?.[1]
+                                || String(old.diabanh || '').trim().match(/^([0-9]{3})/)?.[1] || '';
+                            if (!householdCode || !areaPrefix) {
+                                await client.query('ROLLBACK');
+                                return res.status(400).json({ success: false, message: 'Không đủ mã hộ hoặc địa bàn để áp dụng địa chỉ cho cả hộ.' });
+                            }
+                            if (!String(old.household_id || '').trim()) {
+                                const heads = await client.query(`
+                                    SELECT COUNT(*)::int AS total
+                                    FROM dan_cu
+                                    WHERE TRIM(COALESCE(ma_ho,'')) = $1
+                                      AND COALESCE(NULLIF(LEFT(BTRIM(COALESCE(dia_chi,'')),3),''), SUBSTRING(BTRIM(COALESCE(diabanh,'')) FROM '^[0-9]{3}')) = $2
+                                      AND LOWER(BTRIM(COALESCE(quan_he,''))) IN ('chủ hộ','chu ho')
+                                `, [householdCode, areaPrefix]);
+                                if (Number(heads.rows[0]?.total || 0) > 1) {
+                                    await client.query('ROLLBACK');
+                                    return res.status(409).json({ success: false, message: 'Mã hộ này đang gắn với nhiều chủ hộ trong cùng địa bàn và chưa có mã định danh hộ để phân biệt. Vui lòng kiểm tra mã hộ trước khi cập nhật cả hộ.' });
+                                }
+                            }
+                            const householdAddressMembers = await client.query(`
+                                SELECT id, ma_ho, household_id, ho_ten, ngay_sinh, ma_bhyt, gioi_tinh, ap, diabanh, dia_chi
+                                FROM dan_cu
+                                WHERE TRIM(COALESCE(ma_ho,'')) = $1
+                                  AND COALESCE(NULLIF(LEFT(BTRIM(COALESCE(dia_chi,'')),3),''), SUBSTRING(BTRIM(COALESCE(diabanh,'')) FROM '^[0-9]{3}')) = $2
+                                  AND ((NULLIF(BTRIM($3::text),'') IS NOT NULL AND NULLIF(BTRIM(COALESCE(household_id,'')),'') = BTRIM($3::text))
+                                    OR (NULLIF(BTRIM($3::text),'') IS NULL AND NULLIF(BTRIM(COALESCE(household_id,'')),'') IS NULL))
+                                ORDER BY id
+                                FOR UPDATE
+                            `, [householdCode, areaPrefix, String(old.household_id || '').trim()]);
+                            if (!householdAddressMembers.rows.some(member => Number(member.id) === Number(danCuId))) {
+                                await client.query('ROLLBACK');
+                                return res.status(409).json({ success: false, message: 'Không xác định được người được chọn trong hộ hiện tại. Vui lòng tải lại danh sách.' });
+                            }
+                            householdRows = householdAddressMembers.rows;
+                            householdHasChanges = householdRows.some(member => addressText(member) !== newText);
+                        }
+
+                        if (oldText !== newText || householdHasChanges) {
+                            if (oldText !== newText) Object.assign(updates, newAddress);
+                            if (householdRows) {
+                                addressHousehold = { ids: householdRows.map(member => Number(member.id)), rows: householdRows, newAddress };
+                            }
                             historyRows.push({ label: 'Địa chỉ (địa bàn, Ấp, địa chỉ cụ thể)', oldText, newText });
                         }
                         continue;
@@ -1252,6 +1316,18 @@ app.post("/api/data/:table", async (req, res) => {
                     await client.query(`UPDATE dan_cu SET ${setSql}, updated_at = CURRENT_TIMESTAMP WHERE id = $${updateValues.length}`, updateValues);
                 }
 
+                if (addressHousehold) {
+                    const address = addressHousehold.newAddress;
+                    const otherIds = addressHousehold.ids.filter(id => id !== Number(danCuId));
+                    if (otherIds.length) {
+                        await client.query(`
+                            UPDATE dan_cu
+                            SET diabanh=$1, ap=$2, ma_xa_phuong=$3, dia_chi=$4, updated_at=CURRENT_TIMESTAMP
+                            WHERE id = ANY($5::bigint[])
+                        `, [address.diabanh, address.ap, address.ma_xa_phuong, address.dia_chi, otherIds]);
+                    }
+                }
+
                 if (splitHousehold) {
                     for (const personId of splitHousehold.ids) {
                         const relation = personId === Number(danCuId)
@@ -1268,27 +1344,50 @@ app.post("/api/data/:table", async (req, res) => {
                 const apLog = updatedPerson.ap || user.ap || '';
                 const areaLog = updatedPerson.diabanh || user.diabanh || '';
                 for (const change of historyRows) {
-                    const insertedTable6 = await client.query(`
-                        INSERT INTO table_6
-                        (dan_cu_id, ho_so, ho_ten, ngay_sinh, so_the_bhyt, gioi_tinh,
-                         thong_tin_cu, thong_tin_moi, ap, diabanh, nguoi_nhap, created_at, ghi_chu, ghi_chu_ma_ho)
-                        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-                        RETURNING id
-                    `, [danCuId, updatedPerson.ma_ho || '', updatedPerson.ho_ten || '', updatedPerson.ngay_sinh || '', updatedPerson.ma_bhyt || '', updatedPerson.gioi_tinh || '',
-                        `${change.label === 'Tách hộ' ? change.oldText : `${change.label}: ${change.oldText}`}`, `${change.label === 'Tách hộ' ? change.newText : `${change.label}: ${change.newText}`}`, apLog, areaLog,
-                        `${user.fullname} (${user.username})`, createdAt, [change.note, dataObj.ghi_chu].filter(Boolean).join('. '),
-                        change.label === 'Tách hộ' ? String(splitHousehold?.ghiChuMaHoMoi || '') : '']);
-                    if (change.label === 'Tách hộ' && splitHousehold) {
-                        const table6RowId = insertedTable6.rows[0]?.id;
-                        for (const memberId of splitHousehold.ids.filter(id => Number(id) !== Number(danCuId))) {
-                            await client.query(`INSERT INTO table_6_thanh_vien (table_6_id, dan_cu_id, vai_tro)
-                                VALUES ($1,$2,'THANH_VIEN_TACH_CUNG') ON CONFLICT (table_6_id, dan_cu_id) DO NOTHING`, [table6RowId, memberId]);
+                    // Nếu đổi địa chỉ cho cả hộ, ghi một dòng lịch sử riêng cho từng
+                    // thành viên để tra cứu không chỉ hiện người đại diện được chọn.
+                    const targets = change.label === 'Địa chỉ (địa bàn, Ấp, địa chỉ cụ thể)' && addressHousehold
+                        ? addressHousehold.rows
+                        : [old];
+                    for (const target of targets) {
+                        const targetId = Number(target.id);
+                        const targetUpdated = targetId === Number(danCuId)
+                            ? updatedPerson
+                            : { ...target, ...addressHousehold?.newAddress };
+                        const targetOldAddress = targetId === Number(danCuId)
+                            ? change.oldText
+                            : [target.diabanh, target.ap, String(target.dia_chi || '').trim().replace(/^\s*\d{3}\s*,\s*/, '')].filter(Boolean).join(' · ') || '(Trống)';
+                        const targetNewAddress = targetId === Number(danCuId)
+                            ? change.newText
+                            : [targetUpdated.diabanh, targetUpdated.ap, String(targetUpdated.dia_chi || '').trim().replace(/^\s*\d{3}\s*,\s*/, '')].filter(Boolean).join(' · ') || change.newText;
+                        if (change.label === 'Địa chỉ (địa bàn, Ấp, địa chỉ cụ thể)' && targetOldAddress === targetNewAddress) continue;
+                        const insertedTable6 = await client.query(`
+                            INSERT INTO table_6
+                            (dan_cu_id, ho_so, ho_ten, ngay_sinh, so_the_bhyt, gioi_tinh,
+                             thong_tin_cu, thong_tin_moi, ap, diabanh, nguoi_nhap, created_at, ghi_chu, ghi_chu_ma_ho)
+                            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+                            RETURNING id
+                        `, [targetId, targetUpdated.ma_ho || '', targetUpdated.ho_ten || '', targetUpdated.ngay_sinh || '', targetUpdated.ma_bhyt || '', targetUpdated.gioi_tinh || '',
+                            `${change.label === 'Tách hộ' ? change.oldText : `${change.label}: ${targetOldAddress}`}`, `${change.label === 'Tách hộ' ? change.newText : `${change.label}: ${targetNewAddress}`}`, targetUpdated.ap || apLog, targetUpdated.diabanh || areaLog,
+                            `${user.fullname} (${user.username})`, createdAt, [change.note, dataObj.ghi_chu].filter(Boolean).join('. '),
+                            change.label === 'Tách hộ' ? String(splitHousehold?.ghiChuMaHoMoi || '') : '']);
+                        if (change.label === 'Tách hộ' && splitHousehold) {
+                            const table6RowId = insertedTable6.rows[0]?.id;
+                            for (const memberId of splitHousehold.ids.filter(id => Number(id) !== Number(danCuId))) {
+                                await client.query(`INSERT INTO table_6_thanh_vien (table_6_id, dan_cu_id, vai_tro)
+                                    VALUES ($1,$2,'THANH_VIEN_TACH_CUNG') ON CONFLICT (table_6_id, dan_cu_id) DO NOTHING`, [table6RowId, memberId]);
+                            }
                         }
                     }
                 }
                 await client.query('COMMIT');
                 await logAction(user, 'Cập nhật thông tin dân cư qua Bảng 6', Number(danCuId), `[${old.ho_ten}] ${historyRows.map(x => x.label).join(', ')}`);
-                return res.json({ success: true, message: splitHousehold ? `Đã tách ${splitHousehold.ids.length} người sang hộ ${splitHousehold.newHousehold} và ghi 1 dòng lịch sử vào Bảng 6.` : `Đã cập nhật hồ sơ dân cư và ghi nhận ${historyRows.length} nội dung thay đổi vào Bảng 6.`, updated: historyRows.length });
+                const message = splitHousehold
+                    ? `Đã tách ${splitHousehold.ids.length} người sang hộ ${splitHousehold.newHousehold} và ghi 1 dòng lịch sử vào Bảng 6.`
+                    : (addressHousehold
+                        ? `Đã cập nhật địa chỉ cho ${addressHousehold.ids.length} nhân khẩu trong hộ và ghi lịch sử riêng cho từng người.`
+                        : `Đã cập nhật hồ sơ dân cư và ghi nhận ${historyRows.length} nội dung thay đổi vào Bảng 6.`);
+                return res.json({ success: true, message, updated: historyRows.length, household_updated: addressHousehold?.ids.length || 0 });
             } catch (table6Error) {
                 try { await client.query('ROLLBACK'); } catch (_) {}
                 throw table6Error;
@@ -3064,23 +3163,64 @@ app.post('/api/admin/import-dan-cu', upload.single('excel'), async (req, res) =>
 });
 
 // ============================================================
-// QUẢN LÝ DÂN CƯ - CHỈ ADMIN VÀ LÃNH ĐẠO
+// QUẢN LÝ DÂN CƯ
+// Admin/lãnh đạo được quản trị toàn xã; CTV chỉ được xem địa bàn được giao.
 // ============================================================
+function laCongTacVien(user) {
+    const role = chuanHoaVaiTro(user);
+    return role.startsWith('congtacvien') || role.startsWith('ctv') || role === 'collaborator';
+}
+
+function maDiaBanCongTacVien(user) {
+    return String(user?.diabanh || '').trim().match(/^(\d{3})/)?.[1] || '';
+}
+
 function requireQuanLyDanCu(req, res, next) {
     if (!req.session.user) {
         return res.status(401).json({ success: false, message: 'Chưa đăng nhập.' });
     }
+    const user = req.session.user;
+    if (laQuanLyToanXa(user)) return next();
+    if (laCongTacVien(user) && maDiaBanCongTacVien(user)) return next();
+    return res.status(403).json({ success: false, message: 'Chức năng này chỉ dành cho quản trị, lãnh đạo hoặc cộng tác viên đã được phân công địa bàn.' });
+}
+
+function requireSuaDanCu(req, res, next) {
+    if (!req.session.user) return res.status(401).json({ success: false, message: 'Chưa đăng nhập.' });
     if (!laQuanLyToanXa(req.session.user)) {
-        return res.status(403).json({ success: false, message: 'Bạn không có quyền quản lý dân cư.' });
+        return res.status(403).json({ success: false, message: 'Tài khoản cộng tác viên chỉ được xem danh sách dân cư trong địa bàn được phân công.' });
     }
     next();
+}
+
+function isValidCmndCccd(value) {
+    return /^(?:\d{9}|\d{12})$/.test(String(value ?? '').replace(/\s+/g, '').trim());
+}
+
+function normalizeCccdIssueDate(value) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+    let year, month, day;
+    let match = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T)/);
+    if (match) [, year, month, day] = match;
+    else {
+        match = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (match) [, day, month, year] = match;
+    }
+    if (!year) throw new Error('Ngày cấp CMND/CCCD phải nhập đầy đủ ngày, tháng, năm.');
+    const y = Number(year), m = Number(month), d = Number(day);
+    const check = new Date(Date.UTC(y, m - 1, d));
+    if (!y || check.getUTCFullYear() !== y || check.getUTCMonth() !== m - 1 || check.getUTCDate() !== d) {
+        throw new Error('Ngày cấp CCCD không hợp lệ. Vui lòng kiểm tra ngày, tháng, năm.');
+    }
+    return `${String(y).padStart(4,'0')}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 }
 
 const danCuEditableFields = [
     'ho_ten', 'ma_ho', 'household_id', 'quan_he', 'gioi_tinh', 'ngay_sinh',
     'dan_toc', 'hoc_van', 'hon_nhan', 'tinh_trang_cu_tru', 'ma_bhyt',
     'dia_chi', 'diabanh', 'ma_xa_phuong', 'trang_thai_cu_tru', 'cccd',
-    'ngay_cap_cccd', 'so_con', 'nam_sinh_con', 'theo_doi_15_49'
+    'ngay_cap_cccd', 'noi_cap_cccd', 'so_con', 'nam_sinh_con', 'theo_doi_15_49'
 ];
 
 function danCuPayload(body = {}) {
@@ -3103,6 +3243,12 @@ function danCuPayload(body = {}) {
             value[key] = value[key] === null ? null : String(value[key]).trim();
         }
     }
+    if (value.cccd !== undefined && value.cccd !== null) {
+        value.cccd = String(value.cccd).replace(/\s+/g, '').trim();
+    }
+    if (value.ngay_cap_cccd !== undefined) {
+        value.ngay_cap_cccd = normalizeCccdIssueDate(value.ngay_cap_cccd);
+    }
     if (!value.ho_ten) throw new Error('Vui lòng nhập họ và tên.');
     return value;
 }
@@ -3110,6 +3256,11 @@ function danCuPayload(body = {}) {
 // Danh mục Ấp/địa bàn lấy từ users; chỉ đọc một lần khi trang quản lý mở.
 app.get('/api/admin/dan-cu/filters', requireQuanLyDanCu, async (req, res) => {
     try {
+        if (laCongTacVien(req.session.user)) {
+            const user = req.session.user;
+            const code = maDiaBanCongTacVien(user);
+            return res.json({ success: true, options: [{ ap: String(user.ap || '').trim(), diabanh: String(user.diabanh || '').trim(), ma_dia_ban: code }].filter(x => x.ap || x.diabanh) });
+        }
         const result = await pool.query(`
             SELECT DISTINCT BTRIM(ap) AS ap, BTRIM(diabanh) AS diabanh,
                    SUBSTRING(BTRIM(diabanh) FROM '^[0-9]{3}') AS ma_dia_ban
@@ -3170,9 +3321,14 @@ app.get('/api/admin/dan-cu/thong-bao', requireQuanLyDanCu, async (req, res) => {
             ORDER BY h.ngay_su_kien DESC NULLS LAST, h.created_at DESC NULLS LAST, h.id DESC
             LIMIT 1
         ), d.su_kien_cuoi, '')`;
+        const ctvArea = laCongTacVien(req.session.user) ? maDiaBanCongTacVien(req.session.user) : '';
+        if (laCongTacVien(req.session.user) && !ctvArea) return res.status(403).json({ success: false, message: 'Tài khoản chưa được cấu hình địa bàn hợp lệ.' });
+        const areaScope = ctvArea ? `AND (LEFT(BTRIM(COALESCE(d.dia_chi,'')),3) = $1 OR SUBSTRING(BTRIM(COALESCE(d.diabanh,'')) FROM '^[0-9]{3}') = $1)` : '';
+        const scopeParams = ctvArea ? [ctvArea] : [];
         const activeOnly = `
             UPPER(BTRIM(COALESCE(d.trang_thai_cu_tru,''))) NOT IN ('DA_CHUYEN_DI','DA_KHAI_TU','DA_CHET')
-            AND UPPER(BTRIM(${latestEventD})) NOT IN ('CHUYEN_DI','DA_CHUYEN_DI','KHAI_TU','DA_KHAI_TU','DA_CHET')`;
+            AND UPPER(BTRIM(${latestEventD})) NOT IN ('CHUYEN_DI','DA_CHUYEN_DI','KHAI_TU','DA_KHAI_TU','DA_CHET')
+            ${areaScope}`;
         const childType = `CASE
             WHEN LOWER(REGEXP_REPLACE(BTRIM(COALESCE(d.ho_ten,'')), '[[:space:]]+', ' ', 'g')) IN ('gái','gai','bé gái','be gái','bé gai','be gai') THEN 'BE_GAI'
             WHEN LOWER(REGEXP_REPLACE(BTRIM(COALESCE(d.ho_ten,'')), '[[:space:]]+', ' ', 'g')) IN ('trai','bé trai','be trai') THEN 'BE_TRAI'
@@ -3189,7 +3345,7 @@ app.get('/api/admin/dan-cu/thong-bao', requireQuanLyDanCu, async (req, res) => {
                 FROM dan_cu d
                 WHERE ${activeOnly}
             ) x WHERE child_type IS NOT NULL
-        `);
+        `, scopeParams);
         const childRows = await pool.query(`
             SELECT d.id, d.ho_ten, d.ma_ho, d.ngay_sinh, ${childType.replaceAll('d.', 'd.')} AS loai,
                    LEFT(BTRIM(COALESCE(d.dia_chi,'')),3) AS ma_dia_ban,
@@ -3202,7 +3358,7 @@ app.get('/api/admin/dan-cu/thong-bao', requireQuanLyDanCu, async (req, res) => {
             WHERE ${activeOnly} AND (${childType}) IS NOT NULL
             ORDER BY ma_dia_ban, d.ma_ho, d.ho_ten
             LIMIT 500
-        `);
+        `, scopeParams);
         const duplicateRows = await pool.query(`
             WITH active_people AS (
                 SELECT d.id, BTRIM(COALESCE(d.ma_ho,'')) AS ma_ho,
@@ -3233,7 +3389,7 @@ app.get('/api/admin/dan-cu/thong-bao', requireQuanLyDanCu, async (req, res) => {
             SELECT *, COUNT(*) OVER()::int AS total_groups FROM grouped
             ORDER BY ma_dia_ban, ma_ho
             LIMIT 300
-        `);
+        `, scopeParams);
         res.json({
             success: true,
             tre: childSummary.rows[0] || { be_gai: 0, be_trai: 0, chua_dat_ten: 0, tong_tre: 0 },
@@ -3250,8 +3406,11 @@ app.get('/api/admin/dan-cu/thong-bao', requireQuanLyDanCu, async (req, res) => {
 app.get('/api/admin/dan-cu', requireQuanLyDanCu, async (req, res) => {
     try {
         const q = String(req.query.q || '').trim();
-        const ap = String(req.query.ap || '').trim();
-        const maDiaBan = String(req.query.diabanh || '').trim().match(/^\d{3}/)?.[0] || '';
+        const isScopedCTV = laCongTacVien(req.session.user);
+        const forcedAreaCode = isScopedCTV ? maDiaBanCongTacVien(req.session.user) : '';
+        if (isScopedCTV && !forcedAreaCode) return res.status(403).json({ success: false, message: 'Tài khoản chưa được cấu hình địa bàn hợp lệ.' });
+        const ap = isScopedCTV ? '' : String(req.query.ap || '').trim();
+        const maDiaBan = isScopedCTV ? forcedAreaCode : (String(req.query.diabanh || '').trim().match(/^\d{3}/)?.[0] || '');
         const page = Math.max(1, parseInt(req.query.page, 10) || 1);
         // Mỗi trang lấy tối đa 20 HỘ; các thành viên trong cùng hộ không bị tách trang.
         const householdLimit = Math.min(100, Math.max(5, parseInt(req.query.limit, 10) || 20));
@@ -3264,7 +3423,7 @@ app.get('/api/admin/dan-cu', requireQuanLyDanCu, async (req, res) => {
         }
         if (maDiaBan) {
             params.push(maDiaBan);
-            conditions.push(`LEFT(BTRIM(COALESCE(dia_chi, '')), 3) = $${params.length}`);
+            conditions.push(`(LEFT(BTRIM(COALESCE(dia_chi, '')), 3) = $${params.length} OR SUBSTRING(BTRIM(COALESCE(diabanh, '')) FROM '^[0-9]{3}') = $${params.length})`);
         } else if (ap) {
             const areaResult = await pool.query(`
                 SELECT DISTINCT SUBSTRING(BTRIM(diabanh) FROM '^[0-9]{3}') AS ma_dia_ban
@@ -3275,7 +3434,7 @@ app.get('/api/admin/dan-cu', requireQuanLyDanCu, async (req, res) => {
             const codes = areaResult.rows.map(r => r.ma_dia_ban).filter(code => /^\d{3}$/.test(String(code || '')));
             if (codes.length) {
                 params.push(codes);
-                conditions.push(`LEFT(BTRIM(COALESCE(dia_chi, '')), 3) = ANY($${params.length}::text[])`);
+                conditions.push(`(LEFT(BTRIM(COALESCE(dia_chi, '')), 3) = ANY($${params.length}::text[]) OR SUBSTRING(BTRIM(COALESCE(diabanh, '')) FROM '^[0-9]{3}') = ANY($${params.length}::text[]))`);
             } else {
                 conditions.push('1 = 0');
             }
@@ -3301,9 +3460,9 @@ app.get('/api/admin/dan-cu', requireQuanLyDanCu, async (req, res) => {
         const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
         // Khóa hộ = mã địa bàn (3 số đầu dia_chi) + mã hộ.
         // Hồ sơ thiếu mã hộ được xem là một nhóm riêng để không ghép nhầm người.
-        const areaExpr = `CASE WHEN LEFT(BTRIM(COALESCE(dia_chi, '')), 3) ~ '^[0-9]{3}$' THEN LEFT(BTRIM(COALESCE(dia_chi, '')), 3) ELSE '#NOAREA:' || id::text END`;
+        const areaExpr = `CASE WHEN COALESCE(NULLIF(LEFT(BTRIM(COALESCE(dia_chi, '')), 3), ''), SUBSTRING(BTRIM(COALESCE(diabanh, '')) FROM '^[0-9]{3}')) ~ '^[0-9]{3}$' THEN COALESCE(NULLIF(LEFT(BTRIM(COALESCE(dia_chi, '')), 3), ''), SUBSTRING(BTRIM(COALESCE(diabanh, '')) FROM '^[0-9]{3}')) ELSE '#NOAREA:' || id::text END`;
         const householdExpr = `COALESCE(NULLIF(BTRIM(ma_ho), ''), '#ID:' || id::text)`;
-        const areaExprD = areaExpr.replaceAll('dia_chi', 'd.dia_chi').replaceAll('id', 'd.id');
+        const areaExprD = areaExpr.replaceAll('dia_chi', 'd.dia_chi').replaceAll('diabanh', 'd.diabanh').replaceAll('id', 'd.id');
         const householdExprD = householdExpr.replaceAll('ma_ho', 'd.ma_ho').replaceAll('id', 'd.id');
         const latestEventD = `COALESCE((
             SELECT h.su_kien FROM lich_su_bien_dong_dan_cu h
@@ -3358,12 +3517,12 @@ app.get('/api/admin/dan-cu', requireQuanLyDanCu, async (req, res) => {
             )
             SELECT d.id, d.ho_ten, d.ma_ho, d.household_id, d.quan_he, d.gioi_tinh, d.ngay_sinh,
                    d.dan_toc, d.hoc_van, d.hon_nhan, d.tinh_trang_cu_tru, d.ma_bhyt, d.dia_chi,
-                   d.diabanh, d.ma_xa_phuong, d.trang_thai_cu_tru, d.cccd, d.ngay_cap_cccd,
+                   d.diabanh, d.ma_xa_phuong, d.trang_thai_cu_tru, d.cccd, d.ngay_cap_cccd, d.noi_cap_cccd,
                    d.so_con, d.nam_sinh_con, COALESCE(d.theo_doi_15_49, TRUE) AS theo_doi_15_49,
                    ph.ma_dia_ban AS _ma_dia_ban
             FROM page_households ph
             JOIN dan_cu d
-              ON ${areaExpr.replaceAll('dia_chi','d.dia_chi').replaceAll('id','d.id')} = ph.ma_dia_ban
+              ON ${areaExpr.replaceAll('dia_chi','d.dia_chi').replaceAll('diabanh','d.diabanh').replaceAll('id','d.id')} = ph.ma_dia_ban
              AND ${householdExpr.replaceAll('ma_ho','d.ma_ho').replaceAll('id','d.id')} = ph.household_key
             ORDER BY ph.ma_dia_ban ASC NULLS LAST, ph.ma_ho_sort ASC NULLS LAST, ph.first_id ASC,
               CASE
@@ -3384,6 +3543,8 @@ app.get('/api/admin/dan-cu', requireQuanLyDanCu, async (req, res) => {
             deadPopulation: summaryCounts.dead_population || 0,
             movedHouseholds: summaryCounts.moved_households || 0,
             movedPopulation: summaryCounts.moved_population || 0,
+            can_edit: !isScopedCTV,
+            can_update_cccd: true,
             totalPages: Math.max(1, Math.ceil((summaryCounts.total_listed_households || 0) / householdLimit)) });
     } catch (err) {
         console.error('Lỗi tải danh sách quản lý dân cư:', err);
@@ -3391,11 +3552,62 @@ app.get('/api/admin/dan-cu', requireQuanLyDanCu, async (req, res) => {
     }
 });
 
-app.post('/api/admin/dan-cu', requireQuanLyDanCu, async (req, res) => {
+// CTV được bổ sung riêng thông tin CCCD trong đúng địa bàn được giao.
+// Endpoint không chấp nhận các trường dân cư khác để tránh mở quyền sửa hồ sơ.
+app.put('/api/admin/dan-cu/:id/cccd', requireQuanLyDanCu, async (req, res) => {
+    try {
+        const id = String(req.params.id || '').trim();
+        if (!/^\d+$/.test(id)) return res.status(400).json({ success: false, message: 'ID dân cư không hợp lệ.' });
+        const cccd = String(req.body.cccd || '').replace(/\s+/g, '').trim();
+        if (!isValidCmndCccd(cccd)) {
+            return res.status(400).json({ success: false, message: 'Số CMND/CCCD phải gồm đúng 9 hoặc 12 chữ số.' });
+        }
+        let ngayCap;
+        try { ngayCap = normalizeCccdIssueDate(req.body.ngay_cap_cccd); }
+        catch (dateError) { return res.status(400).json({ success: false, message: dateError.message }); }
+        if (!ngayCap) return res.status(400).json({ success: false, message: 'Vui lòng chọn đầy đủ ngày, tháng và năm cấp CMND/CCCD.' });
+        const noiCap = String(req.body.noi_cap_cccd || '').trim().slice(0, 255);
+
+        const current = await pool.query(
+            'SELECT id, ho_ten, dia_chi, diabanh FROM dan_cu WHERE id = $1', [id]
+        );
+        if (!current.rowCount) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ dân cư.' });
+        const user = req.session.user;
+        if (laCongTacVien(user)) {
+            const withinAssignedArea = thuocDiaBanCongTacVien(user, current.rows[0].dia_chi)
+                || thuocDiaBanCongTacVien(user, current.rows[0].diabanh);
+            if (!withinAssignedArea) {
+                return res.status(403).json({ success: false, message: 'Bạn chỉ được bổ sung CCCD cho nhân khẩu thuộc địa bàn được phân công.' });
+            }
+        } else if (!laQuanLyToanXa(user)) {
+            return res.status(403).json({ success: false, message: 'Tài khoản không có quyền bổ sung CCCD.' });
+        }
+
+        const duplicate = await pool.query(
+            `SELECT id, ho_ten FROM dan_cu WHERE BTRIM(COALESCE(cccd,'')) = $1 AND id <> $2 LIMIT 1`,
+            [cccd, id]
+        );
+        if (duplicate.rowCount) {
+            return res.status(409).json({ success: false, message: `Số CCCD này đã được gắn với nhân khẩu ${duplicate.rows[0].ho_ten}. Vui lòng kiểm tra lại.` });
+        }
+
+        await pool.query(
+            `UPDATE dan_cu SET cccd = $1, ngay_cap_cccd = $2, noi_cap_cccd = NULLIF($3,''), updated_at = CURRENT_TIMESTAMP WHERE id = $4`,
+            [cccd, ngayCap, noiCap, id]
+        );
+        await logAction(user, 'BỔ SUNG CCCD DÂN CƯ', id, current.rows[0].ho_ten);
+        return res.json({ success: true, message: `Đã bổ sung CCCD cho ${current.rows[0].ho_ten}.` });
+    } catch (err) {
+        console.error('Lỗi bổ sung nhanh CCCD dân cư:', err);
+        return res.status(500).json({ success: false, message: 'Không thể bổ sung CCCD lúc này.', error: err.message });
+    }
+});
+
+app.post('/api/admin/dan-cu', requireSuaDanCu, async (req, res) => {
     try {
         const data = danCuPayload(req.body);
-        if (String(data.cccd || '').trim() && !/^\d{12}$/.test(String(data.cccd).trim())) {
-            return res.status(400).json({ success: false, message: 'Số CCCD phải gồm đúng 12 chữ số.' });
+        if (String(data.cccd || '').trim() && !isValidCmndCccd(data.cccd)) {
+            return res.status(400).json({ success: false, message: 'Số CMND/CCCD phải gồm đúng 9 hoặc 12 chữ số.' });
         }
         if (!String(data.ma_xa_phuong || '').trim()) {
             const commune = await getActiveCommune();
@@ -3417,7 +3629,7 @@ app.post('/api/admin/dan-cu', requireQuanLyDanCu, async (req, res) => {
     }
 });
 
-app.put('/api/admin/dan-cu/:id', requireQuanLyDanCu, async (req, res) => {
+app.put('/api/admin/dan-cu/:id', requireSuaDanCu, async (req, res) => {
     try {
         const id = String(req.params.id || '').trim();
         if (!/^\d+$/.test(id)) return res.status(400).json({ success: false, message: 'ID dân cư không hợp lệ.' });
@@ -3426,8 +3638,8 @@ app.put('/api/admin/dan-cu/:id', requireQuanLyDanCu, async (req, res) => {
         if (!oldRecord.rowCount) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ dân cư.' });
         const oldCccd = String(oldRecord.rows[0].cccd || '').trim();
         const newCccd = String(data.cccd || '').trim();
-        if (newCccd && newCccd !== oldCccd && !/^\d{12}$/.test(newCccd)) {
-            return res.status(400).json({ success: false, message: 'Số CCCD mới phải gồm đúng 12 chữ số.' });
+        if (newCccd && newCccd !== oldCccd && !isValidCmndCccd(newCccd)) {
+            return res.status(400).json({ success: false, message: 'Số CMND/CCCD mới phải gồm đúng 9 hoặc 12 chữ số.' });
         }
         const columns = Object.keys(data);
         const sets = columns.map((key, i) => `${key} = $${i + 1}`);
@@ -3446,7 +3658,7 @@ app.put('/api/admin/dan-cu/:id', requireQuanLyDanCu, async (req, res) => {
     }
 });
 
-app.delete('/api/admin/dan-cu/:id', requireQuanLyDanCu, async (req, res) => {
+app.delete('/api/admin/dan-cu/:id', requireSuaDanCu, async (req, res) => {
     const client = await pool.connect();
     try {
         const id = String(req.params.id || '').trim();
@@ -3471,22 +3683,23 @@ app.delete('/api/admin/dan-cu/:id', requireQuanLyDanCu, async (req, res) => {
     }
 });
 
-// Danh mục phục vụ Bảng 6: lấy địa bàn và Ấp đang được khai báo trên tài khoản USER.
+// Danh mục phục vụ Bảng 6: giữ nguyên quan hệ giữa từng Ấp và Địa bàn
+// đã được khai báo trên tài khoản USER; không trả hai danh sách rời dễ ghép nhầm.
 app.get('/api/table6/options', async (req, res) => {
     if (!req.session.user) return res.status(401).json({ success: false, message: 'Chưa đăng nhập.' });
     try {
         const result = await pool.query(`
             SELECT DISTINCT
-                NULLIF(BTRIM(diabanh), '') AS diabanh,
-                NULLIF(BTRIM(ap), '') AS ap
+                BTRIM(ap) AS ap,
+                BTRIM(diabanh) AS diabanh
             FROM users
             WHERE COALESCE(active, 1) = 1
-              AND (NULLIF(BTRIM(diabanh), '') IS NOT NULL OR NULLIF(BTRIM(ap), '') IS NOT NULL)
-            ORDER BY diabanh NULLS LAST, ap NULLS LAST
+              AND NULLIF(BTRIM(ap), '') IS NOT NULL
+              AND NULLIF(BTRIM(diabanh), '') IS NOT NULL
+              AND BTRIM(diabanh) NOT IN ('00', 'Toàn xã')
+            ORDER BY ap, diabanh
         `);
-        const diabanh = [...new Set(result.rows.map(r => r.diabanh).filter(Boolean))];
-        const ap = [...new Set(result.rows.map(r => r.ap).filter(Boolean))];
-        res.json({ success: true, diabanh, ap });
+        res.json({ success: true, pairs: result.rows });
     } catch (err) {
         console.error('Lỗi lấy danh mục Bảng 6:', err);
         res.status(500).json({ success: false, message: err.message });
@@ -3498,19 +3711,39 @@ app.get('/api/table6/household-members', async (req, res) => {
     try {
         const personId = Number(req.query.dan_cu_id);
         if (!Number.isInteger(personId) || personId <= 0) return res.status(400).json({ success: false, message: 'Mã hồ sơ không hợp lệ.' });
-        const person = await pool.query('SELECT id, ma_ho, dia_chi FROM dan_cu WHERE id = $1', [personId]);
+        const person = await pool.query('SELECT id, ma_ho, household_id, dia_chi, diabanh, ap FROM dan_cu WHERE id = $1', [personId]);
         if (!person.rowCount) return res.status(404).json({ success: false, message: 'Không tìm thấy người dân.' });
+        if (!laQuanLyToanXa(req.session.user) && !thuocDiaBanCongTacVien(req.session.user, person.rows[0].dia_chi || person.rows[0].diabanh)) {
+            return res.status(403).json({ success: false, message: 'Bạn không có quyền xem thành viên hộ thuộc địa bàn khác.' });
+        }
+        if (!laQuanLyToanXa(req.session.user) && req.session.user.ap && person.rows[0].ap && String(req.session.user.ap).trim() !== String(person.rows[0].ap).trim()) {
+            return res.status(403).json({ success: false, message: 'Bạn không có quyền xem thành viên hộ thuộc Ấp khác.' });
+        }
         const household = String(person.rows[0].ma_ho || '').trim();
         if (!household) return res.json({ success: true, members: [] });
-        const areaPrefix = String(person.rows[0].dia_chi || '').trim().split(',')[0].trim();
+        const areaPrefix = String(person.rows[0].dia_chi || '').trim().match(/^([0-9]{3})/)?.[1] || String(person.rows[0].diabanh || '').trim().match(/^([0-9]{3})/)?.[1] || '';
+        if (!String(person.rows[0].household_id || '').trim()) {
+            const heads = await pool.query(`
+                SELECT COUNT(*)::int AS total
+                FROM dan_cu
+                WHERE TRIM(COALESCE(ma_ho,'')) = $1
+                  AND COALESCE(NULLIF(LEFT(BTRIM(COALESCE(dia_chi,'')),3),''), SUBSTRING(BTRIM(COALESCE(diabanh,'')) FROM '^[0-9]{3}')) = $2
+                  AND LOWER(BTRIM(COALESCE(quan_he,''))) IN ('chủ hộ','chu ho')
+            `, [household, areaPrefix]);
+            if (Number(heads.rows[0]?.total || 0) > 1) {
+                return res.status(409).json({ success: false, message: 'Mã hộ này có nhiều chủ hộ nhưng chưa có mã định danh hộ để phân biệt. Không thể xác định thành viên đi kèm an toàn.' });
+            }
+        }
         const result = await pool.query(`
             SELECT id, ho_ten, quan_he, ngay_sinh
             FROM dan_cu
             WHERE TRIM(COALESCE(ma_ho,'')) = $1
               AND id <> $2
-              AND split_part(TRIM(COALESCE(dia_chi,'')), ',', 1) = $3
+              AND COALESCE(NULLIF(LEFT(BTRIM(COALESCE(dia_chi,'')),3),''), SUBSTRING(BTRIM(COALESCE(diabanh,'')) FROM '^[0-9]{3}')) = $3
+              AND ((NULLIF(BTRIM($4::text),'') IS NOT NULL AND NULLIF(BTRIM(COALESCE(household_id,'')),'') = BTRIM($4::text))
+                OR (NULLIF(BTRIM($4::text),'') IS NULL AND NULLIF(BTRIM(COALESCE(household_id,'')),'') IS NULL))
             ORDER BY ho_ten, id
-        `, [household, personId, areaPrefix]);
+        `, [household, personId, areaPrefix, String(person.rows[0].household_id || '').trim()]);
         res.json({ success: true, members: result.rows });
     } catch (err) {
         console.error('Lỗi tải thành viên hộ cho Bảng 6:', err);
@@ -3527,13 +3760,13 @@ app.get('/api/dan-cu/search', async (req, res) => {
         const mode = String(req.query.mode || 'all').toLowerCase();
         const user = req.session.user;
         const roleKey = chuanHoaVaiTro(user);
-        const isCollaborator = ['congtacvien', 'congtacvienap', 'congtacvienxa', 'ctv', 'collaborator'].includes(roleKey);
+        const isCollaborator = laCongTacVien(user);
         // Khu vực của CTV được xác định bằng số đứng trước dấu phẩy, ví dụ "142, Xã ...".
         // Giới hạn ở phía máy chủ để CTV không thể xem khu vực khác bằng cách sửa tham số request.
         const areaPrefix = String(user?.diabanh || '').trim().split(',')[0].trim();
         const params = [`%${q}%`];
         let sql = `
-            SELECT d.id, d.ho_ten, d.ma_ho, d.quan_he, d.ngay_sinh, d.gioi_tinh, d.dan_toc, d.hon_nhan, d.ma_bhyt,
+            SELECT d.id, d.ho_ten, d.ma_ho, d.household_id, d.quan_he, d.ngay_sinh, d.gioi_tinh, d.dan_toc, d.hon_nhan, d.ma_bhyt,
                    d.so_con, d.dia_chi, d.diabanh, d.ap, d.trang_thai_cu_tru,
                    CASE
                      WHEN UPPER(TRIM(COALESCE(d.trang_thai_cu_tru, ''))) IN ('DA_KHAI_TU','DA_CHET')
@@ -3562,9 +3795,9 @@ app.get('/api/dan-cu/search', async (req, res) => {
             WHERE (d.ho_ten ILIKE $1 OR d.ma_ho ILIKE $1 OR d.ma_bhyt ILIKE $1)
         `;
         if (isCollaborator) {
-            if (!/^\d+$/.test(areaPrefix)) return res.json([]);
+            if (!/^\d{3}$/.test(areaPrefix)) return res.json([]);
             params.push(areaPrefix);
-            sql += ` AND split_part(trim(COALESCE(d.dia_chi, '')), ',', 1) = $${params.length}`;
+            sql += ` AND (LEFT(BTRIM(COALESCE(d.dia_chi,'')),3) = $${params.length} OR SUBSTRING(BTRIM(COALESCE(d.diabanh,'')) FROM '^[0-9]{3}') = $${params.length})`;
         }
         if (mode === 'woman') {
             sql += `
@@ -3679,6 +3912,28 @@ function getDefaultResidentAddressFromSessionUser(user = {}) {
     const xa = xaRaw ? (/^xã\s*/i.test(xaRaw) ? xaRaw : `Xã ${xaRaw}`) : '';
     const tinh = tinhRaw ? (/^(tỉnh|thành phố)\s*/i.test(tinhRaw) ? tinhRaw : `Tỉnh ${tinhRaw}`) : '';
     return [diaBan, ap, xa, tinh].filter(Boolean).join(', ');
+}
+function normalizeHouseholdRelation(value) {
+    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[đĐ]/g, 'd').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+function isHouseholdHeadRelation(value) {
+    const key = normalizeHouseholdRelation(value);
+    return key === 'chu ho' || key.startsWith('chu ho ');
+}
+function isParentRelation(value) {
+    const key = normalizeHouseholdRelation(value).replace(/[^a-z]/g, '');
+    return ['bo', 'me', 'cha', 'bo/me', 'cha/me', 'bome', 'chame'].includes(key);
+}
+function isAllowedTable1ChildRelation(value) {
+    return ['con de', 'chau', 'co quan he khac'].includes(normalizeHouseholdRelation(value));
+}
+function assertTable1MotherRelation(details) {
+    if (isHouseholdHeadRelation(details?.quan_he)) {
+        const error = new Error('Quan hệ với chủ hộ của người mẹ mới bổ sung không thể là “Chủ hộ”. Vui lòng chọn quan hệ thành viên phù hợp.');
+        error.status = 400;
+        throw error;
+    }
 }
 async function insertResidentForSharedHousehold(client, req, maHo, fullName, details, source) {
     const rawDetails = details && typeof details === 'object' ? details : {};
@@ -3825,6 +4080,9 @@ app.post('/api/admin/sync-phu-nu-from-table1', async (req, res) => {
         const tenMe = String(ho_ten_me || '').trim().replace(/\s+/g, ' ');
         const tenCon = String(ho_ten_con || '').trim().replace(/\s+/g, ' ');
         if (!maHo || !tenMe || !tenCon || !String(ngay_sinh_con || '').trim()) return res.status(400).json({success:false,message:'Thiếu mã hộ, họ tên mẹ, họ tên trẻ hoặc ngày sinh trẻ.'});
+        if (!isAllowedTable1ChildRelation(quan_he_con)) {
+            return res.status(400).json({success:false,message:'Quan hệ với chủ hộ của con chỉ được chọn: Con đẻ, Cháu hoặc Có quan hệ khác.'});
+        }
         const norm = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[đĐ]/g,'d').toLowerCase().replace(/\s+/g,' ').trim();
         await client.query('BEGIN');
         const household = await client.query(`SELECT * FROM dan_cu WHERE TRIM(COALESCE(ma_ho,''))=$1 FOR UPDATE`,[maHo]);
@@ -3906,6 +4164,7 @@ app.post('/api/admin/sync-phu-nu-from-table1', async (req, res) => {
                     ma_xa_phuong: choose('ma_xa_phuong', selectedMother.ma_xa_phuong),
                     household_id: selectedMother.household_id
                 };
+                assertTable1MotherRelation(newResidentDetails);
                 mother = await insertResidentForSharedHousehold(
                     client, req, maHo, tenMe, newResidentDetails, 'Bảng 1 - thêm nhân khẩu cùng hộ'
                 );
@@ -3924,6 +4183,7 @@ app.post('/api/admin/sync-phu-nu-from-table1', async (req, res) => {
                 await client.query('ROLLBACK');
                 return res.status(404).json({success:false,message:`Chưa có ID liên kết người mẹ ${tenMe}. Hãy chọn từ tìm kiếm dân cư hoặc bổ sung hồ sơ dân cư cho người mới.`,requires_resident_details:true});
             }
+            assertTable1MotherRelation(resident_details);
             mother = await insertResidentForSharedHousehold(client, req, maHo, tenMe, resident_details, 'Bảng 1');
         }
         const childDate = String(ngay_sinh_con || '').trim();
@@ -4152,6 +4412,7 @@ app.post('/api/admin/sync-phu-nu-from-table5', async (req, res) => {
         const maHo = String(req.body.ho_so || '').trim();
         const hoTen = String(req.body.ho_ten || '').trim();
         const ngayDi = String(req.body.ngay_di || '').trim() || new Date().toISOString().slice(0,10);
+        const moveWholeHousehold = req.body.chuyen_ca_ho === true;
         if (!maHo || !hoTen) return res.status(400).json({success:false,message:'Thiếu mã hộ hoặc họ tên người chuyển đi.'});
         await client.query('BEGIN');
         const resolved = await resolveEventResident(client, req, {
@@ -4161,12 +4422,85 @@ app.post('/api/admin/sync-phu-nu-from-table5', async (req, res) => {
             source: 'Bảng 5'
         });
         const person = resolved.person;
-        await client.query(`UPDATE dan_cu SET trang_thai_cu_tru='DA_CHUYEN_DI',su_kien_cuoi='CHUYEN_DI',ngay_su_kien=$2::date,theo_doi_15_49=FALSE,updated_at=CURRENT_TIMESTAMP WHERE id=$1`,[person.id,ngayDi]);
-        const already = await client.query(`SELECT 1 FROM lich_su_bien_dong_dan_cu WHERE dan_cu_id=$1 AND su_kien='CHUYEN_DI' AND nguon_bieu_mau='Bảng 5' AND ngay_su_kien=$2::date LIMIT 1`,[person.id,ngayDi]);
-        if (!already.rowCount) await client.query(`INSERT INTO lich_su_bien_dong_dan_cu (dan_cu_id,ma_ho,ho_ten,su_kien,ngay_su_kien,nguon_bieu_mau,nguoi_thuc_hien) VALUES ($1,$2,$3,'CHUYEN_DI',$4::date,'Bảng 5',$5)`,[person.id,maHo,hoTen,ngayDi,req.session.user.username || '']);
+        let people = [person];
+        if (moveWholeHousehold) {
+            const areaPrefix = String(person.dia_chi || '').trim().match(/^([0-9]{3})/)?.[1] || String(person.diabanh || '').trim().match(/^([0-9]{3})/)?.[1] || '';
+            if (!areaPrefix) {
+                const error = new Error('Không xác định được địa bàn của người được chọn nên không thể chuyển cả hộ.');
+                error.status = 409;
+                throw error;
+            }
+            // Chỉ chuyển thành viên thuộc đúng hộ + địa bàn; hộ trùng mã không bị kéo nhầm.
+            // Khi thiếu household_id, chỉ nhóm các hồ sơ cũng thiếu household_id và chặn nếu có nhiều chủ hộ.
+            if (!String(person.household_id || '').trim()) {
+                const heads = await client.query(`
+                    SELECT COUNT(*)::int AS total
+                    FROM dan_cu
+                    WHERE TRIM(COALESCE(ma_ho,'')) = $1
+                      AND COALESCE(NULLIF(LEFT(BTRIM(COALESCE(dia_chi,'')),3),''), SUBSTRING(BTRIM(COALESCE(diabanh,'')) FROM '^[0-9]{3}')) = $2
+                      AND LOWER(BTRIM(COALESCE(quan_he,''))) IN ('chủ hộ','chu ho')
+                      AND UPPER(BTRIM(COALESCE(trang_thai_cu_tru,''))) NOT IN ('DA_CHUYEN_DI','DA_KHAI_TU','DA_CHET')
+                `, [maHo, areaPrefix]);
+                if (Number(heads.rows[0]?.total || 0) > 1) {
+                    const error = new Error('Mã hộ này có nhiều chủ hộ trong cùng địa bàn nhưng chưa có mã định danh hộ để phân biệt. Vui lòng kiểm tra dữ liệu trước khi chuyển cả hộ.');
+                    error.status = 409;
+                    throw error;
+                }
+            }
+            const householdResult = await client.query(`
+                SELECT id, ho_ten, ma_ho, household_id, dia_chi, diabanh, trang_thai_cu_tru
+                FROM dan_cu
+                WHERE TRIM(COALESCE(ma_ho,'')) = $1
+                  AND COALESCE(NULLIF(LEFT(BTRIM(COALESCE(dia_chi,'')),3),''), SUBSTRING(BTRIM(COALESCE(diabanh,'')) FROM '^[0-9]{3}')) = $2
+                  AND ((NULLIF(BTRIM($3::text),'') IS NOT NULL AND NULLIF(BTRIM(COALESCE(household_id,'')),'') = BTRIM($3::text))
+                    OR (NULLIF(BTRIM($3::text),'') IS NULL AND NULLIF(BTRIM(COALESCE(household_id,'')),'') IS NULL))
+                  AND UPPER(BTRIM(COALESCE(trang_thai_cu_tru,''))) NOT IN ('DA_CHUYEN_DI','DA_KHAI_TU','DA_CHET')
+                  AND UPPER(BTRIM(COALESCE(su_kien_cuoi,''))) NOT IN ('CHUYEN_DI','DA_CHUYEN_DI','KHAI_TU','DA_KHAI_TU','DA_CHET')
+                ORDER BY id
+                FOR UPDATE
+            `, [maHo, areaPrefix, String(person.household_id || '').trim()]);
+            if (!householdResult.rows.some(row => Number(row.id) === Number(person.id))) {
+                const error = new Error('Không xác định được người được chọn trong danh sách thành viên đang cư trú của hộ. Vui lòng tải lại danh sách dân cư.');
+                error.status = 409;
+                throw error;
+            }
+            people = householdResult.rows;
+        }
+
+        const ids = people.map(row => Number(row.id));
+        await client.query(`
+            UPDATE dan_cu
+            SET trang_thai_cu_tru='DA_CHUYEN_DI', su_kien_cuoi='CHUYEN_DI', ngay_su_kien=$2::date,
+                theo_doi_15_49=FALSE, updated_at=CURRENT_TIMESTAMP
+            WHERE id = ANY($1::bigint[])
+        `, [ids, ngayDi]);
+        for (const member of people) {
+            const already = await client.query(`
+                SELECT 1 FROM lich_su_bien_dong_dan_cu
+                WHERE dan_cu_id=$1 AND su_kien='CHUYEN_DI' AND nguon_bieu_mau='Bảng 5'
+                  AND ngay_su_kien=$2::date LIMIT 1
+            `, [member.id, ngayDi]);
+            if (!already.rowCount) {
+                await client.query(`
+                    INSERT INTO lich_su_bien_dong_dan_cu
+                    (dan_cu_id,ma_ho,ho_ten,su_kien,ngay_su_kien,nguon_bieu_mau,nguoi_thuc_hien)
+                    VALUES ($1,$2,$3,'CHUYEN_DI',$4::date,'Bảng 5',$5)
+                `, [member.id, maHo, member.ho_ten || '', ngayDi, req.session.user.username || '']);
+            }
+        }
         if (req.body.record_id) await updateReportResidentLink(client, 'table_5', req.body.record_id, person.id, 'dan_cu_id');
         await client.query('COMMIT');
-        return res.json({success:true,dan_cu_id:person.id,message:resolved.createdFromSelectedTemplate ? `Đã thêm ${hoTen} thành nhân khẩu mới và ghi nhận chuyển đi. Hồ sơ người được chọn ban đầu ${resolved.selectedTemplate?.ho_ten || ''} được giữ nguyên.` : 'Đã ghi nhận nhân khẩu và trạng thái đã chuyển đi; ngừng theo dõi 15–49.',created_new_resident:resolved.createdFromSelectedTemplate});
+        return res.json({
+            success:true,
+            dan_cu_id:person.id,
+            moved_count:people.length,
+            message: moveWholeHousehold
+                ? `Đã xác nhận chuyển đi cả hộ ${maHo}: cập nhật ${people.length} nhân khẩu trong cùng địa bàn.`
+                : (resolved.createdFromSelectedTemplate
+                    ? `Đã thêm ${hoTen} thành nhân khẩu mới và ghi nhận chuyển đi. Hồ sơ người được chọn ban đầu ${resolved.selectedTemplate?.ho_ten || ''} được giữ nguyên.`
+                    : 'Đã ghi nhận nhân khẩu và trạng thái đã chuyển đi; ngừng theo dõi 15–49.'),
+            created_new_resident:resolved.createdFromSelectedTemplate
+        });
     } catch (err) {
         try { await client.query('ROLLBACK'); } catch (_) {}
         console.error('Lỗi đồng bộ Bảng 5:', err);
