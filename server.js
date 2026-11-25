@@ -3685,6 +3685,7 @@ app.get('/api/admin/dan-cu', requireQuanLyDanCu, async (req, res) => {
             movedPopulation: summaryCounts.moved_population || 0,
             can_edit: !isScopedCTV,
             can_update_cccd: true,
+            can_update_bhyt: true,
             totalPages: Math.max(1, Math.ceil((summaryCounts.total_listed_households || 0) / householdLimit)) });
     } catch (err) {
         console.error('Lỗi tải danh sách quản lý dân cư:', err);
@@ -3742,6 +3743,53 @@ app.put('/api/admin/dan-cu/:id/cccd', requireQuanLyDanCu, async (req, res) => {
     } catch (err) {
         console.error('Lỗi bổ sung nhanh CCCD dân cư:', err);
         return res.status(500).json({ success: false, message: 'Không thể bổ sung CCCD lúc này.', error: err.message });
+    }
+});
+
+// CTV được nhập nhanh số thẻ BHYT cho nhân khẩu trong đúng địa bàn được giao.
+// Endpoint chỉ cập nhật ma_bhyt, không cho phép thay đổi các trường dân cư khác.
+app.put('/api/admin/dan-cu/:id/bhyt', requireQuanLyDanCu, async (req, res) => {
+    try {
+        const id = String(req.params.id || '').trim();
+        if (!/^\d+$/.test(id)) return res.status(400).json({ success: false, message: 'ID dân cư không hợp lệ.' });
+        const maBhyt = String(req.body.ma_bhyt || '').toUpperCase().replace(/\s+/g, '').trim();
+        if (!/^[A-Z0-9]{6,20}$/.test(maBhyt)) {
+            return res.status(400).json({ success: false, message: 'Số thẻ BHYT phải gồm 6–20 ký tự chữ hoặc số.' });
+        }
+
+        const current = await pool.query(
+            'SELECT id, ho_ten, dia_chi, diabanh FROM dan_cu WHERE id = $1', [id]
+        );
+        if (!current.rowCount) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ dân cư.' });
+
+        const user = req.session.user;
+        if (laCongTacVien(user)) {
+            const withinAssignedArea = thuocDiaBanCongTacVien(user, current.rows[0].dia_chi)
+                || thuocDiaBanCongTacVien(user, current.rows[0].diabanh);
+            if (!withinAssignedArea) {
+                return res.status(403).json({ success: false, message: 'Bạn chỉ được bổ sung BHYT cho nhân khẩu thuộc địa bàn được phân công.' });
+            }
+        } else if (!laQuanLyToanXa(user)) {
+            return res.status(403).json({ success: false, message: 'Tài khoản không có quyền bổ sung BHYT.' });
+        }
+
+        const duplicate = await pool.query(
+            `SELECT id, ho_ten FROM dan_cu WHERE UPPER(BTRIM(COALESCE(ma_bhyt,''))) = $1 AND id <> $2 LIMIT 1`,
+            [maBhyt, id]
+        );
+        if (duplicate.rowCount) {
+            return res.status(409).json({ success: false, message: `Số thẻ BHYT này đã được gắn với nhân khẩu ${duplicate.rows[0].ho_ten}. Vui lòng kiểm tra lại.` });
+        }
+
+        await pool.query(
+            `UPDATE dan_cu SET ma_bhyt = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+            [maBhyt, id]
+        );
+        await logAction(user, 'NHẬP NHANH BHYT DÂN CƯ', id, current.rows[0].ho_ten);
+        return res.json({ success: true, message: `Đã cập nhật số BHYT cho ${current.rows[0].ho_ten}.` });
+    } catch (err) {
+        console.error('Lỗi nhập nhanh BHYT dân cư:', err);
+        return res.status(500).json({ success: false, message: 'Không thể cập nhật số BHYT lúc này.', error: err.message });
     }
 });
 

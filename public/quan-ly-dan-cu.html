@@ -54,6 +54,19 @@
       .modal-footer .btn { flex: 1 1 120px; min-height: 40px; margin: 0 !important; }
       .toast-container { width: calc(100% - 16px); right: 8px !important; left: 8px !important; padding: 0 !important; }
     }
+    /* Bộ lọc nâng cao luôn hiển thị trên máy tính, chỉ thu gọn trên điện thoại. */
+    @media (min-width: 768px) {
+      #residentAdvancedFilters.collapse:not(.show) { display: flex !important; }
+      .resident-filter-toggle { display: none !important; }
+    }
+    @media (max-width: 767.98px) {
+      #residentAdvancedFilters.collapse:not(.show) { display: none !important; }
+      #residentAdvancedFilters.collapse.show { display: flex !important; }
+      .resident-filter-toggle { min-height: 38px; border-radius: 9px; font-weight: 600; }
+      .resident-filter-chevron { transition: transform .2s ease; }
+      .resident-filter-toggle[aria-expanded="true"] .resident-filter-chevron { transform: rotate(180deg); }
+    }
+
     @media (max-width: 380px) {
       .topbar .navbar-brand { font-size: .88rem; }
       #populationTabs .nav-link { font-size: .76rem; padding: 8px 9px; }
@@ -104,7 +117,15 @@
           <select id="filterAp" class="form-select" style="width:auto;min-width:170px"><option value="">Tất cả Ấp</option></select>
           <select id="filterDiaBan" class="form-select" style="width:auto;min-width:190px"><option value="">Tất cả địa bàn</option></select>
         </div>
-        <div class="row g-2 filters mb-3">
+        <div class="d-flex d-md-none justify-content-end mb-2">
+          <button class="btn btn-outline-primary btn-sm resident-filter-toggle" type="button"
+                  data-bs-toggle="collapse" data-bs-target="#residentAdvancedFilters"
+                  aria-expanded="false" aria-controls="residentAdvancedFilters">
+            <i class="fa-solid fa-sliders me-1"></i>Bộ lọc nâng cao
+            <i class="fa-solid fa-chevron-down ms-1 resident-filter-chevron" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="row g-2 filters mb-3 collapse" id="residentAdvancedFilters">
           <div class="col-6 col-md-3 col-xl-2"><label class="form-label">Tình trạng hôn nhân</label><select id="filterHonNhan" class="form-select"><option value="">Tất cả</option><option>Chưa có vợ hoặc chồng</option><option>Có vợ/Có chồng</option><option>Ly thân</option><option>Ly hôn</option><option>Goá</option></select></div>
           <div class="col-6 col-md-2 col-xl-1"><label class="form-label">Giới tính</label><select id="filterGioiTinh" class="form-select"><option value="">Tất cả</option><option>Nam</option><option>Nữ</option><option>Khác</option></select></div>
           <div class="col-6 col-md-2 col-xl-1"><label class="form-label">Tuổi từ</label><input id="filterTuTuoi" type="number" min="0" max="120" class="form-control" placeholder="Từ"></div>
@@ -231,6 +252,22 @@
   </form>
  </div></div>
 </div>
+<div class="modal fade" id="quickBhytModal" tabindex="-1" aria-hidden="true">
+ <div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 rounded-4">
+  <form id="quickBhytForm">
+   <div class="modal-header bg-success text-white"><h5 class="modal-title"><i class="fa-solid fa-id-card me-2"></i>Nhập nhanh số BHYT</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+   <div class="modal-body">
+    <input type="hidden" id="quickBhytResidentId">
+    <div class="fw-semibold mb-1" id="quickBhytPersonName"></div>
+    <div class="small text-muted mb-3" id="quickBhytPersonInfo"></div>
+    <label class="form-label" for="quickBhytNumber">Số thẻ bảo hiểm y tế</label>
+    <input class="form-control form-control-lg text-uppercase" id="quickBhytNumber" maxlength="20" autocomplete="off" placeholder="Nhập số thẻ BHYT" required>
+    <div class="form-text">Có thể nhập thẻ mới hoặc cập nhật lại số thẻ đang có. Chỉ cập nhật trường BHYT, không thay đổi thông tin dân cư khác.</div>
+   </div>
+   <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button><button type="submit" class="btn btn-success" id="btnSaveQuickBhyt"><i class="fa-solid fa-floppy-disk me-1"></i>Lưu số BHYT</button></div>
+  </form>
+ </div></div>
+</div>
 <div class="modal fade" id="bhytLookupModal" tabindex="-1" aria-hidden="true">
  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content border-0 rounded-4">
   <div class="modal-header bg-primary text-white"><h5 class="modal-title"><i class="fa-solid fa-id-card me-2"></i>Tra cứu thẻ BHYT</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
@@ -244,10 +281,10 @@
 (() => {
  const $=id=>document.getElementById(id), modal=new bootstrap.Modal($('residentModal')), quickCccdModal=new bootstrap.Modal($('quickCccdModal'));
  $('btnAdd').hidden=true;
- const bhytModal=new bootstrap.Modal($('bhytLookupModal'));
+ const bhytModal=new bootstrap.Modal($('bhytLookupModal')),quickBhytModal=new bootstrap.Modal($('quickBhytModal'));
  const fields=['ho_ten','ma_ho','household_id','quan_he','gioi_tinh','ngay_sinh','dan_toc','hoc_van','hon_nhan','tinh_trang_cu_tru','ma_bhyt','dia_chi','diabanh','ma_xa_phuong','trang_thai_cu_tru','cccd','ngay_cap_cccd','noi_cap_cccd','so_con','nam_sinh_con'];
  const filterIds=['filterAp','filterDiaBan','filterHonNhan','filterGioiTinh','filterTuTuoi','filterDenTuoi','filterNamSinh','filterTrangThai','filterBienDong'];
- let page=1,totalPages=1,searchTimer=null,filterTimer=null,filterOptions=[],formOptions={quan_he:[],dan_toc:[],hoc_van:[]},originalCccd='',canEdit=false,canQuickCccd=false;
+ let page=1,totalPages=1,searchTimer=null,filterTimer=null,filterOptions=[],formOptions={quan_he:[],dan_toc:[],hoc_van:[]},originalCccd='',canEdit=false,canQuickCccd=false,canQuickBhyt=false;
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  function normalizeDateForInput(value){const raw=String(value??'').trim();if(/^\d{4}-\d{2}-\d{2}/.test(raw))return raw.slice(0,10);const m=raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);return m?`${m[3]}-${m[2]}-${m[1]}`:'';}
  function notify(msg,isError=false){$('noticeText').textContent=msg;$('noticeToast').classList.toggle('text-danger',isError);bootstrap.Toast.getOrCreateInstance($('noticeToast'),{delay:4200}).show();}
@@ -265,11 +302,11 @@
   setSelectOptions('hoc_van',formOptions.hoc_van,'-- Chọn học vấn --');
  }
  async function load(){const body=$('residentBody');body.innerHTML='<tr><td colspan="10" class="text-center loading">Đang tải dữ liệu...</td></tr>';
-  try{const q=$('searchInput').value.trim();const params=new URLSearchParams({q,page,limit:20});const map={ap:'filterAp',diabanh:'filterDiaBan',hon_nhan:'filterHonNhan',gioi_tinh:'filterGioiTinh',tu_tuoi:'filterTuTuoi',den_tuoi:'filterDenTuoi',nam_sinh:'filterNamSinh',trang_thai:'filterTrangThai',bien_dong:'filterBienDong'};Object.entries(map).forEach(([k,id])=>{if($(id).value.trim())params.set(k,$(id).value.trim());});const data=await api(`/api/admin/dan-cu?${params}`);canEdit=data.can_edit!==false;canQuickCccd=data.can_update_cccd===true;$('btnAdd').hidden=!canEdit;const desc=document.querySelector('main.page-wrap .muted-small');if(desc)desc.textContent=canEdit?'Thêm mới, chỉnh sửa và xóa hồ sơ trong danh sách dân cư gốc.':(canQuickCccd?'Chế độ cộng tác viên: chỉ xem dân cư trong địa bàn được phân công, được bổ sung riêng thông tin CCCD.':'Chế độ chỉ xem danh sách dân cư.');const adminLink=document.querySelector('.topbar a[href="admin.html"]');if(adminLink)adminLink.hidden=!canEdit;totalPages=data.totalPages||1;
+  try{const q=$('searchInput').value.trim();const params=new URLSearchParams({q,page,limit:20});const map={ap:'filterAp',diabanh:'filterDiaBan',hon_nhan:'filterHonNhan',gioi_tinh:'filterGioiTinh',tu_tuoi:'filterTuTuoi',den_tuoi:'filterDenTuoi',nam_sinh:'filterNamSinh',trang_thai:'filterTrangThai',bien_dong:'filterBienDong'};Object.entries(map).forEach(([k,id])=>{if($(id).value.trim())params.set(k,$(id).value.trim());});const data=await api(`/api/admin/dan-cu?${params}`);canEdit=data.can_edit!==false;canQuickCccd=data.can_update_cccd===true;canQuickBhyt=data.can_update_bhyt===true;$('btnAdd').hidden=!canEdit;const desc=document.querySelector('main.page-wrap .muted-small');if(desc)desc.textContent=canEdit?'Thêm mới, chỉnh sửa và xóa hồ sơ trong danh sách dân cư gốc.':(canQuickCccd?'Chế độ cộng tác viên: chỉ xem dân cư trong địa bàn được phân công, được bổ sung nhanh thông tin CCCD và số BHYT.':'Chế độ chỉ xem danh sách dân cư.');const adminLink=document.querySelector('.topbar a[href="admin.html"]');if(adminLink)adminLink.hidden=!canEdit;totalPages=data.totalPages||1;
    $('summary').innerHTML = `<div><strong>Tổng cộng ${Number(data.totalHouseholds||0).toLocaleString('vi-VN')} hộ</strong> · Tổng số dân ${Number(data.totalPopulation||0).toLocaleString('vi-VN')} người · Đang hiển thị ${Number(data.totalRows||0).toLocaleString('vi-VN')} thành viên</div><div class="small text-muted mt-1">Đã chết/khai tử: ${Number(data.deadHouseholds||0).toLocaleString('vi-VN')} hộ · ${Number(data.deadPopulation||0).toLocaleString('vi-VN')} người &nbsp;|&nbsp; Đã chuyển đi: ${Number(data.movedHouseholds||0).toLocaleString('vi-VN')} hộ · ${Number(data.movedPopulation||0).toLocaleString('vi-VN')} người</div>`;
    $('pageInfo').textContent=`Trang ${data.page}/${totalPages} · ${data.data.length} thành viên (tối đa 20 hộ/trang)`;
    if(!data.data.length){body.innerHTML='<tr><td colspan="10" class="text-center text-muted py-5">Không tìm thấy hồ sơ dân cư.</td></tr>';}
-   else body.innerHTML=data.data.map((r,i)=>{const prev=data.data[i-1];const newHouse=!prev||String(prev._ma_dia_ban||'')!==String(r._ma_dia_ban||'')||String(prev.ma_ho||'')!==String(r.ma_ho||'');const status=String(r.trang_thai_cu_tru||'').toUpperCase();const inactive=['DA_CHUYEN_DI','DA_KHAI_TU','DA_CHET'].includes(status);const rowClasses=[newHouse?'household-start':'household-member',inactive?'table-secondary':''].filter(Boolean).join(' ');const quick=`${canQuickCccd?`<button class="btn btn-sm btn-outline-success me-1" title="Bổ sung nhanh CMND/CCCD" data-quick-cccd="${r.id}" data-name="${esc(r.ho_ten)}" data-ma-ho="${esc(r.ma_ho||'')}" data-dia-chi="${esc(r.dia_chi||'')}" data-ngay-sinh="${esc(r.ngay_sinh||'')}" data-cccd="${esc(r.cccd||'')}" data-ngay-cap="${esc(r.ngay_cap_cccd||'')}" data-noi-cap="${esc(r.noi_cap_cccd||'')}"><i class="fa-solid fa-id-card me-1"></i>CMND/CCCD</button>`:''}`;const manage=canEdit?`<button class="btn btn-sm btn-outline-primary action-btn me-1" title="Sửa" data-edit="${r.id}"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-outline-danger action-btn" title="Xóa" data-delete="${r.id}" data-name="${esc(r.ho_ten)}"><i class="fa-solid fa-trash"></i></button>`:'<span class="small text-muted">Chỉ xem thông tin khác</span>';const actions=`${quick}${manage}`;return `<tr${rowClasses?` class="${rowClasses}"`: ''}><td class="text-center">${i+1}</td><td class="fw-semibold">${esc(r.ho_ten)}</td><td>${esc(r.ma_ho)}</td><td>${esc(r.ngay_sinh)}</td><td>${esc(r.gioi_tinh)}</td><td>${esc(r.quan_he)}</td><td>${esc(r.cccd)}</td><td>${esc(r.ma_bhyt)}</td><td>${esc(r.dia_chi)}</td><td class="text-center text-nowrap">${actions}</td></tr>`;}).join('');
+   else body.innerHTML=data.data.map((r,i)=>{const prev=data.data[i-1];const newHouse=!prev||String(prev._ma_dia_ban||'')!==String(r._ma_dia_ban||'')||String(prev.ma_ho||'')!==String(r.ma_ho||'');const status=String(r.trang_thai_cu_tru||'').toUpperCase();const inactive=['DA_CHUYEN_DI','DA_KHAI_TU','DA_CHET'].includes(status);const rowClasses=[newHouse?'household-start':'household-member',inactive?'table-secondary':''].filter(Boolean).join(' ');const quick=`${canQuickCccd?`<button class="btn btn-sm btn-outline-success me-1" title="Bổ sung nhanh CMND/CCCD" data-quick-cccd="${r.id}" data-name="${esc(r.ho_ten)}" data-ma-ho="${esc(r.ma_ho||'')}" data-dia-chi="${esc(r.dia_chi||'')}" data-ngay-sinh="${esc(r.ngay_sinh||'')}" data-cccd="${esc(r.cccd||'')}" data-ngay-cap="${esc(r.ngay_cap_cccd||'')}" data-noi-cap="${esc(r.noi_cap_cccd||'')}"><i class="fa-solid fa-id-card me-1"></i>CMND/CCCD</button>`:''}`;const quickBhyt=canQuickBhyt?`<button class="btn btn-sm btn-outline-success me-1" title="Nhập nhanh số BHYT" data-quick-bhyt="${r.id}" data-name="${esc(r.ho_ten)}" data-ma-ho="${esc(r.ma_ho||'')}" data-dia-chi="${esc(r.dia_chi||'')}" data-bhyt="${esc(r.ma_bhyt||'')}"><i class="fa-solid fa-heart-pulse me-1"></i>BHYT</button>`:'';const manage=canEdit?`<button class="btn btn-sm btn-outline-primary action-btn me-1" title="Sửa" data-edit="${r.id}"><i class="fa-solid fa-pen"></i></button><button class="btn btn-sm btn-outline-danger action-btn" title="Xóa" data-delete="${r.id}" data-name="${esc(r.ho_ten)}"><i class="fa-solid fa-trash"></i></button>`:'<span class="small text-muted">Chỉ xem thông tin khác</span>';const actions=`${quick}${quickBhyt}${manage}`;return `<tr${rowClasses?` class="${rowClasses}"`: ''}><td class="text-center">${i+1}</td><td class="fw-semibold">${esc(r.ho_ten)}</td><td>${esc(r.ma_ho)}</td><td>${esc(r.ngay_sinh)}</td><td>${esc(r.gioi_tinh)}</td><td>${esc(r.quan_he)}</td><td>${esc(r.cccd)}</td><td>${esc(r.ma_bhyt)}</td><td>${esc(r.dia_chi)}</td><td class="text-center text-nowrap">${actions}</td></tr>`;}).join('');
    renderPages();
   }catch(e){body.innerHTML=`<tr><td colspan="10" class="text-center text-danger py-5">${esc(e.message)}</td></tr>`;$('summary').textContent='Không tải được dữ liệu';$('pageInfo').textContent='';$('pagination').innerHTML='';if(e.message.includes('quyền')||e.message.includes('đăng nhập'))$('btnAdd').disabled=true;}
  }
@@ -342,7 +379,27 @@
   catch(err){notify(err.message,true);}
   finally{$('btnSaveQuickCccd').disabled=false;}
  });
+ $('quickBhytNumber').addEventListener('input',()=>{$('quickBhytNumber').value=$('quickBhytNumber').value.toUpperCase().replace(/\\s+/g,'').slice(0,20);});
+ $('quickBhytForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const id=$('quickBhytResidentId').value;
+  const ma_bhyt=String($('quickBhytNumber').value||'').toUpperCase().replace(/\\s+/g,'').trim();
+  if(!id){notify('Không xác định được hồ sơ dân cư.',true);return;}
+  if(!/^[A-Z0-9]{6,20}$/.test(ma_bhyt)){notify('Số thẻ BHYT phải gồm 6–20 ký tự chữ hoặc số. Vui lòng kiểm tra lại.',true);$('quickBhytNumber').focus();return;}
+  $('btnSaveQuickBhyt').disabled=true;
+  try{const result=await api(`/api/admin/dan-cu/${encodeURIComponent(id)}/bhyt`,{method:'PUT',body:JSON.stringify({ma_bhyt})});quickBhytModal.hide();notify(result.message);load();}
+  catch(err){notify(err.message,true);}
+  finally{$('btnSaveQuickBhyt').disabled=false;}
+ });
  $('residentBody').addEventListener('click',async e=>{
+  const quickBhyt=e.target.closest('[data-quick-bhyt]');
+  if(quickBhyt){
+   $('quickBhytResidentId').value=quickBhyt.dataset.quickBhyt;
+   $('quickBhytPersonName').textContent=quickBhyt.dataset.name||'';
+   $('quickBhytPersonInfo').textContent=`Mã hộ: ${quickBhyt.dataset.maHo||'—'} · ${quickBhyt.dataset.diaChi||''}`;
+   $('quickBhytNumber').value=quickBhyt.dataset.bhyt||'';
+   quickBhytModal.show();setTimeout(()=>$('quickBhytNumber').focus(),150);return;
+  }
   const quick=e.target.closest('[data-quick-cccd]');
   if(quick){
    $('quickCccdResidentId').value=quick.dataset.quickCccd;
